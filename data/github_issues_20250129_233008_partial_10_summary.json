@@ -1,0 +1,9 @@
+{
+  "total_issues": 23,
+  "repositories": 1,
+  "date_range": {
+    "earliest": "2024-07-09T11:01:33+00:00",
+    "latest": "2025-01-14T11:18:32+00:00"
+  },
+  "issues_by_repo": {
+    "weaviate/weaviate-python-client": 

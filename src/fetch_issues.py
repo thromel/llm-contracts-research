@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 from tqdm import tqdm
@@ -10,6 +11,18 @@ from utils import (
     get_relevant_repositories,
     is_relevant_issue
 )
+
+
+def handle_rate_limit(client):
+    """Handle GitHub API rate limiting by waiting if necessary."""
+    rate_limit = client.get_rate_limit()
+    if rate_limit.core.remaining < 100:  # Buffer of 100 requests
+        reset_timestamp = rate_limit.core.reset.timestamp()
+        sleep_time = reset_timestamp - time.time() + 1  # Add 1 second buffer
+        if sleep_time > 0:
+            print(f"\nRate limit low. Waiting {
+                  sleep_time:.2f} seconds for reset...")
+            time.sleep(sleep_time)
 
 
 def fetch_closed_issues(
@@ -30,6 +43,7 @@ def fetch_closed_issues(
         batch_size: Number of issues to process before saving (default: 100)
     """
     try:
+        handle_rate_limit(client)
         repo = client.get_repo(repo_name)
         issues = []
         processed = 0
@@ -53,6 +67,9 @@ def fetch_closed_issues(
         with tqdm(desc=f'Fetching issues from {repo_name}') as pbar:
             for issue in closed_issues:
                 try:
+                    if processed % 50 == 0:  # Check rate limit every 50 issues
+                        handle_rate_limit(client)
+
                     if issue.closed_at and start_date <= issue.closed_at <= end_date:
                         if is_relevant_issue(issue):
                             issue_data = format_issue_data(issue)
@@ -64,6 +81,9 @@ def fetch_closed_issues(
                                 # Save intermediate results for large repositories
                                 if processed % batch_size == 0:
                                     yield issues[-batch_size:]
+
+                    time.sleep(0.1)  # Small delay between requests
+
                 except Exception as e:
                     print(f"Error processing issue #{issue.number}: {str(e)}")
                     continue
@@ -94,11 +114,16 @@ def save_to_files(issues: List[Dict[str, Any]], base_filename: str, mode: str = 
     # Create data directory if it doesn't exist
     os.makedirs('data', exist_ok=True)
 
-    # Save as CSV
+    # Convert DataFrame for both CSV and stats
     df = pd.DataFrame(issues)
+
+    # Convert numpy int64/float64 to native Python types for JSON serialization
+    for col in df.select_dtypes(include=['int64', 'float64']).columns:
+        df[col] = df[col].astype(str)
+
+    # Save as CSV
     csv_file = f'data/{base_filename}.csv'
     if mode == 'a' and os.path.exists(csv_file):
-        # Append without header if file exists
         df.to_csv(csv_file, mode='a', header=False, index=False)
     else:
         df.to_csv(csv_file, index=False)
@@ -107,16 +132,28 @@ def save_to_files(issues: List[Dict[str, Any]], base_filename: str, mode: str = 
     # Save as JSON
     json_file = f'data/{base_filename}.json'
     if mode == 'a' and os.path.exists(json_file):
-        # Load existing data and append
         with open(json_file, 'r', encoding='utf-8') as f:
             existing_data = json.load(f)
         issues = existing_data + issues
+
+    # Convert numpy types to native Python types before JSON serialization
+    def convert_to_serializable(obj):
+        if pd.isna(obj):
+            return None
+        if hasattr(obj, 'item'):  # Convert numpy types
+            return obj.item()
+        return obj
+
+    # Convert all numeric values in issues
+    for issue in issues:
+        for key, value in issue.items():
+            issue[key] = convert_to_serializable(value)
 
     with open(json_file, 'w', encoding='utf-8') as f:
         json.dump(issues, f, indent=2, ensure_ascii=False)
     print(f"Saved detailed data to {json_file}")
 
-    # Generate and save summary
+    # Generate summary statistics with proper type conversion
     summary = {
         'total_issues': len(issues),
         'repositories': len(set(issue['repository'] for issue in issues)),
@@ -124,9 +161,9 @@ def save_to_files(issues: List[Dict[str, Any]], base_filename: str, mode: str = 
             'earliest': min(issue['created_at'] for issue in issues),
             'latest': max(issue['closed_at'] for issue in issues if issue['closed_at'])
         },
-        'issues_by_repo': dict(df['repository'].value_counts()),
-        'avg_resolution_time': float(df['resolution_time_hours'].mean()),
-        'total_comments': int(df['comments_count'].sum())
+        'issues_by_repo': {k: int(v) for k, v in dict(df['repository'].value_counts()).items()},
+        'avg_resolution_time': float(df['resolution_time_hours'].astype(float).mean()),
+        'total_comments': int(df['comments_count'].astype(int).sum())
     }
 
     summary_file = f'data/{base_filename}_summary.json'

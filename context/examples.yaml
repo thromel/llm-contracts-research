@@ -1,0 +1,72 @@
+examples:
+  - title: "Rate Limit Change Without Notice"
+    description: "API provider reduced rate limits without prior notification"
+    analysis:
+      is_violation: true
+      violation_type: "Rate Limit Violation"
+      severity: "high"
+      impact:
+        description: "Production systems failed due to unexpected throttling"
+        affected_users: "Enterprise customers"
+        scope: "Global"
+      resolution:
+        was_addressed: true
+        resolution_type: "Policy Change"
+        effectiveness: "Provider implemented notification policy"
+      evidence:
+        - "Sudden increase in 429 errors"
+        - "No prior communication"
+        - "Multiple customer complaints"
+
+  - title: "Breaking Change in Response Format"
+    description: "Model output format changed without version update"
+    analysis:
+      is_violation: true
+      violation_type: "API Breaking Change"
+      severity: "high"
+      impact:
+        description: "Parsing failures in downstream applications"
+        affected_users: "All API users"
+        scope: "Global"
+      resolution:
+        was_addressed: true
+        resolution_type: "Version Update"
+        effectiveness: "Proper versioning implemented"
+      evidence:
+        - "JSON structure changes"
+        - "Client application errors"
+        - "Version number unchanged"
+
+  - title: "Performance Degradation"
+    description: "Response times exceeded SLA without notification"
+    analysis:
+      is_violation: true
+      violation_type: "Performance Contract Violation"
+      severity: "medium"
+      impact:
+        description: "Increased latency affecting user experience"
+        affected_users: "High-volume users"
+        scope: "Regional"
+      resolution:
+        was_addressed: true
+        resolution_type: "Infrastructure Upgrade"
+        effectiveness: "Performance restored to SLA levels"
+      evidence:
+        - "Latency metrics"
+        - "SLA breach records"
+        - "Customer tickets"
+
+  - title: "Feature Request"
+    description: "Request for new model capability"
+    analysis:
+      is_violation: false
+      categorization:
+        primary_category: "Feature Request"
+        subcategory: "Model Capability"
+      explanation: "Not a violation as it requests new functionality"
+      tags: ["enhancement", "feature-request"]
+
+metadata:
+  version: "1.0"
+  last_updated: "YYYY-MM-DD"
+  notes: "Template examples - update with real cases from research" 

@@ -1,0 +1,9 @@
+{
+  "total_issues": 9,
+  "repositories": 1,
+  "date_range": {
+    "earliest": "2024-02-27T16:14:10+00:00",
+    "latest": "2025-01-28T16:57:54+00:00"
+  },
+  "issues_by_repo": {
+    "deepseek-ai/DeepSeek-Coder": 

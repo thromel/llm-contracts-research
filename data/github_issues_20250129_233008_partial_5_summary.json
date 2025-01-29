@@ -1,0 +1,9 @@
+{
+  "total_issues": 100,
+  "repositories": 1,
+  "date_range": {
+    "earliest": "2024-09-23T15:10:46+00:00",
+    "latest": "2025-01-27T01:57:58+00:00"
+  },
+  "issues_by_repo": {
+    "NVIDIA/NeMo": 

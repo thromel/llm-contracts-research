@@ -1,0 +1,626 @@
+[
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1504,
+    "title": "Add support for ` /objects/{className}/{id}` endpoint",
+    "body": "`query.fetch_object_by_id` hits the gRPC search method which has different replication properties than the `/objects/{className}/{id}` REST endpoint. We should therefore expose the ability to hit this endpoint through a method in the Python client, perhaps namespaced under `data` as `get_object_by_id`\r\nRef: https://weaviate.io/developers/weaviate/api/rest#tag/objects/GET/objects/{className}/{id}",
+    "state": "closed",
+    "created_at": "2025-01-10T10:14:57+00:00",
+    "closed_at": "2025-01-10T17:37:01+00:00",
+    "updated_at": "2025-01-10T17:37:01+00:00",
+    "author": "tsmith023",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "enhancement",
+    "milestone": null,
+    "closed_by": "tsmith023",
+    "resolution_time_hours": 7.3677777777777775,
+    "first_comments": [
+      {
+        "author": "dirkkul",
+        "created_at": "2025-01-10T10:24:04+00:00",
+        "body": "> has different replication properties\r\n\r\nThen that should be changed on the server\r\n\r\nYour proposal would create several problems:\r\n- returns are different between REST and GRPC APIs and both methods would need different returns\r\n- it would be very confusing to users, why there are two methods and what the difference between those are\r\n- would complicate the docs with explaining the differences\r\n\r\nThis seems to be a purely internal problem and I don't think that we should add extra functionality to the python client to solve this"
+      },
+      {
+        "author": "tsmith023",
+        "created_at": "2025-01-10T10:50:41+00:00",
+        "body": "Makes sense, I think it will still be useful for debugging purposes so let's introduce the `debug` namespace where we can add this and then other niche endpoints besides"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1504"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1481,
+    "title": "Tenant creation failing when using httpx == 0.28.1",
+    "body": "Runnig the code:\r\n\r\n    collection.tenants.create(\r\n        [\r\n            Tenant(\r\n                name=f\"Tenant-With_Very-Very-_Very-Very_Very-Very-Very---Long-Name\"\r\n            )\r\n        ]\r\n\r\nDoesn't create the tenant properly, it has no shards.\r\n\r\nFails when using the weaviate-client == 4.10.1 and httpx == 0.28.1\r\n\r\nAfter using httpx == 0.27.0 it works well.",
+    "state": "closed",
+    "created_at": "2024-12-13T09:52:50+00:00",
+    "closed_at": "2024-12-16T07:56:14+00:00",
+    "updated_at": "2024-12-16T07:56:14+00:00",
+    "author": "rlmanrique",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 70.05666666666667,
+    "first_comments": [],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1481"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1445,
+    "title": "Add Dimension Parameter to Azure OpenAI Vectorizer Client",
+    "body": "The Azure OpenAI vectorizer lacks the dimension parameter ([configure-the-vectorizer](https://weaviate.io/developers/weaviate/model-providers/openai-azure/embeddings#configure-the-vectorizer)), which allows the use of custom dimensions for the embeddings it generates.\r\nThis feature seems to have already been implemented in Weaviate: https://github.com/weaviate/weaviate/pull/5987.\r\n",
+    "state": "closed",
+    "created_at": "2024-11-29T13:18:39+00:00",
+    "closed_at": "2025-01-14T11:18:32+00:00",
+    "updated_at": "2025-01-14T11:18:32+00:00",
+    "author": "Barabanga",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "tsmith023",
+    "resolution_time_hours": 1101.9980555555555,
+    "first_comments": [
+      {
+        "author": "AlexMiasoiedov",
+        "created_at": "2024-12-02T09:46:58+00:00",
+        "body": "Same problem here. We're migrating embeddings with dimension 3072 from `pgvector` and getting error – `distance between entrypoint and query node: 3072 vs 1536: vector lengths don\\'t match`.\r\nModel: `text-embedding-3-large`"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1445"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1401,
+    "title": "Add support for dynamic backup locations",
+    "body": null,
+    "state": "closed",
+    "created_at": "2024-11-11T08:05:30+00:00",
+    "closed_at": "2025-01-14T11:17:50+00:00",
+    "updated_at": "2025-01-14T11:17:50+00:00",
+    "author": "dirkkul",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "1.28",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 1539.2055555555555,
+    "first_comments": [],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1401"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1400,
+    "title": "include_vector on QueryReference not returning vectors",
+    "body": "# Describe the bug\r\n\r\nWhen trying to return vectors (either named vectors with array of string or all vectors with a boolean) on a reference,  two related bugs shows up:\r\n- using include_vector with an array of string would trigger a ValidationError as only Boolean values are valid\r\n- using include_vector in QueryReference with boolean parameter would return the source collection names for dict keys along with empty values\r\n\r\n# Steps to reproduce\r\n\r\nThis would setup 2 collections with named vectors:\r\n\r\n```python\r\nfrom weaviate.classes.query import MetadataQuery, Filter, QueryReference\r\nclient = weaviate.connect_to_local()\r\n\r\nclt_source = client.collections.create(\r\n    name='CltSource',\r\n    properties=[\r\n        Property(name=\"name\", data_type=DataType.TEXT),\r\n    ],\r\n)\r\n\r\nclt_target = client.collections.create(\r\n    name='CltTarget',\r\n    properties=[\r\n        Property(name=\"name\", data_type=DataType.TEXT),\r\n    ],\r\n    vectorizer_config=[Configure.NamedVectors.none(name=\"bringYourOwn1\"),\r\n                        Configure.NamedVectors.none(name=\"bringYourOwn2\")]\r\n)\r\n\r\nclt_source.config.add_reference(ReferenceProperty(name=\"hasRef\",target_collection='CltTarget'))\r\n\r\nuuid_target=clt_target.data.insert(properties = {'name': 'name_val_target'}, vector={'bringYourOwn1':[1,2,3],'bringYourOwn2':[4,5,6]})\r\nuuid_source=clt_source.data.insert(properties = {'name': 'name_val_source'}, references={'hasRef':uuid_target})\r\n```\r\n\r\n## Test with array of string\r\n\r\n```python\r\ninclude_vector_string=clt_source.query.fetch_objects(\r\n    return_references=QueryReference(\r\n    link_on='hasRef', \r\n    include_vector=['bringYourOwn1']))\r\n\r\ninclude_vector_string.objects[0].references['hasRef'].objects[0].vector\r\n```\r\n\r\n## Test with boolean\r\n\r\n```python\r\ninclude_vector_boolean=clt_source.query.fetch_objects(\r\n    return_references=QueryReference(\r\n    link_on='hasRef', \r\n    include_vector=True))\r\n\r\ninclude_vector_boolean.objects[0].references['hasRef'].objects[0].vector\r\n```\r\n\r\n# Expected behavior\r\n\r\n- Array of string parameter should return the named vectors\r\n- Boolean parameter should return all the vectors\r\n\r\n# Actual behavior\r\n\r\n- Array of string triggers a ValidationError input should be a valid Boolean\r\n\r\n<img width=\"897\" alt=\"Screenshot 2024-11-09 at 10 18 51\" src=\"https://github.com/user-attachments/assets/591b78b1-52f6-48aa-8f58-8e658aec1adc\">\r\n\r\n- Boolean would return an empty object dict\r\n\r\n<img width=\"1093\" alt=\"Screenshot 2024-11-09 at 10 19 29\" src=\"https://github.com/user-attachments/assets/b1aa3dfd-af1b-4feb-bdc3-b0ef3dc3635b\">\r\n\r\n# Proposed Solution\r\n\r\n## Fixing input should be a valid Boolean\r\n\r\nRemoving the type constraint to change on _QueryReference class \r\n\r\nhttps://github.com/weaviate/weaviate-python-client/pull/1399\r\n\r\n\r\n## Fixing boolean True returning empty dict\r\n\r\nThis one was a bit tricky and I did not expected the journey I get myself into as I was expecting the issue to come from the python Weaviate client but ended up running Go Weaviate core library on my laptop and learning the basics of Go and gRPC as I am not familiar at all with these. But it was really interesting to see the internals of Weaviate. (I am still not sure tho that I did the right thing, maybe i am just using the existing client wrongly?)\r\n\r\nBut to make it short, when looking at the request generated in __create_request, \r\n\r\nhttps://github.com/weaviate/weaviate-python-client/blob/main/weaviate/collections/grpc/query.py#L147\r\n\r\nthe request was consistent with what you would expect from the code and the next step after this is the gRPC call. That kinda scared me a bit, I was like f***, is that really happening in the core Go app? Then I rolled up my sleeves, get myself a Go env and Weaviate db running locally and get the basics of gRPC as I never touched that tech before.\r\n\r\nEnd of the story here: \r\n\r\nhttps://github.com/weaviate/weaviate/issues/6279\r\n",
+    "state": "closed",
+    "created_at": "2024-11-10T00:03:00+00:00",
+    "closed_at": "2025-01-06T14:01:32+00:00",
+    "updated_at": "2025-01-06T14:01:32+00:00",
+    "author": "paul7Junior",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "tsmith023",
+    "resolution_time_hours": 1381.9755555555555,
+    "first_comments": [
+      {
+        "author": "tsmith023",
+        "created_at": "2025-01-06T11:01:08+00:00",
+        "body": "@paul7Junior, thanks for your great work with the PR on the core repo. I would like to close this now as completed due to your changes there, do you agree?"
+      },
+      {
+        "author": "paul7Junior",
+        "created_at": "2025-01-06T13:57:31+00:00",
+        "body": "Hey @tsmith023, yes sure and thanks to the Weaviate team. It's a great soft. 😎"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1400"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1393,
+    "title": "Add support for WES in python client",
+    "body": "- mostly same as every other module\r\n- WCD API key is auth key for WES",
+    "state": "closed",
+    "created_at": "2024-11-05T11:38:43+00:00",
+    "closed_at": "2024-12-18T05:43:21+00:00",
+    "updated_at": "2024-12-18T05:43:21+00:00",
+    "author": "dirkkul",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "1.28",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 1026.0772222222222,
+    "first_comments": [],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1393"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1389,
+    "title": "Add RBAC support to python client",
+    "body": null,
+    "state": "closed",
+    "created_at": "2024-11-05T05:38:06+00:00",
+    "closed_at": "2024-12-18T05:43:27+00:00",
+    "updated_at": "2024-12-18T05:43:27+00:00",
+    "author": "dirkkul",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "1.28",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 1032.0891666666666,
+    "first_comments": [],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1389"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1383,
+    "title": "Add support for multi2vec-cohere module",
+    "body": "For reference: https://github.com/weaviate/weaviate/pull/6166",
+    "state": "closed",
+    "created_at": "2024-11-01T18:25:30+00:00",
+    "closed_at": "2024-11-15T13:14:39+00:00",
+    "updated_at": "2024-11-15T13:14:39+00:00",
+    "author": "antas-marcin",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 330.81916666666666,
+    "first_comments": [],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1383"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1361,
+    "title": "[Bug] module 'weaviate' has no attribute 'connect_to_local'",
+    "body": "Have tried the v4 and v3 versions of the quickstart neither of which work:\n```python\nclient = weaviate.connect_to_local()\nclient = weaviate.Client()\nAttributeError: module 'weaviate' has no attribute 'connect_to_local'\nAttributeError: module 'weaviate' has no attribute 'Client'\n```\n",
+    "state": "closed",
+    "created_at": "2024-10-23T05:41:18+00:00",
+    "closed_at": "2024-10-23T06:10:52+00:00",
+    "updated_at": "2024-10-23T06:10:52+00:00",
+    "author": "PylotLight",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 0.49277777777777776,
+    "first_comments": [
+      {
+        "author": "dirkkul",
+        "created_at": "2024-10-23T06:10:52+00:00",
+        "body": "I think this is the same as https://github.com/weaviate/weaviate-python-client/issues/1360 - will close for now"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1361"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1360,
+    "title": "[Bug] cannot import name '__version__' from 'weaviate'",
+    "body": "When trying to run the python v4 client in python 3.10 and run this I get the following error:\n```python \nimport weaviate.classes as wvc\n```\n```\nTraceback (most recent call last):\n  File \"<stdin>\", line 1, in <module>\n  File \"/home/lochy/.asdf/installs/python/3.10.13/lib/python3.10/site-packages/weaviate/classes/__init__.py\", line 1, in <module>\n    from .config import ConsistencyLevel\n  File \"/home/lochy/.asdf/installs/python/3.10.13/lib/python3.10/site-packages/weaviate/classes/config.py\", line 1, in <module>\n    from weaviate.collections.classes.config import (\n  File \"/home/lochy/.asdf/installs/python/3.10.13/lib/python3.10/site-packages/weaviate/collections/__init__.py\", line 1, in <module>\n    from weaviate.collections.batch.collection import BatchCollection, CollectionBatchingContextManager\n  File \"/home/lochy/.asdf/installs/python/3.10.13/lib/python3.10/site-packages/weaviate/collections/batch/__init__.py\", line 3, in <module>\n    from .client import _BatchClient\n  File \"/home/lochy/.asdf/installs/python/3.10.13/lib/python3.10/site-packages/weaviate/collections/batch/client.py\", line 3, in <module>\n    from weaviate.collections.batch.base import (\n  File \"/home/lochy/.asdf/installs/python/3.10.13/lib/python3.10/site-packages/weaviate/collections/batch/base.py\", line 16, in <module>\n    from weaviate.cluster.types import Node\n  File \"/home/lochy/.asdf/installs/python/3.10.13/lib/python3.10/site-packages/weaviate/cluster/__init__.py\", line 7, in <module>\n    from .cluster import Cluster\n  File \"/home/lochy/.asdf/installs/python/3.10.13/lib/python3.10/site-packages/weaviate/cluster/cluster.py\", line 10, in <module>\n    from weaviate.connect import Connection\n  File \"/home/lochy/.asdf/installs/python/3.10.13/lib/python3.10/site-packages/weaviate/connect/__init__.py\", line 7, in <module>\n    from .v3 import Connection\n  File \"/home/lochy/.asdf/installs/python/3.10.13/lib/python3.10/site-packages/weaviate/connect/v3.py\", line 20, in <module>\n    from weaviate import __version__ as client_version\nImportError: cannot import name '__version__' from 'weaviate' (/home/lochy/.asdf/installs/python/3.10.13/lib/python3.10/site-packages/weaviate/__init__.py)\n```\n```\nPackage                                 Version\n--------------------------------------- -----------\ngrpcio | 1.67.0\ngrpcio-health-checking  | 1.67.0\ngrpcio-tools | 1.66.2\npip | 24.2\nprotobuf | 5.28.3\nweaviate | 0.1.0\nweaviate-client | 4.9.0\n```",
+    "state": "closed",
+    "created_at": "2024-10-23T05:15:37+00:00",
+    "closed_at": "2024-10-23T06:36:17+00:00",
+    "updated_at": "2024-10-23T06:36:17+00:00",
+    "author": "PylotLight",
+    "author_type": "User",
+    "comments_count": 5,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 1.3444444444444446,
+    "first_comments": [
+      {
+        "author": "dirkkul",
+        "created_at": "2024-10-23T06:09:13+00:00",
+        "body": "Hi\r\n\r\n> weaviate | 0.1.0\r\n\r\ncan you remove this please and try again?"
+      },
+      {
+        "author": "PylotLight",
+        "created_at": "2024-10-23T06:26:00+00:00",
+        "body": "```\nSuccessfully uninstalled weaviate-0.1.0...\nTraceback (most recent call last):\n  File \"/home/lochy/repos/llm-tools/llm-tool-weaviate/demo.py\", line 3, in <module>\n    client = weaviate.connect_to_local(\nAttributeError: module 'weaviate' has no attribute 'connect_to_local'\n```\n```\n    from weaviate import __version__ as client_version\nImportError: cannot import name '__version__' from 'weaviate' (unknown location)\n```\n\nStill seem to having both issues despite pip uninstalling that weaviate module "
+      },
+      {
+        "author": "dirkkul",
+        "created_at": "2024-10-23T06:28:25+00:00",
+        "body": "just to be sure, could you:\r\n\r\n- create a new virtual environment\r\n- install only weaviate-client in that env\r\n- retry\r\n\r\n\r\n\r\n"
+      },
+      {
+        "author": "PylotLight",
+        "created_at": "2024-10-23T06:34:54+00:00",
+        "body": "I think that's working better.. \nAre we able to confirm what the conflict was? \nIs it asdf tool for managing python versions specifically, or just another globally installed module version conflict etc?"
+      },
+      {
+        "author": "dirkkul",
+        "created_at": "2024-10-23T06:36:17+00:00",
+        "body": "the `weaviate` is a dummy package and should not be installed - we are working on getting that resolved.\r\n\r\nThanks for confirming, will close this!"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1360"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1351,
+    "title": "Speed up iterator",
+    "body": "Currently we:\r\n- make a request for X objects\r\n- return them one-by-one\r\n- make the next request after all objects have been returned\r\n\r\nInstead we should\r\n- make a request for X objects\r\n- return them one-by-one\r\n- make the next request immediately while we are returning the objects in the background",
+    "state": "closed",
+    "created_at": "2024-10-17T07:58:31+00:00",
+    "closed_at": "2024-10-17T11:05:41+00:00",
+    "updated_at": "2024-10-17T11:05:41+00:00",
+    "author": "dirkkul",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 3.1194444444444445,
+    "first_comments": [
+      {
+        "author": "dirkkul",
+        "created_at": "2024-10-17T11:05:41+00:00",
+        "body": "sadly does not work - the iterator spends almost all its time doing the requests, any pre-fetching does not help"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1351"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1343,
+    "title": "Upgrade `gRPC` libraries to `1.66.x` and `protobuf` to `5.28.x`",
+    "body": "The GRPC libraries currently use `grpc-tools=1.62.x` which uses `protobuf=4.25.x`. This means that downstream projects using `protobuf` also need to use these older versions. ",
+    "state": "closed",
+    "created_at": "2024-10-15T15:02:34+00:00",
+    "closed_at": "2024-12-05T13:50:49+00:00",
+    "updated_at": "2024-12-05T13:50:49+00:00",
+    "author": "EItanya",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 1222.8041666666666,
+    "first_comments": [
+      {
+        "author": "dirkkul",
+        "created_at": "2024-12-05T13:50:49+00:00",
+        "body": "we just merged the update for the upcoming 4.10 release"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1343"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1332,
+    "title": "Fix event loop blocking and deadlocks in batching loop",
+    "body": "Due to use of `threading.Lock.acquire()` inside `async def __send_batch`, the event loop can be blocked from progressing. This becomes problematic when multiple threads call `batch.add_object` as lock contention can occur between the many locks involved in synchronising the batching algorithm\r\n\r\nIn certain scenarios this lock contention leads to a deadlock as the event loop becomes blocked by a call to `self.__active_requests_lock.acquire()` inside `async def __send_batch` that stops the event loop from progressing thereby causing `self.__active_requests` to never increase or decrease in value, since all active requests are stuck in a blocked event loop\r\n\r\nThe same may occur with the other locks so it would be best to migrate all `threading.Lock`s to `asyncio.Lock`s and to call `asyncio.Lock.acquire()` within the sidecar event loop from synchronous functions\r\n\r\nOnce this is dealt with, the batching loop is much faster in sending objects. However, this has unintended consequences for the heuristics in the dynamic batch size calculating background thread. The heuristics involved there will need to be refactored to account for the timing behaviour change between using `threading.Lock` and `asyncio.Lock`\r\n\r\nDraft PR for reference: https://github.com/weaviate/weaviate-python-client/pull/1270",
+    "state": "closed",
+    "created_at": "2024-10-11T13:57:45+00:00",
+    "closed_at": "2025-01-10T10:49:41+00:00",
+    "updated_at": "2025-01-10T10:49:42+00:00",
+    "author": "tsmith023",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "bug",
+    "milestone": null,
+    "closed_by": "tsmith023",
+    "resolution_time_hours": 2180.8655555555556,
+    "first_comments": [],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1332"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1309,
+    "title": "Problem upgrading to version higher than 4.6.7 on AWS ECS Cluster",
+    "body": "Hello,\r\n\r\nThis week we tried to upgrade the version of the Weaviate python client to `4.8.0` as we wanted to try the support for multi vector search.\r\nThe code runs fine locally but when running in a task on AWS ECS we had problems with the connection, any request (queries, `client.is_connected()`, `client.get_meta()`, etc) stucks and we get timeout.\r\nWe can see in logs that the client initialization is successful and were able to hit the `/meta` endpoint (also on our debug code it worked)\r\n\r\nWe also tried on version `4.7.1` with no luck\r\n\r\nTo be able to debug, I created the following FastAPI controller:\r\n```python\r\nimport logging\r\nfrom pydantic import BaseModel\r\nfrom fastapi import APIRouter\r\nfrom fastapi.responses import JSONResponse\r\nimport weaviate\r\nfrom weaviate.classes.query import Filter\r\n\r\nlogger = logging.getLogger(__name__)\r\nrouter = APIRouter(prefix=\"/ui\")\r\n\r\nclass StatusBody(BaseModel):\r\n    url: str\r\n    key: str\r\n    collection: str\r\n    field: str\r\n    value: str\r\n\r\n@router.post(\"/status\", response_class=JSONResponse)\r\nasync def status(body: StatusBody):\r\n    logger.info(\"Status endpoint\")\r\n\r\n    with weaviate.connect_to_wcs(\r\n        cluster_url=body.url,\r\n        auth_credentials=weaviate.auth.AuthApiKey(body.key),\r\n        additional_config=weaviate.classes.init.AdditionalConfig(timeout=weaviate.classes.init.Timeout(init=10)),\r\n        skip_init_checks=True,\r\n    ) as client:\r\n\r\n        logger.info(\"Status got client\")\r\n\r\n        result = client.collections.get(body.collection).query.fetch_objects(\r\n            filters=Filter.by_property(body.field).equal(body.value),\r\n            limit=1\r\n        )\r\n\r\n        logger.info(\"Status got response\")\r\n\r\n        data = result.objects[0].properties\r\n        logger.info(f\"Status: {data}\")\r\n\r\n        return data\r\n```\r\n\r\nWhen running it we saw the logs for \"Status endpoint\" and  \"Status got client\" but never \"Status got response\".\r\nRunning locally worked fine\r\n",
+    "state": "closed",
+    "created_at": "2024-09-18T17:15:35+00:00",
+    "closed_at": "2024-11-01T07:06:50+00:00",
+    "updated_at": "2024-11-01T07:06:50+00:00",
+    "author": "gariel",
+    "author_type": "User",
+    "comments_count": 10,
+    "reactions_count": 0,
+    "labels": "grpc",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 1045.8541666666667,
+    "first_comments": [
+      {
+        "author": "tsmith023",
+        "created_at": "2024-09-18T18:44:33+00:00",
+        "body": "Hi @gariel, thanks for raising this! As you say, the code works locally and I see the same with the tests in the repo and also running your snippet locally with some mock data. So my guess is there may be a communication issue between the client in the ECS environment and your deployed Weaviate.\r\n\r\nYou have specified `skip_init_checks=True`, which bypasses a number of checks that guarantee the client can successfully connect to the server. What happens if you change this to `False`? Do you see any errors printed or do you end up in the same situation where the API route simple times out?\r\n\r\nP.S. Are you able to experiment using the new async client in your ECS environment? You can do this simply with your code snippet by modifying as so:\r\n```python\r\nimport logging\r\nfrom pydantic import BaseModel\r\nfrom fastapi import APIRouter\r\nfrom fastapi.responses import JSONResponse\r\nimport weaviate\r\nfrom weaviate.classes.query import Filter\r\n\r\nlogger = logging.getLogger(__name__)\r\nrouter = APIRouter(prefix=\"/ui\")\r\n\r\nclass StatusBody(BaseModel):\r\n    url: str\r\n    key: str\r\n    collection: str\r\n    field: str\r\n    value: str\r\n\r\n@router.post(\"/status\", response_class=JSONResponse)\r\nasync def status(body: StatusBody):\r\n    logger.info(\"Status endpoint\")\r\n\r\n    async with weaviate.use_async_with_weaviate_cloud(\r\n        cluster_url=body.url,\r\n        auth_credentials=weaviate.auth.AuthApiKey(body.key),\r\n        additional_config=weaviate.classes.init.AdditionalConfig(timeout=weaviate.classes.init.Timeout(init=10)),\r\n        skip_init_checks=True,\r\n    ) as client:\r\n\r\n        logger.info(\"Status got client\")\r\n\r\n        result = await client.collections.get(body.collection).query.fetch_objects(\r\n            filters=Filter.by_property(body.field).equal(body.value),\r\n            limit=1\r\n        )\r\n\r\n        logger.info(\"Status got response\")\r\n\r\n        data = result.objects[0].properties\r\n        logger.info(f\"Status: {data}\")\r\n\r\n        return data\r\n```\r\nI'd be interested to know if this fixes things as it would indicate an issue with our new sync implementation running in deployed async environments!"
+      },
+      {
+        "author": "gariel",
+        "created_at": "2024-09-18T20:54:49+00:00",
+        "body": "Hi @tsmith023, I'm going to test these changes and send you the results"
+      },
+      {
+        "author": "tsmith023",
+        "created_at": "2024-09-20T10:31:51+00:00",
+        "body": "@gariel, is this issue: https://github.com/weaviate/weaviate-python-client/issues/1292, potentially related to your deployment setup?"
+      },
+      {
+        "author": "gariel",
+        "created_at": "2024-09-26T18:41:11+00:00",
+        "body": "Hi @tsmith023, sorry I was unable to focus on this until now, and yes, we normally don't use gunicorn locally for development but I started the service using it locally and was able to reproduce the problem\r\nI also implemented you code for async usage but the same problem:\r\n```json\r\n{\"asctime\": \"2024-09-26 15:25:38,442\", \"levelname\": \"INFO\", \"message\": \"Status endpoint\", \"name\": \"routes.poc.ui\", \"process\": 6705, \"taskName\": \"starlette.middleware.base.BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro\", \"request_id\": \"5de542bb-1482-4245-bbda-c33c8f5cbffa\"}\r\n{\"asctime\": \"2024-09-26 15:25:38,776\", \"levelname\": \"INFO\", \"message\": \"HTTP Request: GET https://<redacted>.gcp.weaviate.cloud/v1/meta \\\"HTTP/1.1 200 OK\\\"\", \"name\": \"httpx\", \"process\": 6705, \"taskName\": \"starlette.middleware.base.BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro\", \"request_id\": \"5de542bb-1482-4245-bbda-c33c8f5cbffa\"}\r\n{\"asctime\": \"2024-09-26 15:25:38,779\", \"levelname\": \"INFO\", \"message\": \"Status got client\", \"name\": \"routes.poc.ui\", \"process\": 6705, \"taskName\": \"starlette.middleware.base.BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro\", \"request_id\": \"5de542bb-1482-4245-bbda-c33c8f5cbffa\"}\r\n```\r\n\r\nI also removed the `skip_init_checks=True,` and the \"Status got client\" log also didn't show, it seems like it will keep hanging (no timeout or something), the curl request also keeps hanging"
+      },
+      {
+        "author": "tsmith023",
+        "created_at": "2024-10-07T14:53:15+00:00",
+        "body": "Oh interesting! Just so I understand you correctly, you are able to reproduce the problem locally if you use `gunicorn` when deploying your API in a Docker compose stack or k8s cluster?\r\n\r\nIf so, could you please share the Dockerfile you are using to replicate the problem?\r\nI am using the following and am unable to reproduce the issue that you are describing:\r\n```python\r\nimport weaviate\r\nfrom fastapi import FastAPI\r\n\r\napp = FastAPI()\r\n\r\n@app.get(\"/meta\")\r\ndef get():\r\n    with weaviate.connect_to_local(host=\"weaviate\") as client:\r\n        name = \"Thing\"\r\n        if not client.collections.exists(name):\r\n            collection = client.collections.create(name)\r\n        else:\r\n            collection = client.collections.get(name)\r\n        return collection.query.fetch_objects()\r\n```\r\nand:\r\n```Dockerfile\r\nFROM python:3.12-slim\r\n\r\nWORKDIR /app\r\n\r\nRUN python3 -m venv venv\r\n\r\nRUN ./venv/bin/pip install --upgrade pip\r\nRUN ./venv/bin/pip install fastapi\r\nRUN ./venv/bin/pip install uvicorn\r\nRUN ./venv/bin/pip install weaviate-client\r\nRUN ./venv/bin/pip install gunicorn\r\n\r\nCOPY ./app.py /app/app.py\r\n\r\nCMD [\"./venv/bin/gunicorn\", \"-w\", \"4\", \"-k\", \"uvicorn.workers.UvicornWorker\", \"app:app\", \"-b\", \"0.0.0.0:8000\"]\r\n```"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1309"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1276,
+    "title": "An invalid vector should not break the batch loop",
+    "body": "This code should be able to run and get you **one** ingested object and **one** failed object.\r\n\r\n```python\r\nprint(weaviate.__version__, client.get_meta().get(\"version\"))\r\nclient.collections.delete(\"Test\")\r\ncollection = client.collections.create(\r\n    \"Test\",\r\n    vectorizer_config=wvc.config.Configure.Vectorizer.none(),\r\n    properties=[\r\n        weaviate.classes.config.Property(name=\"sample\", data_type=weaviate.classes.config.DataType.TEXT)\r\n    ]\r\n)\r\n\r\nimport numpy as np\r\nprops = [{\"sample\": \"1 dimensions\"}, {\"sample\": \"nan dimensions\"}]\r\nvectors = [[1], np.nan]\r\nwith collection.batch.fixed_size(batch_size=2) as batch:\r\n  for i in range(2):\r\n      batch.add_object(\r\n          properties=props[i],\r\n          vector=vectors[i],\r\n      )\r\n\r\nprint(collection.batch.failed_objects)\r\n```\r\n\r\nhowever, it will fail with:\r\n\r\n```\r\nFile ~/dev/weaviate/lab/.venv/lib/python3.12/site-packages/weaviate/collections/classes/batch.py:61, in BatchObject.__init__(self, **data)\r\n     59         data[\"vector\"] = v\r\n     60     else:\r\n---> 61         data[\"vector\"] = _get_vector_v4(v)\r\n     63 data[\"uuid\"] = (\r\n     64     get_valid_uuid(u) if (u := data.get(\"uuid\")) is not None else uuid_package.uuid4()\r\n     65 )\r\n     66 super().__init__(**data)\r\n\r\nFile ~/dev/weaviate/lab/.venv/lib/python3.12/site-packages/weaviate/util.py:451, in _get_vector_v4(vector)\r\n    449     return get_vector(vector)\r\n    450 except TypeError as e:\r\n--> 451     raise WeaviateInvalidInputError(\r\n    452         f\"The vector you supplied was malformatted! Vector:  {vector}\"\r\n    453     ) from e\r\n\r\nWeaviateInvalidInputError: Invalid input provided: The vector you supplied was malformatted! Vector:  nan.\r\n```\r\n\r\n\r\nThanks to  Riley Griffith for pointing it out 💯 ",
+    "state": "closed",
+    "created_at": "2024-09-03T20:00:18+00:00",
+    "closed_at": "2024-09-13T09:56:54+00:00",
+    "updated_at": "2024-09-13T09:56:54+00:00",
+    "author": "dudanogueira",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 229.94333333333333,
+    "first_comments": [
+      {
+        "author": "dirkkul",
+        "created_at": "2024-09-13T09:56:54+00:00",
+        "body": "I'd prefer to leave it like it is.\r\n\r\nWe have `collection.batch.failed_objects` because sending objects to weaviate is async, eg you add the object and the function returns, but the actual sending happens later and we cannot provide feedback about this right away. \r\n\r\nHowever we CAN provide feedback right away for malformed input. There are more cases were invalid input will produce an error and it would be quite some work to change this."
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1276"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1275,
+    "title": "Potentially missing attribute is_safe when instantiating a _WeaviateUUIDInt class",
+    "body": "The sample app weaviate_v4.py from [openllmetry](https://github.com/traceloop/openllmetry) is throwing following error: AttributeError: '_WeaviateUUIDInt' object has no attribute 'is_safe'\r\n\r\nFor details see https://github.com/traceloop/openllmetry/issues/1929\r\n\r\nThere are ways to fix this in that repo, but I am not sure if that is the best approach. How about adding this line to the constructor of _WeaviateUUIDInt (https://github.com/weaviate/weaviate-python-client/blob/main/weaviate/collections/queries/base.py#L66)?\r\n`object.__setattr__(self, \"is_safe\", uuid_lib.SafeUUID.unknown)`\r\nThis is also the default value when creating an UUID instance.\r\n\r\nI made the proposed change locally, ran some tests, and it looked promising.",
+    "state": "closed",
+    "created_at": "2024-09-03T18:18:05+00:00",
+    "closed_at": "2024-09-26T11:08:59+00:00",
+    "updated_at": "2024-09-26T11:08:59+00:00",
+    "author": "tibor-reiss",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 544.8483333333334,
+    "first_comments": [],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1275"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1265,
+    "title": "Update warning message for `datetime` use without timezone when querying",
+    "body": "Queries show the same `datetime` warning as insertion, which can be confusing at first\r\n\r\n```shell\r\nCon002: You are inserting the datetime object 2017-01-01 00:00:00 without a timezone. The timezone will be set to UTC.\r\n            To use a different timezone, specify it in the datetime object. For example:\r\n            datetime.datetime(2021, 1, 1, 0, 0, 0, tzinfo=datetime.timezone(-datetime.timedelta(hours=2))).isoformat() = 2021-01-01T00:00:00-02:00\r\n```\r\n\r\nProposal: could update `inserting` to `using` so it applies to both insertions & queries",
+    "state": "closed",
+    "created_at": "2024-08-28T13:17:45+00:00",
+    "closed_at": "2024-10-01T09:41:58+00:00",
+    "updated_at": "2024-10-01T09:41:58+00:00",
+    "author": "databyjp",
+    "author_type": "User",
+    "comments_count": 3,
+    "reactions_count": 0,
+    "labels": "good first issue,usability",
+    "milestone": null,
+    "closed_by": "databyjp",
+    "resolution_time_hours": 812.4036111111111,
+    "first_comments": [
+      {
+        "author": "gssakash",
+        "created_at": "2024-09-25T15:10:54+00:00",
+        "body": "Requesting for clarification @databyjp  :-\r\n\r\nI would like to take up this issue, unless I'm understanding this incorrectly, do you just need the warning message to get updated with the word ``using`` instead of ``inserting``?\r\n\r\nOR is the requirement to have 2 separate types of warning messages between the operations ``INSERTION`` and ``QUERY`` respectively? I have an approach in mind to do this as well."
+      },
+      {
+        "author": "databyjp",
+        "created_at": "2024-09-26T09:46:10+00:00",
+        "body": "Hi @gssakash - Yup the proposal is for a text update of the existing error msg :) \r\n\r\nI do not think adding a second message would be necessary."
+      },
+      {
+        "author": "gssakash",
+        "created_at": "2024-09-26T15:29:42+00:00",
+        "body": "I have generated a PR fixing this at #1320! \r\nI appreciate the prompt replies, thanks!"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1265"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1261,
+    "title": "Add support for Databricks Foundation Model API - Embedding & generative",
+    "body": "parameters:\r\n\r\nembedding:\r\nonly standard\r\nhttps://github.com/weaviate/weaviate/pull/5508\r\n\r\ngenerative:\r\n\tModel            string\r\n\tFrequencyPenalty *float64\r\n\tLogprobs         *bool\r\n\tTopLogprobs      *int\r\n\tMaxTokens        *int\r\n\tN                *int\r\n\tPresencePenalty  *float64\r\n\tStop             []string\r\n\tTemperature      *float64\r\n\tTopP             *float64\r\n\r\nhttps://github.com/weaviate/weaviate/pull/5536",
+    "state": "closed",
+    "created_at": "2024-08-28T05:18:16+00:00",
+    "closed_at": "2024-09-11T06:48:44+00:00",
+    "updated_at": "2024-09-11T06:48:44+00:00",
+    "author": "dirkkul",
+    "author_type": "User",
+    "comments_count": 3,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 337.5077777777778,
+    "first_comments": [
+      {
+        "author": "tsmith023",
+        "created_at": "2024-08-30T09:18:10+00:00",
+        "body": "Hi @hsm207, [here](https://github.com/weaviate/weaviate-python-client/pull/1273) is the PR for `generative-databricks`. Could you test it out and then we'll merge the client change? Cheers 😁 "
+      },
+      {
+        "author": "hsm207",
+        "created_at": "2024-09-02T14:41:27+00:00",
+        "body": "@tsmith023 I've tested both and they work. Thanks!\r\n\r\nIs there a timeline for when these changes will be released and is going to be a minor or a patch release?"
+      },
+      {
+        "author": "hsm207",
+        "created_at": "2024-09-04T03:44:07+00:00",
+        "body": "> Is there a timeline for when these changes will be released and is going to be a minor or a patch release?\r\n\r\n@tsmith023 or @dirkkul ☝️"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1261"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1255,
+    "title": "Add support for Generative FriendliAI Module",
+    "body": "https://github.com/weaviate/weaviate/pull/5598",
+    "state": "closed",
+    "created_at": "2024-08-23T05:10:22+00:00",
+    "closed_at": "2024-08-29T14:28:21+00:00",
+    "updated_at": "2024-08-29T14:28:21+00:00",
+    "author": "dirkkul",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 153.29972222222221,
+    "first_comments": [],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1255"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1254,
+    "title": "Collection.get() doesn't take a tenant?",
+    "body": "I can't find _any examples_ of how you do multitenancy stuff with this API? \r\n[Here]( https://github.com/weaviate/weaviate-python-client/blob/main/weaviate/collections/collections/sync.py#L167) you have .get() which initialises a Collection but you don't pass the tenant argument?!\r\nThere is _no_ documentation around tenants. How is one supposed to use it?",
+    "state": "closed",
+    "created_at": "2024-08-22T23:28:46+00:00",
+    "closed_at": "2024-08-23T05:07:25+00:00",
+    "updated_at": "2024-08-23T08:05:10+00:00",
+    "author": "awhillas",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 5.644166666666667,
+    "first_comments": [
+      {
+        "author": "dirkkul",
+        "created_at": "2024-08-23T05:07:25+00:00",
+        "body": "please use our [forum for support request](https://forum.weaviate.io/), thanks!"
+      },
+      {
+        "author": "tsmith023",
+        "created_at": "2024-08-23T08:05:09+00:00",
+        "body": "@awhillas, [here](https://weaviate.io/developers/weaviate/manage-data/multi-tenancy#crud-operations) are the docs for multi-tenancy CRUD ops "
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1254"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1252,
+    "title": "add Backup cancellation from client ",
+    "body": "there are situations were backup gets stuck and in those situations we would like to cancel the created (stuck) backups. \r\n\r\nso Weaviate will support backup cancellation from `1.27+` and in order for clients users to be able to cancel  backups\r\n\r\n\r\n[that is the new specification for deleting a backup ](https://github.com/weaviate/weaviate/pull/5639/files#diff-6e46d1a078f97315e53e6f21a97a0d18ac955212f3272ad75cfe0db74a248398R4862)\r\n\r\n<img width=\"1075\" alt=\"Screenshot 2024-08-22 at 16 41 26\" src=\"https://github.com/user-attachments/assets/72d93173-6bfb-4205-8e09-ec22087a9057\">\r\n",
+    "state": "closed",
+    "created_at": "2024-08-22T14:42:24+00:00",
+    "closed_at": "2024-10-10T05:52:35+00:00",
+    "updated_at": "2024-10-10T05:52:35+00:00",
+    "author": "moogacs",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "enhancement",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 1167.1697222222222,
+    "first_comments": [
+      {
+        "author": "moogacs",
+        "created_at": "2024-08-22T14:43:45+00:00",
+        "body": "linked issues : \r\nhttps://github.com/weaviate/java-client/issues/297\r\nhttps://github.com/weaviate/weaviate-go-client/issues/240\r\nhttps://github.com/weaviate/typescript-client/issues/188"
+      },
+      {
+        "author": "dirkkul",
+        "created_at": "2024-10-10T05:52:35+00:00",
+        "body": "this is merged"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1252"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1237,
+    "title": "property.to_dict() with tokenizer instead of tokenization",
+    "body": "When exporting the collection config using `to_dict`, the `tokenization` parameter is defined as `tokenizer`. \r\n\r\nThis causes a wrong parameter name to be generated, and when using `creating_from_dict` with this dict, it doesn't have a  tokenization, and fall backs to default (word) when used with `create_from_dict`.\r\n\r\nthis affects 4.7.1. [Here is the line to change](https://github.com/weaviate/weaviate-python-client/blob/5482164c2732db8ea9ce66b1c4743a4c2140b8ac/weaviate/collections/classes/config.py#L1223)\r\n\r\nCode to test:\r\n\r\n```python\r\nimport weaviate\r\nfrom weaviate import classes as wvc\r\nclient = weaviate.connect_to_local()\r\n    \r\nprint(weaviate.__version__, client.get_meta().get(\"version\"))\r\n\r\nclient.collections.delete([\"Test\", \"NewTest\"])\r\ncollection = client.collections.create(\"Test\",\r\n    properties=[\r\n        wvc.config.Property(\r\n            name=\"field_tokenizer\",\r\n            data_type=wvc.config.DataType.TEXT,\r\n            tokenization=wvc.config.Tokenization.FIELD\r\n        )\r\n    ]\r\n)\r\n\r\n# extract the collection config dict\r\nschema_dict = collection.config.get().to_dict()\r\ndefined_tokenizer = schema_dict.get(\"properties\")[0].get(\"tokenizer\")\r\nassert defined_tokenizer == \"field\"\r\n\r\n# create a new collection\r\nmodified_schema_dict = schema_dict\r\n# change it to a new name\r\nmodified_schema_dict[\"class\"] = \"NewTest\"\r\nnew_collection = client.collections.create_from_dict(modified_schema_dict)\r\nnew_tokenizer = new_collection.config.get().properties[0].tokenization.value\r\nprint(\"new tokenizer\", new_tokenizer)\r\nassert new_tokenizer == \"field\"\r\n```",
+    "state": "closed",
+    "created_at": "2024-08-12T19:34:09+00:00",
+    "closed_at": "2024-08-28T08:31:13+00:00",
+    "updated_at": "2024-08-28T08:31:14+00:00",
+    "author": "dudanogueira",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 372.9511111111111,
+    "first_comments": [
+      {
+        "author": "dirkkul",
+        "created_at": "2024-08-28T08:31:13+00:00",
+        "body": "this should be fixed and will be in the next release"
+      }
+    ],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1237"
+  },
+  {
+    "repository": "weaviate/weaviate-python-client",
+    "issue_number": 1168,
+    "title": "Add `.fetch_objects_by_ids()` method as shorthand for filtering with `.fetch_objects`",
+    "body": "As the title suggests, the client is capable of fetching objects by a list of IDs but this is verbose requiring the user to make use of the filtering syntax. Instead, we should have a shortcut method that abstracts this syntax away for this common use-case",
+    "state": "closed",
+    "created_at": "2024-07-09T11:01:33+00:00",
+    "closed_at": "2024-08-20T08:04:32+00:00",
+    "updated_at": "2024-08-20T08:04:32+00:00",
+    "author": "tsmith023",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "good first issue",
+    "milestone": null,
+    "closed_by": "dirkkul",
+    "resolution_time_hours": 1005.0497222222223,
+    "first_comments": [],
+    "url": "https://github.com/weaviate/weaviate-python-client/issues/1168"
+  }
+]

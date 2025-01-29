@@ -1,0 +1,9 @@
+{
+  "total_issues": 100,
+  "repositories": 1,
+  "date_range": {
+    "earliest": "2024-10-22T19:52:40+00:00",
+    "latest": "2025-01-29T14:24:20+00:00"
+  },
+  "issues_by_repo": {
+    "langchain-ai/langchain": 

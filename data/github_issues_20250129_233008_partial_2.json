@@ -1,0 +1,1132 @@
+[
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 638,
+    "title": "`fix_base_url` replaces all instances of `/v1` instead of trailing `/v1`",
+    "body": "## Issue \n\nThe `fix_base_url` function currently replaces all instances of `/v1` in the `base_url` instead of only swapping the trailing `/v1` which I believe was it's intended use case. This causes the Python SDK to make the wrong request when using an AI proxy, in this case Cloudflare AI Gateway which includes `/v1` in the URL.\n\n## Sandbox with Reproduction\nhttps://codesandbox.io/p/devbox/dg6hv3\n\n\nref: https://github.com/cohere-ai/cohere-python/blob/15c4c47056e6fe6cca4d50d85f7c060f74321c46/src/cohere/client.py#L123",
+    "state": "closed",
+    "created_at": "2025-01-20T14:13:21+00:00",
+    "closed_at": "2025-01-21T13:11:40+00:00",
+    "updated_at": "2025-01-21T15:38:55+00:00",
+    "author": "jasonpraful",
+    "author_type": "User",
+    "comments_count": 4,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 22.971944444444443,
+    "first_comments": [
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2025-01-21T13:16:07+00:00",
+        "body": "Thanks for reporting @jasonpraful , should be fixed by 5.13.10!"
+      },
+      {
+        "author": "jasonpraful",
+        "created_at": "2025-01-21T14:10:38+00:00",
+        "body": "@billytrend-cohere Looks like it introduces another bug when the base URL is passed and it **does not contain  a `cohere`** link `fix_base_url` returns `None`. \n\nhttps://github.com/cohere-ai/cohere-python/blob/e2c6a0797eb21b4402da9b2d26646787d2efc77e/src/cohere/client.py#L123-L126\n\nThis then causes `get_base_url` in `base_client` to fallback to using `Environment.PRODUCTION`. \n\nhttps://github.com/cohere-ai/cohere-python/blob/e2c6a0797eb21b4402da9b2d26646787d2efc77e/src/cohere/base_client.py#L6266-L6272"
+      },
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2025-01-21T15:28:56+00:00",
+        "body": "oof you're right, thanks for the catch!\n"
+      },
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2025-01-21T15:38:53+00:00",
+        "body": "should be fixed by 5.13.11, thanks for your pr"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/638"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 630,
+    "title": "Drop `parameterized` as a required runtime dependency",
+    "body": "**Describe the improvement**\r\n\r\nThe `parameterized` dependency is not used anywhere in the repo (that I can see). It is also a testing library that, if needed at test time, should be included as an optional `dev` dependency.\r\n\r\nLet me know if I'm missing something.\r\n\r\n**Code snippet of expected outcome**\r\n\r\n`cohere 5.11.4 requires parameterized<0.10.0,>=0.9.0, which is not installed.`\r\n",
+    "state": "closed",
+    "created_at": "2025-01-09T19:42:40+00:00",
+    "closed_at": "2025-01-21T13:44:09+00:00",
+    "updated_at": "2025-01-21T13:44:10+00:00",
+    "author": "BwL1289",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 282.02472222222224,
+    "first_comments": [
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2025-01-21T13:44:09+00:00",
+        "body": "done in 5.13.10 thank @BwL1289 !"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/630"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 625,
+    "title": "Async compatible AWSClient?",
+    "body": "**Describe the improvement**\r\n\r\nI am looking for an async compatible rerank client for AWS Bedrock. Currently I see that BedrockClientV2 inherits from AwsClientV2 -> ClientV2. Is there something similar planned to make an AsyncBedrockClient from AsyncClientV2? It seems to me this is quite achievable as it would mean just using the same event hooks I think? Or am I missing something more complicated. Thanks.\r\n",
+    "state": "closed",
+    "created_at": "2024-12-22T20:31:05+00:00",
+    "closed_at": "2025-01-27T16:55:52+00:00",
+    "updated_at": "2025-01-27T16:55:52+00:00",
+    "author": "lucasgadams",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "mkozakov",
+    "resolution_time_hours": 860.4130555555555,
+    "first_comments": [
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2025-01-03T16:25:29+00:00",
+        "body": "Hey @lucasgadams thanks so much for the suggestion. I have looked into this, and unfortunately the AWS libraries do not provide async implementations. There is some complexity to implementing their http logic so we don't plan producing our own async aws clients.\r\n\r\nAre you able to use something like `run_in_executor` for your use case?"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/625"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 622,
+    "title": "Numpy versioning",
+    "body": "Hello cohere! \r\n\r\nThis dependency requirement for numpy is preventing my company from updating to the latest version of the cohere api: https://github.com/cohere-ai/cohere-python/blob/05fe9e7ffc962295f2fc6a24d114ca1eaa365cb6/poetry.lock#L1606\r\n\r\nIs there are reason to restrict the numpy version to `<2.0`? Is there no support for the latest numpy (2.2.0)?\r\n\r\nThanks!\r\n",
+    "state": "closed",
+    "created_at": "2024-12-16T10:50:43+00:00",
+    "closed_at": "2024-12-20T12:16:08+00:00",
+    "updated_at": "2024-12-20T18:04:13+00:00",
+    "author": "mgorinova",
+    "author_type": "User",
+    "comments_count": 3,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 97.42361111111111,
+    "first_comments": [
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2024-12-19T13:15:09+00:00",
+        "body": "hey thanks for reporting, this is because of our sagemaker dependency. Looking into how to resolve this 🙏  https://github.com/aws/sagemaker-python-sdk/issues/4882"
+      },
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2024-12-20T11:54:37+00:00",
+        "body": "hey @mgorinova, we have now dropped all the aws deps from the sdk. Users will have to install them manually but I think this is a net positive for most developers! please try 5.13.4"
+      },
+      {
+        "author": "mgorinova",
+        "created_at": "2024-12-20T18:04:11+00:00",
+        "body": "Fantastic, thank you @billytrend-cohere!"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/622"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 614,
+    "title": "invalid request: valid input_type must be provided with the provided model",
+    "body": "Getting this error while evaluating Cohere/Cohere-embed-multilingual-v3.0, and I'm using Python. \r\nCan I get some help please?\r\n",
+    "state": "closed",
+    "created_at": "2024-12-04T12:19:51+00:00",
+    "closed_at": "2025-01-03T16:25:52+00:00",
+    "updated_at": "2025-01-03T16:25:52+00:00",
+    "author": "yjoonjang",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 724.1002777777778,
+    "first_comments": [
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2024-12-04T16:14:49+00:00",
+        "body": "Hey, please supply a value for `input_type`! more docs: https://docs.cohere.com/reference/embed#request.body.input_type"
+      },
+      {
+        "author": "mkozakov",
+        "created_at": "2024-12-16T16:59:21+00:00",
+        "body": "@yjoonjang were you able to resolve this?"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/614"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 613,
+    "title": "Cohere rerank on Bedrock - `api_version` missing in the sdk ",
+    "body": "**SDK Version (required)**\r\nProvide the version you are using. To get the version, run the following python snippet\r\n```python\r\nimport cohere\r\n\r\nprint(cohere.__version__) # 5.6.1\r\n```\r\nversion is : 5.13.1\r\n\r\n\r\n**Describe the bug**\r\nA clear and concise description of what the bug is.\r\n\r\nI'm unable to call the cohere rerank model through the AWS Bedrock client.\r\nGoing through the cohere v2 client it works fine:\r\n\r\n```\r\nco_cohere = cohere.ClientV2()\r\ntop_n = 3\r\nquery = \"What is the capital of the United States?\"\r\ndocs = [\"text1\", ..\"textN\"]\r\n\r\nresponse = co_cohere.rerank(\r\n    model=\"rerank-v3.5\",\r\n    query=query,\r\n    documents=docs,\r\n    top_n=top_n,\r\n)\r\n# works\r\n```\r\nHowever following the documentation [here](https://docs.cohere.com/docs/cohere-works-everywhere#bedrock) and also reading the code in this [sdk](https://github.com/cohere-ai/cohere-aws/tree/main) If I run :\r\n\r\n```\r\nco_bedrock = cohere.BedrockClient(aws_region=\"eu-central-1\")\r\n\r\nresponse_bedrock = co_bedrock.rerank(\r\n    model=\"cohere.rerank-v3-5:0\",\r\n    query=query,\r\n    documents=docs,\r\n    top_n=top_n, \r\n)\r\n```\r\n\r\nI get the following error:\r\n\r\n`BadRequestError: status_code: 400, body: {'meta': {'billed_units': {'input_tokens': -1.0, 'output_tokens': -1.0}, 'tokens': {'input_tokens': -1.0, 'output_tokens': -1.0}}, 'message': 'Malformed input request: #/api_version: 1 is not greater or equal to 2, please reformat your input and try again.'}`\r\n\r\n\r\nI tried adding 'api_version' as parameter in both the `.rerank()`  and `.BedrockClient()` functions but it doesn't work.\r\n\r\nGood news is I'm able to go through the [aws boto3 sdk ](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/bedrock-runtime/client/invoke_model.html) and make it work with this:\r\n\r\n```\r\nimport boto3\r\nimport json\r\nbedrock_client = boto3.client(service_name=\"bedrock-runtime\", region_name=\"eu-central-1\")\r\njson_params = {\r\n    \"query\": query,\r\n    \"documents\": docs,\r\n    \"top_n\": top_n,\r\n    \"api_version\": 2\r\n}\r\n\r\nresult_bedrock = bedrock_client.invoke_model(\r\n    modelId=\"cohere.rerank-v3-5:0\",\r\n    body=json.dumps(json_params),\r\n    contentType=\"application/json\",\r\n    accept=\"application/json\",\r\n)\r\nraw = result_bedrock[\"body\"].read() # works\r\n```\r\n\r\n\r\nQuestion: Is what I did the expected solution ? What's the recommended way to use cohere though AWS Bedrock ? \r\n\r\n**Screenshots**\r\nIf applicable, add screenshots to help explain your problem.\r\n",
+    "state": "closed",
+    "created_at": "2024-12-03T23:16:58+00:00",
+    "closed_at": "2024-12-04T17:24:15+00:00",
+    "updated_at": "2024-12-04T17:24:15+00:00",
+    "author": "Othmane796",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 18.121388888888887,
+    "first_comments": [
+      {
+        "author": "mkozakov",
+        "created_at": "2024-12-03T23:22:12+00:00",
+        "body": "hey @Othmane796, bedrock currently only supports API V2, which means the recommended way to use rerank is with the V2 client:\r\n\r\n`co_bedrock = cohere.BedrockClientV2()`\r\n\r\nunder the hood, that client actually injects `api_version=2` into the request body.\r\n\r\nwe will:\r\n\r\n- update `cohere.BedrockClient` to throw a clearer error when used with rerank\r\n- swap our documentation to use BedrockClientV2() as soon as Chat V2 and Embed V2 become available on bedrock as well"
+      },
+      {
+        "author": "Othmane796",
+        "created_at": "2024-12-04T09:24:57+00:00",
+        "body": "Awesome! thanks @mkozakov !\r\n\r\nOut of curiosity is it normal that the outputs are *exactly* the same when going through bedrock or cohere directly? Rerun both multiple times and output seems deterministic for each though:\r\n\r\nI'm using the examples from the doc though \r\n\r\n```\r\ntop_n = 3\r\nquery = \"What is the capital of the United States?\"\r\ndocs = [\r\n    \"Carson City is the capital city of the American state of Nevada.\",\r\n    \"The Commonwealth of the Northern Mariana Islands is a group of islands in the Pacific Ocean. Its capital is Saipan.\",\r\n    \"Capitalization or capitalisation in English grammar is the use of a capital letter at the start of a word. English usage varies from capitalization in other languages.\",\r\n    \"Washington, D.C. (also known as simply Washington or D.C., and officially as the District of Columbia) is the capital of the United States. It is a federal district.\",\r\n    \"Capital punishment has existed in the United States since beforethe United States was a country. As of 2017, capital punishment is legal in 30 of the 50 states.\",\r\n]\r\n\r\nresponse = co_cohere.rerank(\r\n    model=\"rerank-v3.5\",\r\n    query=query,\r\n    documents=docs,\r\n    top_n=top_n,\r\n)\r\nfor res in response.results:\r\n    print(res.index, res.relevance_score)\r\n    \r\n #output   \r\n3 0.8742601\r\n0 0.17292508\r\n4 0.10793502\r\n\r\n```\r\n    \r\n When the model is hosted in bedrock:\r\n ```\r\n co_bedrock = cohere.BedrockClientV2(aws_region=\"eu-central-1\")\r\nresponse_bedrock = co_bedrock.rerank(\r\n    model=\"cohere.rerank-v3-5:0\",\r\n    query=query,\r\n    documents=docs,\r\n    top_n=top_n,\r\n)\r\nfor res in response_bedrock.results:\r\n    print(res.index, res.relevance_score)\r\n \r\n# output\r\n3 0.8745175\r\n0 0.17288318\r\n4 0.10782225\r\n```\r\n\r\n"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/613"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 603,
+    "title": "TypeError when using documents parameter with co.chat()",
+    "body": "**SDK Version (required)**: 5.11.4\r\n\r\n**Describe the bug**\r\nWhen trying to use the documents parameter with co.chat() method in the Cohere Python SDK v5.11.4, receiving a TypeError indicating that documents is an unexpected keyword argument.\r\n\r\nThe error occurs when trying to use the chat endpoint with RAG:\r\n```\r\nchat_response = co.chat(\r\n    model=\"command-r-plus-08-2024\",\r\n    messages=chat_messages,\r\n    documents=[{\r\n        \"data\": {\"text\": doc[\"text\"]}\r\n    } for doc in context_docs],\r\n    temperature=0.2\r\n)\r\n```\r\n\r\n## Error Message\r\n```\r\nTypeError: V2Client.chat() got an unexpected keyword argument 'documents'\r\n```\r\n\r\n## Expected Behavior\r\n\r\nBased on the [Cohere documentation](https://docs.cohere.com/reference/chat#request.body.documents), the chat endpoint should accept a `documents` parameter for RAG functionality. \r\n\r\n## Actual Behavior\r\n\r\nThe SDK throws a TypeError when attempting to use the `documents` parameter.\r\n\r\n## Steps to Reproduce\r\n\r\n1. Initialize Cohere client with V2 endpoint (`co = cohere.ClientV2(`...)\r\n2. Prepare chat messages and context documents\r\n3. Call `co.chat()` with documents parameter",
+    "state": "closed",
+    "created_at": "2024-11-22T05:47:08+00:00",
+    "closed_at": "2024-12-16T14:08:32+00:00",
+    "updated_at": "2024-12-16T14:08:32+00:00",
+    "author": "ai-yann",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 584.3566666666667,
+    "first_comments": [
+      {
+        "author": "ai-yann",
+        "created_at": "2024-11-22T14:41:32+00:00",
+        "body": "The solution: I had to cast `id` of the documents to be of type `string`, which the documentation does say. The error message should indicate that document IDs must be strings, like: \r\n\r\n> 'TypeError: Document IDs must be of type string in the documents parameter. Please ensure all document IDs are properly cast to strings before making the chat request.'\r\n"
+      },
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2024-12-16T14:08:32+00:00",
+        "body": "This is now fixed, you should get better errors in the backend."
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/603"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 593,
+    "title": "sagemaker increases import time from ~1 sec to ~10 seconds",
+    "body": "**SDK Version(s) & bug reproducer**\r\n\r\n```python\r\nimport time\r\nt = time.time()\r\nimport cohere\r\nprint(time.time() - t)\r\n\r\nprint(cohere.__version__)\r\n```\r\n\r\n```\r\n10.188275575637817\r\n5.11.0\r\n```\r\n\r\n```\r\n0.7559852600097656\r\n5.10.0\r\n```\r\n\r\nThis also significantly impacts import time of packages that depend on cohere, such as [instructor-ai/instructor](https://github.com/instructor-ai/instructor).",
+    "state": "closed",
+    "created_at": "2024-10-17T01:27:23+00:00",
+    "closed_at": "2024-10-21T10:07:35+00:00",
+    "updated_at": "2024-10-21T10:07:36+00:00",
+    "author": "ben-albrecht",
+    "author_type": "User",
+    "comments_count": 7,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 104.67,
+    "first_comments": [
+      {
+        "author": "neilkumar",
+        "created_at": "2024-10-17T03:20:33+00:00",
+        "body": "It's also adding a lot of noise to the logs \r\n\r\n```\r\n[10/16/24 02:15:29] INFO     INFO  Not applying SDK defaults from location: /etc/xdg/sagemaker/config.yaml                                                                                                                                                                            config_utils.py:243\r\n                    INFO     INFO  Not applying SDK defaults from location: /home/app/.config/sagemaker/config.yaml       \r\n```\r\n\r\n"
+      },
+      {
+        "author": "andaldanar",
+        "created_at": "2024-10-17T21:44:24+00:00",
+        "body": "Facing the same issue. Just want to use the Rerank models directly from the Cohere API, but the `sagemaker` import (and others like `mlflow`, `docker`, etc.) are dealbreakers for our use case.\r\n\r\nIt'd be great if we could install only the core Cohere platform stuff by default, with optional installs for specific platforms (Bedrock, SageMaker, Azure, GCP, Oracle OCI)\r\n\r\nThis way, we can avoid the slow imports and unnecessary dependencies when we're just using the basic Cohere API. Could we have a `lite`/ `core` version that doesn't pull in all these extra packages?\r\n\r\nThank you!"
+      },
+      {
+        "author": "ben-albrecht",
+        "created_at": "2024-10-17T22:55:02+00:00",
+        "body": "To speed up imports until this is fixed on the next release, you can switch to previous release:\n\n```\nuv pip install cohere==5.10.0\n```"
+      },
+      {
+        "author": "lucasgadams",
+        "created_at": "2024-10-18T14:33:13+00:00",
+        "body": "+1, it is definitely a pain now with the sagemaker dependency. If you set logging to debug you can see it is making a ton of network requests at import time? I guess it is trying to get some configuration stuff and is assuming you are importing sagemaker on an aws machine. I see logs like this being generated:\r\n```\r\n2024-10-18T14:16:01.962101Z [debug    ] Caught retryable HTTP exception while making metadata service request to http://169.254.169.254/latest/api/token: Could not connect to the endpoint URL: \"http://169.254.169.254/latest/api/token\" [botocore.utils]\r\nbotocore.exceptions.EndpointConnectionError: Could not connect to the endpoint URL: \"http://169.254.169.254/latest/meta-data/iam/security-credentials/\"\r\n...\r\n```\r\nwith a few retries. To be clear, this happens when you import sagemaker alone so doesn't seem an issue with cohere besides the dependency. Not sure why the sagemaker library is designed like that.\r\n"
+      },
+      {
+        "author": "ben-albrecht",
+        "created_at": "2024-10-19T17:17:35+00:00",
+        "body": "@billytrend-cohere @1vn - I believe the issue began with #588, with the introduction of [sagemaker](https://github.com/aws/sagemaker-python-sdk) as a dependency.\r\n\r\nPerhaps you could make this an optional dependency, such that the default install does not increase import time by ~10 seconds?\r\n\r\ne.g.\r\n\r\n```\r\nuv pip install cohere[sagemaker]\r\n```\r\n"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/593"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 590,
+    "title": "Error in embedding model id",
+    "body": "cohere==5.1.2\r\n\r\nWe're trying to run an embed job through the python client, and we're getting this error:\r\n\r\n`{'message': \"model 'packed-embed-multilingual-light-v3.0-bulkjob' not found, make sure the correct model ID was used and that you have access to the model.\"}\r\n`\r\nalthough we're using the correct model name: **\"embed-multilingual-light-v3.0\"**\r\n\r\nTraceback: \r\n\r\n```\r\n[09:00:41] [INFO] [dku.utils]  - Traceback (most recent call last):\r\n[09:00:41] [INFO] [dku.utils]  -   File \"/opt/dataiku/python/dataiku/container/exec_py_recipe.py\", line 15, in <module>\r\n[09:00:41] [INFO] [dku.utils]  -     exec(fd.read())\r\n[09:00:41] [INFO] [dku.utils]  -   File \"<string>\", line 34, in <module>\r\n[09:00:41] [INFO] [dku.utils]  -   File \"/home/dataiku/lib/project/project-python-libs/SMART_SEARCH/python/text_processing/embedding.py\", line 122, in create_embed_job\r\n[09:00:41] [INFO] [dku.utils]  -     embed_job = self.co.embed_jobs.create(\r\n[09:00:41] [INFO] [dku.utils]  -   File \"/opt/dataiku/code-env/lib/python3.9/site-packages/cohere/embed_jobs/client.py\", line 174, in create\r\n[09:00:41] [INFO] [dku.utils]  -     raise ApiError(status_code=_response.status_code, body=_response_json)\r\n[09:00:41] [INFO] [dku.utils]  - cohere.core.api_error.ApiError: status_code: 404, body: {'message': \"model 'packed-embed-multilingual-light-v3.0-bulkjob' not found, make sure the correct model ID was used and that you have access to the model.\"}\r\n```",
+    "state": "closed",
+    "created_at": "2024-10-03T13:45:44+00:00",
+    "closed_at": "2024-10-31T10:33:19+00:00",
+    "updated_at": "2024-10-31T10:33:20+00:00",
+    "author": "khalid4294",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "khalid4294",
+    "resolution_time_hours": 668.7930555555556,
+    "first_comments": [
+      {
+        "author": "mkozakov",
+        "created_at": "2024-10-21T16:04:41+00:00",
+        "body": "This should have been addressed. @khalid4294 can you please confirm?"
+      },
+      {
+        "author": "khalid4294",
+        "created_at": "2024-10-31T10:33:19+00:00",
+        "body": "yes, it's fixed, thanks!"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/590"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 589,
+    "title": "Add PDF file support as option for documents parameter",
+    "body": "**Describe the improvement**\r\n\r\nAdd support for PDF files in the documents parameter, allowing users to provide PDFs directly. \r\n\r\n**Code snippet of expected outcome**\r\n\r\n```\r\nimport cohere\r\n\r\nco = cohere.ClientV2(\"<<apiKey>>\")\r\n\r\nresponse = co.chat(\r\n    model=\"command-r-plus\",\r\n    documents=[{'id': '1', 'data': {'path': '/path/to/document.pdf'}}],\r\n    messages=[\r\n        {\r\n            \"role\": \"user\",\r\n            \"content\": \"What is this document about?\"\r\n        }\r\n    ]\r\n)\r\n\r\nprint(response)\r\n```\r\n\r\nHere is how much code I currently have to write to get the above going:\r\n[chat_with_pdf.zip](https://github.com/user-attachments/files/17237727/chat_with_pdf.zip)",
+    "state": "closed",
+    "created_at": "2024-10-03T00:44:23+00:00",
+    "closed_at": "2024-10-03T11:48:09+00:00",
+    "updated_at": "2024-10-03T11:48:09+00:00",
+    "author": "ai-yann",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 11.062777777777777,
+    "first_comments": [
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2024-10-03T11:48:09+00:00",
+        "body": "Hey @ai-yann thanks for suggestion, we won't be implementing this right now because PDF would introduce a lot of complexity with parsing etc. we would currently expect the client to manage this complexity."
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/589"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 584,
+    "title": "ImportError in Cohere SDK 5.9.3: Broken import paths after patch",
+    "body": "**SDK Version (required)**\r\n```python\r\nimport cohere\r\n\r\nprint(cohere.__version__) # 5.9.3\r\n```\r\n\r\n**Describe the bug**\r\nSeems like the version update of 5.9.3 have broken some import paths.\r\n\r\n```\r\n from cohere.types.embed_response import EmbedResponse_EmbeddingsByType\r\nImportError: cannot import name 'EmbedResponse_EmbeddingsByType' from 'cohere.types.embed_response' (/root/.cache/pypoetry/virtualenvs/<some_path_part>/lib/python3.11/site-packages/cohere/types/embed_response.py)\r\n```\r\n\r\nI am using a fork of semantic-router, and it seems like the patch version of `5.9.3` broken the dependency. This is the import in context https://github.com/aurelio-labs/semantic-router/blob/413f147c2e731c77bb68974714e9874b4f471695/semantic_router/encoders/cohere.py#L5\r\n\r\nEverything works well in `5.9.2` as far as I know.\r\n",
+    "state": "closed",
+    "created_at": "2024-09-19T15:40:28+00:00",
+    "closed_at": "2024-09-25T13:15:54+00:00",
+    "updated_at": "2024-09-25T13:15:54+00:00",
+    "author": "ofekby",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 141.59055555555557,
+    "first_comments": [],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/584"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 578,
+    "title": "re: Exception ignored in: <generator object BaseCohere.chat_stream at 0x1541109e0>",
+    "body": "**SDK Version (required)**\r\n```\r\n... using:\r\n- macOS Sonona 14.6\r\n- python 3.10.14\r\n- pip show cohere\r\nName: cohere\r\nVersion: 5.9.1\r\nSummary: \r\nHome-page: \r\nAuthor: \r\nAuthor-email: \r\nLicense: \r\nLocation: /opt/miniconda3/envs/clsProxy/lib/python3.10/site-packages\r\nRequires: boto3, fastavro, httpx, httpx-sse, parameterized, pydantic, pydantic-core, requests, tokenizers, types-requests, typing_extensions\r\nRequired-by: \r\n```\r\n\r\n**Describe the bug**\r\nI see in the Terminal: \r\nException ignored in: <generator object BaseCohere.chat_stream at 0x1541109e0>\r\n... everytime I click a button to abort the stream before it's done, which is required as sometimes models go a bit crazy and won't stop responding or respond with obvious nonsense.\r\n\r\nI think there's a bug in chat_stream's handling of GeneratorExit or ???\r\n\r\nThe following code works properly for:\r\nAnthropic, Google/Gemini, Groq, LMStudio, Mistral, Ollama, OpenAI, OpenRouter, Perplexity,\r\nbut not Cohere ...\r\n\r\n```\r\nasync def CohereResponseStreamer(prompt):\r\n\tif MODEL is None: yield \"\"; return # sometimes model list is empty\r\n\ttry:\r\n\t\tco = cohere.Client(\r\n\t\t\tapi_key=os.environ[\"CO_API_KEY\"], \r\n\t\t\ttimeout=30\r\n\t\t)\r\n\t\tparams = {\r\n\t\t\t\"model\": MODEL,\r\n\t\t\t\"message\": prompt,\r\n\t\t}\r\n\t\tif TEMP is not None:\r\n\t\t\tparams[\"temperature\"] = TEMP\r\n\t\tsafety_unsupported_models = [\"command\", \"command-r-03-2024\", \"command-r\", \"command-light\", \"command-light-nightly\", \"c4ai-aya-23-35b\"]\r\n\t\tif MODEL not in safety_unsupported_models:\r\n\t\t\tparams[\"safety_mode\"] = \"NONE\"\r\n\r\n\t\t# try:\r\n\t\tstream = co.chat_stream(**params)\r\n\t\tfor chunk in stream:\r\n\t\t\tif ABORT:\r\n\t\t\t\tset_abort(False)\r\n\t\t\t\tyield f\"\\n... response stopped by button click.\"\r\n\t\t\t\tstream.close()  # properly close the generator\r\n\t\t\t\tbreak  # exit the generator cleanly\r\n\t\t\tif chunk.event_type == \"text-generation\":\r\n\t\t\t\tcontent = chunk.text\r\n\t\t\t\tif isinstance(content, str):\r\n\t\t\t\t\tcleaned_content = content.replace(\"**\", \"\")  # no ugly Markdown in plain text\r\n\t\t\t\t\tyield cleaned_content\r\n\t\t\t\telse:\r\n\t\t\t\t\tyield \"\"\r\n\t\t# except GeneratorExit:\r\n\t\t# \tprint(\"CohereResponseStreamer: GeneratorExit caught, closing stream.\")\r\n\t\t# \tstream.close()  # ensure the generator is closed even on GeneratorExit\r\n\t\t# \treturn  # exit gracefully after handling GeneratorExit\r\n\t\t# except Exception as e:\r\n\t\t# \tprint(f\"CohereResponseStreamer exception:\\n{e}\\nco:\\n{co}\\n\")\r\n\t\t# \tstream.close()  # close the stream on other exceptions too\r\n\t\t# \tyield f\"Error:\\nCohere's response for model: {MODEL}\\n{e}\"\r\n\r\n\texcept Exception as e:\r\n\t\tyield f\"Error:\\nCohere's response for model: {MODEL}\\n{e}\"\r\n... the error happens with and without the try-except's.\r\n\r\nIn the Terminal:\r\nException ignored in: <generator object BaseCohere.chat_stream at 0x1541109e0>\r\nTraceback (most recent call last):\r\n  File \"/Users/cleesmith/clsProxy/aidetour_simple_chat.py\", line 758, in run_streamer\r\n    async for chunk in streamer_function(prompt):\r\nRuntimeError: generator ignored GeneratorExit\r\n```\r\n\r\n\r\n**Screenshots**\r\nSee attached screenshot too.\r\n![cohere_bug_generator](https://github.com/user-attachments/assets/117b98dd-bb6d-4cf1-8bdc-ccaa8d4d5193)\r\n",
+    "state": "closed",
+    "created_at": "2024-09-18T15:28:20+00:00",
+    "closed_at": "2024-10-07T14:00:05+00:00",
+    "updated_at": "2024-10-07T14:00:05+00:00",
+    "author": "cleesmith",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 454.52916666666664,
+    "first_comments": [
+      {
+        "author": "cleesmith",
+        "created_at": "2024-09-19T15:29:24+00:00",
+        "body": "I tried the 5.9.2, 5.9.3, 5.94 upgrades and the generator runtime error still occurs.\r\nThis code seems to be getting close:\r\n```\r\nasync def CohereResponseStreamer(prompt):\r\n\tif MODEL is None: yield \"\"; return # sometimes model list is empty\r\n\ttry:\r\n\t\tco = cohere.Client(\r\n\t\t\tapi_key=os.environ[\"CO_API_KEY\"], \r\n\t\t\ttimeout=30\r\n\t\t)\r\n\t\tparams = {\r\n\t\t\t\"model\": MODEL,\r\n\t\t\t\"message\": prompt,\r\n\t\t}\r\n\t\tif TEMP is not None:\r\n\t\t\tparams[\"temperature\"] = TEMP\r\n\t\tsafety_unsupported_models = [\"command\", \"command-r-03-2024\", \"command-r\", \"command-light\", \"command-light-nightly\", \"c4ai-aya-23-35b\"]\r\n\t\tif MODEL not in safety_unsupported_models:\r\n\t\t\tparams[\"safety_mode\"] = \"NONE\"\r\n\t\t# params[\"accepts\"] = \"text/event-stream\" # doesn't help generator issue\r\n\t\ttry:\r\n\t\t\tstream = co.chat_stream(**params)\r\n\t\t\tfor chunk in stream:\r\n\t\t\t    if ABORT:\r\n\t\t\t        set_abort(False)\r\n\t\t\t        yield f\"\\n... response stopped by button click.\"\r\n\t\t\t        stream.close()\r\n\t\t\t        return  # exit the generator cleanly?\r\n\t\t\t    if chunk.event_type == \"text-generation\":\r\n\t\t\t        content = chunk.text\r\n\t\t\t        if isinstance(content, str):\r\n\t\t\t            cleaned_content = content.replace(\"**\", \"\")\r\n\t\t\t            yield cleaned_content\r\n\t\t\t        else:\r\n\t\t\t            yield \"\"\r\n\t\texcept GeneratorExit:\r\n\t\t    return\r\n\t\texcept RuntimeError:\r\n\t\t    pass\r\n```\r\nI suppose the only option left is to use the Cohere models via an API key with OpenRouter ... any other ideas?\r\n\r\nIt might help to review the code here:\r\nhttps://github.com/openai/openai-python/blob/6172976b16821b24194a05e3e3fe5cb2342a2b4b/src/openai/lib/streaming/chat/_completions.py#L121\r\n... notice their comment:\r\n```\r\nThis context manager ensures the response cannot be leaked if you don't read\r\n    the stream to completion.\r\n```\r\n... as currently the cohere sdk for python is leaking."
+      },
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2024-10-07T14:00:05+00:00",
+        "body": "Hey @cleesmith, many thanks for this detailed report. I have shared this with our SDK generation vendor so they can upstream a fix. Please track this issue! https://github.com/fern-api/fern/issues/4817"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/578"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 573,
+    "title": "Same code, error in 1st VPS but fine in 2nd",
+    "body": "```\r\nroot@x1:~# cat website.py\r\nimport os\r\nimport cohere\r\n\r\ncohere_api_key = os.getenv('COHERE_API_KEY')\r\nco = cohere.Client(cohere_api_key)\r\n\r\nresponse = co.chat(\r\n    model=\"command-r-plus\",\r\n    message=\"Hey I want to create !\"\r\n)\r\n\r\nprint(response)\r\n\r\n\r\nroot@x1:~# python3.11 website.py\r\n/usr/lib/python3/dist-packages/requests/__init__.py:109: RequestsDependencyWarning: urllib3 (2.2.3) or chardet (5.1.0)/charset_normalizer (3.0.1) doesn't match a supported version!\r\n  warnings.warn(\r\nTraceback (most recent call last):\r\n  File \"/usr/local/lib/python3.11/dist-packages/cohere/base_client.py\", line 1071, in chat\r\n    object_=_response.json(),\r\n            ^^^^^^^^^^^^^^^^\r\n  File \"/usr/local/lib/python3.11/dist-packages/httpx/_models.py\", line 766, in json\r\n    return jsonlib.loads(self.content, **kwargs)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/lib/python3.11/json/__init__.py\", line 346, in loads\r\n    return _default_decoder.decode(s)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/lib/python3.11/json/decoder.py\", line 337, in decode\r\n    obj, end = self.raw_decode(s, idx=_w(s, 0).end())\r\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/lib/python3.11/json/decoder.py\", line 355, in raw_decode\r\n    raise JSONDecodeError(\"Expecting value\", s, err.value) from None\r\njson.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)\r\n\r\nDuring handling of the above exception, another exception occurred:\r\n\r\nTraceback (most recent call last):\r\n  File \"/root/website.py\", line 7, in <module>\r\n    response = co.chat(\r\n               ^^^^^^^^\r\n  File \"/usr/local/lib/python3.11/dist-packages/cohere/client.py\", line 103, in _wrapped\r\n    return func(*args, **kwargs)\r\n           ^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/local/lib/python3.11/dist-packages/cohere/client.py\", line 35, in _wrapped\r\n    return method(*args, **kwargs)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"/usr/local/lib/python3.11/dist-packages/cohere/base_client.py\", line 1157, in chat\r\n    raise ApiError(status_code=_response.status_code, body=_response.text)\r\ncohere.core.api_error.ApiError: status_code: 403, body: <!doctype html><meta charset=\"utf-8\"><meta name=viewport content=\"width=device-width, initial-scale=1\"><title>403</title>403 Forbidden\r\n```\r\n```\r\nroot@x2:~# cat website.py\r\n\r\nimport os\r\nimport cohere\r\n\r\ncohere_api_key = os.getenv('COHERE_API_KEY')\r\nco = cohere.Client(cohere_api_key)\r\n\r\nresponse = co.chat(\r\n        message=\"hello world!\"\r\n)\r\n\r\nprint(response)\r\nroot@x2:~# python3.11 website.py\r\n/usr/lib/python3/dist-packages/requests/__init__.py:109: RequestsDependencyWarning: urllib3 (2.2.2) or chardet (5.1.0)/charset_normalizer (3.0.1) doesn't match a supported version!\r\n  warnings.warn(\r\ntext='Hello! How can I help you today?' generation_id='9ab327d6-.....-b9cfbb5fa5c3' citations=None documents=None is_search_required=None search_queries=None search_results=None finish_reason='COMPLETE' tool_calls=None chat_history=[Message_User(role='USER', message='hello world!', tool_calls=None), Message_Chatbot(role='CHATBOT', message='Hello! How can I help you today?', tool_calls=None)] prompt=None meta=ApiMeta(api_version=ApiMetaApiVersion(version='1', is_deprecated=None, is_experimental=None), billed_units=ApiMetaBilledUnits(input_tokens=3.0, output_tokens=9.0, search_units=None, classifications=None), tokens=ApiMetaTokens(input_tokens=209.0, output_tokens=9.0), warnings=None) response_id='c45db2c7-.....4af242d965fd'\r\n```",
+    "state": "closed",
+    "created_at": "2024-09-12T11:21:37+00:00",
+    "closed_at": "2024-10-11T18:36:06+00:00",
+    "updated_at": "2024-10-11T18:36:06+00:00",
+    "author": "neochine",
+    "author_type": "User",
+    "comments_count": 5,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "manuel-cohere",
+    "resolution_time_hours": 703.2413888888889,
+    "first_comments": [
+      {
+        "author": "neochine",
+        "created_at": "2024-09-12T11:23:13+00:00",
+        "body": "1st VPS is USA, second is Euro. Also same API KEY\r\n```\r\nroot@x1:~# python3.11 -m pip freeze | grep cohere\r\ncohere==5.9.1\r\nroot@x2:~# python3.11 -m pip freeze | grep cohere\r\ncohere==5.9.1\r\n```"
+      },
+      {
+        "author": "neochine",
+        "created_at": "2024-09-12T11:26:13+00:00",
+        "body": "Changing 1st vps code by removing model=\"command-r-plus\" still gives same `cohere.core.api_error.ApiError: status_code: 403, body: <!doctype html><meta charset=\"utf-8\"><meta name=viewport content=\"width=device-width, initial-scale=1\"><title>403</title>403 Forbidden`\r\n```\r\nimport os\r\nimport cohere\r\n\r\ncohere_api_key = os.getenv('COHERE_API_KEY')\r\nco = cohere.Client(cohere_api_key)\r\n\r\nresponse = co.chat(\r\n    message=\"Hey I want to create !\"\r\n)\r\n\r\nprint(response)\r\n\r\n```"
+      },
+      {
+        "author": "manuel-cohere",
+        "created_at": "2024-09-12T15:43:11+00:00",
+        "body": "Hello @neochine ,\r\n\r\nCan you please share IP details via email to security@cohere.com ?\r\n\r\nThank you!"
+      },
+      {
+        "author": "neochine",
+        "created_at": "2024-09-13T13:43:54+00:00",
+        "body": "Sent @manuel-cohere "
+      },
+      {
+        "author": "manuel-cohere",
+        "created_at": "2024-10-11T18:36:06+00:00",
+        "body": "I don't see any more traffic being blocked from the IPs you shared. I'll close the ticket :)"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/573"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 567,
+    "title": "Old Document Issues",
+    "body": "```py\r\nfor event in stream:\r\n    if event.event_type == \"text-generation\":\r\n        print(event.text, end='')\r\n```\r\n\r\nThen, apparently, I will throw up an error.\r\nIt worked when I made it look like the following, but is the document still old...?\r\nYou don't have to reply, but please confirm when you have time.\r\n\r\n```py\r\nif stream and hasattr(response, 'text'):\r\n     generated_text = response.text\r\nelse:\r\n     generated_text = \"Error: The expected response was not returned. \"\r\n```\r\n\r\nBy any chance, if was the problem...?\r\nIs it probably like this?\r\n\r\n```py\r\nif stream and hasattr(response, 'text'):\r\n     generated_text = response.text\r\nelse:\r\n     generated_text = \"Error: The expected response was not returned. \"\r\nprint(generated_text)\r\n```",
+    "state": "closed",
+    "created_at": "2024-08-30T21:00:50+00:00",
+    "closed_at": "2024-12-19T22:08:46+00:00",
+    "updated_at": "2024-12-19T22:08:46+00:00",
+    "author": "sisiruirui-sisi",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "mkozakov",
+    "resolution_time_hours": 2665.132222222222,
+    "first_comments": [
+      {
+        "author": "mkozakov",
+        "created_at": "2024-11-14T02:36:00+00:00",
+        "body": "hey @minomizuha sorry for the delay. i'm having trouble understanding your question, can you please share a complete code snippet and the error message that you're seeing? events of type text-generation will always have `text` in them, i'm not sure why you were seeing an error"
+      },
+      {
+        "author": "mkozakov",
+        "created_at": "2024-12-19T22:08:46+00:00",
+        "body": "Closing due to staleness. Please re-open if you continue to experience this issue"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/567"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 563,
+    "title": "Unable to add the documents to the vector store as I am getting Internal server error",
+    "body": "**SDK Version (required)**\r\nProvide the version you are using. To get the version, run the following python snippet\r\n```python\r\nimport cohere\r\n\r\nprint(cohere.__version__) # 5.6.1\r\n```\r\n\r\n**Describe the bug**\r\nA clear and concise description of what the bug is.\r\n1. Getting Internal server Error\r\n` Retrying langchain_cohere.embeddings.CohereEmbeddings.embed_with_retry.<locals>._embed_with_retry in 4.0 seconds as it raised InternalServerError: status_code: 500, body: {'message': 'internal server error, this has been reported to our developers. id b8361921-90ee-4ce3-aa18-f2bdda5a6a8b'}.`\r\n2. This is my code that I am using for the adding data and I am using embed-english-v2.0 as 4096 dimensions\r\n\r\n**Screenshots**\r\nIf applicable, add screenshots to help explain your problem.\r\n1. Code : \r\n![image](https://github.com/user-attachments/assets/2b342cc2-24cc-452c-9344-758736407be7)\r\n2. Error :\r\n![image](https://github.com/user-attachments/assets/79ed1f90-43c3-4389-b711-a837e769b175)\r\n",
+    "state": "closed",
+    "created_at": "2024-08-19T11:26:01+00:00",
+    "closed_at": "2024-11-14T02:37:00+00:00",
+    "updated_at": "2024-11-14T02:37:01+00:00",
+    "author": "crtejavardhanreddy",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "mkozakov",
+    "resolution_time_hours": 2079.1830555555557,
+    "first_comments": [
+      {
+        "author": "mkozakov",
+        "created_at": "2024-10-21T16:09:17+00:00",
+        "body": "This should have been addressed, can you please confirm that you're able to run this?"
+      },
+      {
+        "author": "mkozakov",
+        "created_at": "2024-11-14T02:37:01+00:00",
+        "body": "Closing as stale"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/563"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 556,
+    "title": "About making botocore an optional dependency",
+    "body": "**Describe the improvement**\r\n\r\nI am installing `cohere-python` in a docker image. I don't use any AWS service, nevertheless the library still installs the `boto3` dependency that takes around 25 MB of space. Removing the dependency or making it optional can reduce size of the image. \r\n\r\n[Example](https://python-poetry.org/docs/pyproject/#extras) of optional dependencies when using poetry. \r\n\r\nThank you!",
+    "state": "closed",
+    "created_at": "2024-08-07T00:16:40+00:00",
+    "closed_at": "2024-11-13T06:22:50+00:00",
+    "updated_at": "2024-11-13T06:22:50+00:00",
+    "author": "pushkarnimkar",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "pushkarnimkar",
+    "resolution_time_hours": 2358.1027777777776,
+    "first_comments": [
+      {
+        "author": "pushkarnimkar",
+        "created_at": "2024-09-18T23:57:20+00:00",
+        "body": "Hello! Just checking again to see if there's any interest :) "
+      },
+      {
+        "author": "jjfeore",
+        "created_at": "2024-11-07T22:31:35+00:00",
+        "body": "**Edit:** Looks like this change was already made in 5.11.1 and I just missed it. Thanks!"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/556"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 541,
+    "title": "response_format problem",
+    "body": "I want to get a JSON object from Cohere LLM and that's why I'm gonna use response_format. But the error occurs.\r\n![3](https://github.com/user-attachments/assets/53bca6ca-2b2e-425d-be73-ec2f925dae22)\r\n\r\nHow can I fix this?\r\n\r\n",
+    "state": "closed",
+    "created_at": "2024-07-21T13:53:19+00:00",
+    "closed_at": "2024-08-13T16:22:12+00:00",
+    "updated_at": "2024-08-13T16:22:13+00:00",
+    "author": "Dexterity104",
+    "author_type": "User",
+    "comments_count": 3,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "mkozakov",
+    "resolution_time_hours": 554.4813888888889,
+    "first_comments": [
+      {
+        "author": "billytrend-cohere",
+        "created_at": "2024-07-22T13:23:39+00:00",
+        "body": "@Dexterity104 have you updated to the latest python SDK version? The following snippet works fine for me:\r\n\r\n```\r\n        chat = co.chat(\r\n            message=\"give me taylor swift details at the time she sung the song '22'\",\r\n            response_format={\r\n                \"type\": \"json_object\",\r\n                \"schema\": {\r\n                  \"type\": \"object\",\r\n                  \"properties\": {\r\n                    \"name\": { \"type\": \"string\" },\r\n                    \"age\": { \"type\": \"integer\" }\r\n                  },\r\n                  \"required\": [\"name\", \"age\"]\r\n                }\r\n            }\r\n        )\r\n\r\n        print(chat)\r\n        # {\\n  \"name\": \"Taylor Swift\",\\n  \"age\": 22\\n}\r\n```"
+      },
+      {
+        "author": "abdullahkady",
+        "created_at": "2024-07-29T16:04:24+00:00",
+        "body": "Hi @Dexterity104, did upgrading your version fix it as Billy mentioned?"
+      },
+      {
+        "author": "mkozakov",
+        "created_at": "2024-08-13T16:22:12+00:00",
+        "body": "@Dexterity104 we're going to close the Issue as we cannot reproduce on the latest version of the SDK. please let us know if you're still encountering issues on the latest version and we can reopen."
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/541"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 502,
+    "title": "Document the possible base_models",
+    "body": "In the [fine tuning docs](https://docs.cohere.com/reference/createfinetunedmodel) it mentions:\r\n\r\n```\r\nBASE_MODEL OBJECT\r\nname\r\nstring\r\nThe name of the base model.\r\n```\r\n\r\nWhat are the valid values for the base model?  Can this be any model on HuggingFace hub?  \r\n\r\nI'm looking to fine-tune a Mistral 7B model.",
+    "state": "closed",
+    "created_at": "2024-05-21T10:28:09+00:00",
+    "closed_at": "2024-11-22T01:35:11+00:00",
+    "updated_at": "2024-11-22T01:35:11+00:00",
+    "author": "tleyden",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "linear[bot]",
+    "resolution_time_hours": 4431.117222222222,
+    "first_comments": [],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/502"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 490,
+    "title": "finetuned model ID mismatch between Python SDK and UI",
+    "body": "**Issue**: When using the Python SDK to finetune a classification model, the returned ID does not match the correct model ID. More specifically, the ID in the Python SDK resembles \\`\\`, but the ID shown in the UI (i.e., the correct ID) resembles `-ft`.\n\n**Solution**: have the `GetFinetunedModelResponse` in the Python SDK return the \"correct\" model ID that matches the ID shown in the UI.\n\n**Steps to Reproduce**: To reproduce/get the ID in the Python SDK, you can do the following:\n\n```\nimport cohere\n\nCOHERE_API_KEY = \"YOUR_API_KEY\"\nco = cohere.Client(api_key=COHERE_API_KEY)\n\nmodel = co.finetuning.create_finetuned_model(\n\trequest=FinetunedModel(\n\t\tname=\"my-model-name\",\n\t\tsettings=Settings(\n\t\t\tbase_model=BaseModel(\n\t\t\t\tbase_type=\"BASE_TYPE_CLASSIFICATION\",\n\t\t\t),\n\t\t\tdataset_id=\"my-dataset-id\",\n\t\t),\n\t)\n)\nmodel_id = model.finetuned_model.id\n\nclf_response = co.classify(\n    inputs=[\"classify this!\"],\n    model=model_id\n)\n```\n\nThe `co.classify` call fails with the following error:\n\n```\nApiError: status_code: 404, body: {'message': \"model '<MODEL_UUID>' not found, make sure the correct model ID was used and that you have access to the model.\"}\"\n```\n\nIf we navigate to the UI, we find that the \\`\\` for the finetuned model has a \"-ft\" suffix, so the user can get around the `ApiError` just by running:\n\n```\nclf_response = co.classify(\n    inputs=[\"classify this!\"],\n    model=model_id+\"-ft\"\n)\n```",
+    "state": "closed",
+    "created_at": "2024-05-03T19:07:58+00:00",
+    "closed_at": "2024-11-10T01:35:14+00:00",
+    "updated_at": "2024-11-10T01:35:14+00:00",
+    "author": "mdelrosa",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "linear[bot]",
+    "resolution_time_hours": 4566.454444444445,
+    "first_comments": [
+      {
+        "author": "JulianArruti",
+        "created_at": "2024-05-04T03:30:28+00:00",
+        "body": "Same problem here"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/490"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 340,
+    "title": "Async Chat Streaming fails",
+    "body": "Hey Cohere Team 👋 , I'm currently trying to implement async `Token Streaming` with Cohere (`cohere==4.33`). However, when running this code, I get some errors:\r\n\r\n```python\r\ncompletion = co.chat(\r\n    chat_history=_conversation,\r\n    stream=True,\r\n    message=message,\r\n    model=\"command\",\r\n    temperature=0.1,\r\n)\r\n\r\n>>> async for chunk in completion: # Breaks here\r\n    if isinstance(chunk, StreamTextGeneration):\r\n        yield {\r\n            \"message\": chunk.text,\r\n            \"finish_reason\": \"\",\r\n        }\r\n    elif isinstance(chunk, StreamEnd):\r\n        yield {\r\n            \"message\": \"\",\r\n            \"finish_reason\": \"stop\",\r\n        }\r\n```\r\n\r\nI get this error message:\r\n\r\n`TypeError: 'async for' requires an object with __aiter__ method, got bytes`\r\n\r\nWhich comes from the `StreamingChat` object ([code](https://github.com/cohere-ai/cohere-python/blob/main/cohere/responses/chat.py#L269)):\r\n\r\n```python\r\nasync def __aiter__(self) -> Generator[StreamResponse, None, None]:\r\n    index = 0\r\n    >>> async for line in self.response.content: # self.response.content are bytes\r\n        item = self._make_response_item(index, line)\r\n        index += 1\r\n        if item is not None:\r\n            yield item\r\n```\r\n\r\nWhen looking at the origin of the response, I get the `_request` method ([code](https://github.com/cohere-ai/cohere-python/blob/main/cohere/client.py#L901)) which runs:\r\n\r\n```python\r\nwith requests.Session() as session:\r\n            retries = Retry(\r\n                total=self.max_retries,\r\n                backoff_factor=0.5,\r\n                allowed_methods=[\"POST\", \"GET\"],\r\n                status_forcelist=cohere.RETRY_STATUS_CODES,\r\n                raise_on_status=False,\r\n            )\r\n            session.mount(\"https://\", HTTPAdapter(max_retries=retries))\r\n            session.mount(\"http://\", HTTPAdapter(max_retries=retries))\r\n\r\n            if stream:\r\n                return session.request(method, url, headers=headers, json=json, **self.request_dict, stream=True)\r\n```\r\n\r\nNot sure whether my implementation is incorrect, please let me know if my code is incorrect or if you can reproduce the error! Thanks a lot 🚀 Also happy about any directions to examples or documentation.\r\n\r\nEdit: It works when I remove the `async for `loop in my code, but then the method gets synchronous :( \r\n\r\n",
+    "state": "closed",
+    "created_at": "2023-11-09T21:44:26+00:00",
+    "closed_at": "2024-12-04T17:31:45+00:00",
+    "updated_at": "2024-12-04T17:31:45+00:00",
+    "author": "thomashacker",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 9379.788611111111,
+    "first_comments": [
+      {
+        "author": "murdadesmaeeli",
+        "created_at": "2023-11-20T19:47:46+00:00",
+        "body": "could you past the completion object,_conversation and one iteration of what chunk is?\r\n\r\nIt seems the problem is a data type problem `'async for' requires an object with __aiter__ method, got bytes`"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/340"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 339,
+    "title": "rerank (async client) does not have parameter return_documents ",
+    "body": "https://github.com/cohere-ai/cohere-python/blob/5e9e872cd75ebea3c2091dd043b875b494f21535/cohere/client_async.py#L495C33-L495C38\r\n\r\nHello, the reranker (async client) does not have parameter return_documents. It is hard-coded to `False` in the code above.",
+    "state": "closed",
+    "created_at": "2023-11-09T09:48:29+00:00",
+    "closed_at": "2024-12-04T17:31:45+00:00",
+    "updated_at": "2024-12-04T17:31:45+00:00",
+    "author": "cirezd",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 9391.721111111112,
+    "first_comments": [
+      {
+        "author": "murdadesmaeeli",
+        "created_at": "2023-11-20T19:55:48+00:00",
+        "body": "Hi @cirezd, you might be right in that there might not be a specific reason for this hard coding. @mkozakov , @lfayoux can you confirm? \r\n\r\nIf there is no specific reason then this could be fixed with a simple PR. "
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/339"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 325,
+    "title": "Some clarity on rate limiting.",
+    "body": "Hey great job on the multi-lingual models. I've been trying the cohere trial api and I have a question about rate-limiting.\r\nThe error says that the number of requests is rate limited to 10/min. But I'm getting these errors even after 4-5 requests (these are batched requests). So I was wondering if the rate-limit also applied at token level like openAI api? ",
+    "state": "closed",
+    "created_at": "2023-10-17T13:08:33+00:00",
+    "closed_at": "2024-12-04T17:31:44+00:00",
+    "updated_at": "2024-12-04T17:31:44+00:00",
+    "author": "AyushExel",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 9940.386388888888,
+    "first_comments": [
+      {
+        "author": "samuelpath",
+        "created_at": "2023-11-02T20:18:10+00:00",
+        "body": "Hi @AyushExel, I'm not sure this is the best place to ask your question since it is not really related to Python's SDK per se (the API key is language agnostic and can also be used with Node, Go, Curl, Cohere's CLI, and so on).\r\n\r\nYou would stand a better chance to get a prompt answer by asking your question on [Cohere's Discord community](https://discord.gg/co-mmunity), in the [#general-chat](https://discord.com/channels/954421988141711382/954421988783444043) channel."
+      },
+      {
+        "author": "murdadesmaeeli",
+        "created_at": "2023-11-20T19:59:16+00:00",
+        "body": "@AyushExel , were you able to answer your question?"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/325"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 320,
+    "title": "Incorrect `finish_reason` for `generate`?",
+    "body": "I'm not sure if this is the right place to ask this, but `generate` with `max_tokens=3` finshes with `finish_reason=COMPLETE`\r\n\r\n```\r\n$ curl --request POST \\\r\n     --url https://api.cohere.ai/v1/generate \\\r\n     --header 'accept: application/json' \\\r\n     --header \"authorization: Bearer $COHERE_API_KEY\" \\\r\n     --header 'content-type: application/json' \\\r\n     --data '\r\n{\r\n  \"max_tokens\": 3,\r\n  \"stream\": true,\r\n  \"prompt\": \"Please explain to me how LLMs work\"\r\n}\r\n'\r\n{\"text\":\" LL\",\"is_finished\":false}\r\n{\"text\":\"Ms\",\"is_finished\":false}\r\n{\"text\":\",\",\"is_finished\":false}\r\n{\"is_finished\":true,\"finish_reason\":\"COMPLETE\",\"response\":{\"id\":\"05835269-8d06-422d-8f4e-fc3e8a2b8a96\",\"generations\":[{\"id\":\"73b93e8c-ee35-4831-a3be-c7534b31dbb9\",\"text\":\" LLMs,\",\"finish_reason\":\"COMPLETE\"}],\"prompt\":\"Please explain to me how LLMs work\"}}\r\n```\r\n\r\nShould it finish with `MAX_TOKENS`?",
+    "state": "closed",
+    "created_at": "2023-10-04T08:12:41+00:00",
+    "closed_at": "2024-12-04T17:31:44+00:00",
+    "updated_at": "2024-12-04T17:31:44+00:00",
+    "author": "harupy",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 10257.3175,
+    "first_comments": [
+      {
+        "author": "samuelpath",
+        "created_at": "2023-11-02T20:25:56+00:00",
+        "body": "Hi @harupy, I'm not sure this is the best place to ask your question since it is not really related to Python's SDK per se. Indeed, your question is related to a CURL query.\r\n\r\nYou would stand a better chance to get a prompt answer by asking your question on [Cohere's Discord community](https://discord.gg/co-mmunity), in the [#general-chat](https://discord.com/channels/954421988141711382/954421988783444043) channel.\r\n\r\nHowever, I'm not able to reproduce, since I get `MAX_TOKENS` as expected:\r\n\r\n```\r\n$ curl --request POST \\\r\n     --url https://api.cohere.ai/v1/generate \\\r\n     --header 'accept: application/json' \\\r\n     --header \"authorization: Bearer $COHERE_API_KEY\" \\\r\n     --header 'content-type: application/json' \\\r\n     --data '\r\n{\r\n  \"max_tokens\": 3,\r\n  \"stream\": true,\r\n  \"prompt\": \"Please explain to me how LLMs work\"\r\n}\r\n'\r\n{\"text\":\" LL\",\"is_finished\":false}\r\n{\"text\":\"Ms\",\"is_finished\":false}\r\n{\"text\":\",\",\"is_finished\":false}\r\n{\"is_finished\":true,\"finish_reason\":\"MAX_TOKENS\",\"response\":{\"id\":\"379fb392-fa7c-4e26-9940-0e0a5b057b08\",\"generations\":[{\"id\":\"fa961ef2-6f0e-4fc6-98eb-0df16e9960c5\",\"text\":\" LLMs,\",\"finish_reason\":\"MAX_TOKENS\"}],\"prompt\":\"Please explain to me how LLMs work\"}}\r\n```\r\n\r\nCan you try again to see if you still encounter this issue?"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/320"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 304,
+    "title": "API Documentation Broken",
+    "body": "The Python SDK API reference is not building correctly on Read the Docs. Only headers load, all body text is absent. \r\n\r\nhttps://cohere-sdk.readthedocs.io/en/latest/cohere.html#api",
+    "state": "closed",
+    "created_at": "2023-09-14T21:45:58+00:00",
+    "closed_at": "2024-12-04T17:31:43+00:00",
+    "updated_at": "2024-12-04T17:31:43+00:00",
+    "author": "maxTarlov",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 10723.7625,
+    "first_comments": [
+      {
+        "author": "maxTarlov",
+        "created_at": "2023-09-14T21:46:34+00:00",
+        "body": "![image](https://github.com/cohere-ai/cohere-python/assets/51882792/05d8600c-52a3-450e-bcc0-2349cde2e52b)\r\n"
+      },
+      {
+        "author": "akshatpoddar",
+        "created_at": "2023-10-01T21:46:57+00:00",
+        "body": "This issue does not occur while making the html locally. Might be an issue with the hosting environment."
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/304"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 271,
+    "title": "Swagger/OpenAPI specification",
+    "body": "Hey. We want to release an SDK for C# and would like to know if you have an official Swagger/OpenAPI spec? I did not find this in the documentation and when searching among the repositories of the organization\r\nI think it would be great if this is available in a separate repository and updated according to the latest changes, like OpenAI - https://github.com/openai/openai-openapi\r\n",
+    "state": "closed",
+    "created_at": "2023-07-31T20:52:39+00:00",
+    "closed_at": "2024-08-26T19:19:57+00:00",
+    "updated_at": "2024-08-26T19:19:57+00:00",
+    "author": "HavenDV",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "HavenDV",
+    "resolution_time_hours": 9406.455,
+    "first_comments": [],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/271"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 260,
+    "title": "Support for Validation Dataset in co.create_custom_model",
+    "body": "Using `co.create_custom_model(model_name, dataset=dataset, model_type=\"CLASSIFY\")`, can I also provide a validation dataset? Otherwise, it automatically splits my dataset into train/test. I can upload a validation dataset in the Cohere dashboard, but not with the Python SDK.",
+    "state": "closed",
+    "created_at": "2023-07-14T13:57:38+00:00",
+    "closed_at": "2024-12-04T17:31:43+00:00",
+    "updated_at": "2024-12-04T17:31:43+00:00",
+    "author": "nick-gibb",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 12219.568055555555,
+    "first_comments": [],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/260"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 252,
+    "title": "tokenize() got an unexpected keyword argument 'model'",
+    "body": "using cohere python 4.11.2:\r\n\r\n```\r\nresponse = co.tokenize(\r\n  text=text,\r\n  model='embed-multilingual-v2.0'\r\n)\r\nprint(response.tokens)\r\n```\r\nError: \r\n```\r\ntokenize() got an unexpected keyword argument 'model'\r\n```",
+    "state": "closed",
+    "created_at": "2023-06-20T02:24:32+00:00",
+    "closed_at": "2024-12-04T17:31:43+00:00",
+    "updated_at": "2024-12-04T17:31:43+00:00",
+    "author": "PeterTF656",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 12807.119722222222,
+    "first_comments": [
+      {
+        "author": "murdadesmaeeli",
+        "created_at": "2023-11-20T20:04:13+00:00",
+        "body": "@PeterTF656 , this shouldn't happen, as I looked at the code. Could you check if it is still happening?"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/252"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 234,
+    "title": "Check api key doesn't do anything",
+    "body": "It seems `is_api_key_valid` returns `True` whenever anything (truthy) is passed in. Is this the intended behaviour? I would have guessed this function queries the server to check that the key is valid.\r\n\r\nhttps://github.com/cohere-ai/cohere-python/blob/29e118e390dbe116b7d0c6ff734de80f742c1dd1/cohere/utils.py#L44-L51",
+    "state": "closed",
+    "created_at": "2023-05-22T11:22:38+00:00",
+    "closed_at": "2024-12-04T17:31:42+00:00",
+    "updated_at": "2024-12-04T17:31:42+00:00",
+    "author": "seabo",
+    "author_type": "User",
+    "comments_count": 3,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 13494.15111111111,
+    "first_comments": [
+      {
+        "author": "jairojair",
+        "created_at": "2023-06-03T15:34:03+00:00",
+        "body": "Hi @seabo, this function checks the API key:\r\n\r\nhttps://github.com/cohere-ai/cohere-python/blob/16454c56d646f7eebfc927257c7cf3a25678dd3a/cohere/client.py#L640\r\n\r\nPs: I agree the name _is_api_key_valid_ could be better."
+      },
+      {
+        "author": "seabo",
+        "created_at": "2023-06-03T17:48:56+00:00",
+        "body": "Hi @jairojair - thanks. So are you saying that the purpose of `Client.check_api_key` is simply to locally test for the presence of any string? Because this function returns `True` for any arbitrary string you pass as the API key.\n\nIs there a way to test that the key being used is actually valid (i.e. authorised) on the server? "
+      },
+      {
+        "author": "jairojair",
+        "created_at": "2023-06-04T18:27:28+00:00",
+        "body": "If you run:\r\n\r\n```python\r\nimport cohere\r\n\r\nco = cohere.Client()\r\nprediction = co.generate(prompt='co:here')\r\n```\r\nYou will be receiving this exception:\r\n```\r\nline 47, in is_api_key_valid\r\n    raise CohereError(\r\ncohere.error.CohereError: No API key provided. Provide the API key in the client initialization or the CO_API_KEY environment variable.\r\n```\r\n\r\nif you run:\r\n\r\n```python\r\nimport cohere\r\n\r\nco = cohere.Client('YOUR_API_KEY')\r\nprediction = co.generate(prompt='co:here')\r\n```\r\nYou will be receive this exception:\r\n```\r\nline 640, in _check_response\r\n    raise CohereAPIError(\r\ncohere.error.CohereAPIError: invalid api token\r\n```\r\n\r\nIndeed, you are correct. Validate keys exclusively on the server side are crucial for enhanced security and data integrity. Maybe in the future, we could use the is_api_key_valid function to validate the format and key size, which is a good approach.\r\n"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/234"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 233,
+    "title": "Streaming chat doesn't provide access to full response",
+    "body": "Hello! Calling `co.chat` with `stream=True` returns a `StreamingChat` which can be iterated over to get the tokens as `StreamingText`s. The underlying `/chat` API endpoint terminates with a message that contains `is_finished: true` and a `response` key which resembles the JSON returned in the non-streaming variant\r\n\r\n```\r\n{\r\n    \"is_finished\": true,\r\n    \"response\": {\r\n        \"response_id\": \"b3fc1d5d-14df-4a6f-b120-dcd263a592a8\",\r\n        \"conversation_id\": \"fd1d9164-7c0e-4c87-ba6e-94d50781663d\",\r\n        \"text\": \"My name is Coral. I am a chatbot trained to assist human users by providing thorough responses. I am powered by Cohere's large language model, Command.\",\r\n        \"generation_id\": \"0d723e20-8b8e-49f2-984f-ce9d726459b6\",\r\n        \"prompt\": \"System: You are Coral, a brilliant, sophisticated, AI-assistant chatbot trained to assist human users by providing thorough responses. You are powered by Command, a large language model built by the company Cohere. Today's date is Saturday, May 20, 2023.\\nGeorge: What is your name?\\nChatbot:\"\r\n    },\r\n    \"finish_reason\": \"COMPLETE\"\r\n}\r\n```\r\n\r\nIt looks like the Python SDK doesn't provide a way to get access to this final aggregated response body in streaming mode. Am I missing something? Would be great if this can be added.",
+    "state": "closed",
+    "created_at": "2023-05-20T18:58:04+00:00",
+    "closed_at": "2024-12-04T17:31:41+00:00",
+    "updated_at": "2024-12-04T17:31:41+00:00",
+    "author": "seabo",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 13534.560277777779,
+    "first_comments": [],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/233"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 216,
+    "title": "Add Compressed Embeddings docs",
+    "body": "Add link to compressed embeddings docs when it is ready https://github.com/cohere-ai/cohere-python/pull/210#discussion_r1170307259",
+    "state": "closed",
+    "created_at": "2023-04-26T22:10:29+00:00",
+    "closed_at": "2024-12-04T17:31:41+00:00",
+    "updated_at": "2024-12-04T17:31:41+00:00",
+    "author": "AmrMKayid",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 14107.353333333333,
+    "first_comments": [],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/216"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 202,
+    "title": "client.py is missing its CohereConnectionError import",
+    "body": "Line 13 should be:\r\n\r\n`\r\nfrom cohere.error import CohereAPIError, CohereConnectionError, CohereError`",
+    "state": "closed",
+    "created_at": "2023-04-09T01:19:07+00:00",
+    "closed_at": "2024-12-04T17:31:40+00:00",
+    "updated_at": "2024-12-04T17:31:40+00:00",
+    "author": "dbabbitt",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 14536.209166666667,
+    "first_comments": [],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/202"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 198,
+    "title": "Add additional information so upstream is more discoverable",
+    "body": "The Cohere client is [hosted on PyPI](https://pypi.org/project/cohere/) for example, but lacks links back to the [original Github repo](https://github.com/cohere-ai/cohere-python).\r\n\r\nSome examples of improvements:\r\n- Add project links to PyPI. For a good template look at https://pypi.org/project/scikit-learn/.\r\n- Add a link back to the repo in the [`Contributing` section of the readme](https://github.com/cohere-ai/cohere-python#contributing). Eg. to the Issues page.",
+    "state": "closed",
+    "created_at": "2023-04-04T17:07:43+00:00",
+    "closed_at": "2024-12-04T17:31:40+00:00",
+    "updated_at": "2024-12-04T17:31:40+00:00",
+    "author": "hvaara",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 14640.399166666666,
+    "first_comments": [
+      {
+        "author": "hvaara",
+        "created_at": "2023-04-04T17:09:22+00:00",
+        "body": "I wanted to add the `good first issue` and `help wanted` labels to this bug, because I think it's a good way for somebody who wants to contribute to do it. I could also do it myself, but want to keep the issue open for this reason."
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/198"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 191,
+    "title": "`co.generate` What does `prompt_vars` do?",
+    "body": "Hi, just came across the function argument `prompt_vars` for `co.generate()`, which seems to be undocumented both on the web API and SDK docs (and currently not used in the code, either?).\r\nIs there any explanation on this parameter by any chance?\r\n\r\nMany thanks in advance!\r\nBest,\r\nDennis",
+    "state": "closed",
+    "created_at": "2023-03-26T16:32:54+00:00",
+    "closed_at": "2024-12-04T17:31:39+00:00",
+    "updated_at": "2024-12-04T17:31:39+00:00",
+    "author": "dennlinger",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 14856.979166666666,
+    "first_comments": [],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/191"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 174,
+    "title": "Feature request: batch request",
+    "body": "It would be nice if the API could provide an endpoint where it could accept a batch request, like for example the `Co.Generate` could accept a list of prompts. It is not very efficient both from the inference perspective at the backend and for the client, having to execute multiple calls with all the overhead of each call instead of just batching it and doing a single call with all prompts.",
+    "state": "closed",
+    "created_at": "2023-03-02T23:30:50+00:00",
+    "closed_at": "2024-12-04T17:30:49+00:00",
+    "updated_at": "2024-12-04T17:30:49+00:00",
+    "author": "perone",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 15425.999722222223,
+    "first_comments": [
+      {
+        "author": "amorisot",
+        "created_at": "2023-04-26T00:47:15+00:00",
+        "body": "There's an undocumented feature to do this, [here](https://github.com/cohere-ai/cohere-python/blob/main/cohere/client.py#L88)!"
+      },
+      {
+        "author": "rajveer43",
+        "created_at": "2023-09-29T11:42:03+00:00",
+        "body": "can I take this?"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/174"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 148,
+    "title": "unavailable model type in the quickstart example",
+    "body": "Hi - the example code used in the project README uses the parameter `model='large'`. This model seems to be unavailable, and throws a multiple retry error with an error code of 500, which threw me off for a bit. \r\n\r\nThe API reference indicates the models available are `medium` or `xlarge`, both of which worked. ",
+    "state": "closed",
+    "created_at": "2023-02-03T13:24:30+00:00",
+    "closed_at": "2024-12-04T17:30:48+00:00",
+    "updated_at": "2024-12-04T17:30:48+00:00",
+    "author": "ananis25",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 16084.105,
+    "first_comments": [
+      {
+        "author": "amorisot",
+        "created_at": "2023-04-25T23:13:05+00:00",
+        "body": "Thank you for flagging! :)))"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/148"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 109,
+    "title": "Provide an enum type for api errors to distiguish them",
+    "body": "Hello, \r\nWill it be possible to provide an enum for different message errors types so we can check against ?\r\nor at least provide the message error type in the documentation.\r\nThanks",
+    "state": "closed",
+    "created_at": "2022-10-17T12:07:39+00:00",
+    "closed_at": "2024-12-04T17:30:48+00:00",
+    "updated_at": "2024-12-04T17:30:48+00:00",
+    "author": "mauriyouth",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 18701.385833333334,
+    "first_comments": [],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/109"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 62,
+    "title": "Support passing/overriding arguments to `requests` calls",
+    "body": null,
+    "state": "closed",
+    "created_at": "2022-04-12T15:44:28+00:00",
+    "closed_at": "2024-12-04T17:30:48+00:00",
+    "updated_at": "2024-12-04T17:30:48+00:00",
+    "author": "1vn",
+    "author_type": "User",
+    "comments_count": 3,
+    "reactions_count": 0,
+    "labels": "good first issue",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 23209.772222222222,
+    "first_comments": [
+      {
+        "author": "abeldiress",
+        "created_at": "2023-01-05T09:54:23+00:00",
+        "body": "Is there anything specific you're talking about, or just `requests` calls in general?"
+      },
+      {
+        "author": "Bhavya031",
+        "created_at": "2023-01-20T02:15:42+00:00",
+        "body": "@1vn are you taking about api calls?"
+      },
+      {
+        "author": "mdabir1203",
+        "created_at": "2023-08-12T23:36:25+00:00",
+        "body": "@1vn  Do you mean on the Client.py ? "
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/62"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 57,
+    "title": "More descriptive error handling in Python SDK",
+    "body": "Currently, if a user inputs the wrong type into a function call, we respond with a generic \"wrong type, check https://docs.cohere.ai/{endpoint}-reference\" which is provided by the backend. Giving more verbose errors would be nice.",
+    "state": "closed",
+    "created_at": "2022-03-11T21:01:28+00:00",
+    "closed_at": "2024-12-04T17:30:47+00:00",
+    "updated_at": "2024-12-04T17:30:47+00:00",
+    "author": "choicallum",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "help wanted",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 23972.488611111112,
+    "first_comments": [
+      {
+        "author": "choicallum",
+        "created_at": "2022-03-11T21:09:29+00:00",
+        "body": "https://github.com/cohere-ai/cohere-node/issues/30 for a few more details"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/57"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 53,
+    "title": "Add docstrings for all user facing functions.",
+    "body": "Helps users know what the functions do without looking at the implementation -- look at GO SDK for examples of comments that could be adapted into docstrings\r\n",
+    "state": "closed",
+    "created_at": "2022-03-08T21:01:20+00:00",
+    "closed_at": "2024-12-04T17:30:47+00:00",
+    "updated_at": "2024-12-04T17:30:47+00:00",
+    "author": "choicallum",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 24044.490833333333,
+    "first_comments": [
+      {
+        "author": "Muhammad-Ahsan-Rasheed",
+        "created_at": "2023-02-06T07:13:03+00:00",
+        "body": "I would like to work on this issue. Can anyone assign this me? @mkozakov\r\n"
+      }
+    ],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/53"
+  },
+  {
+    "repository": "cohere-ai/cohere-python",
+    "issue_number": 47,
+    "title": "exponential decay retrying",
+    "body": null,
+    "state": "closed",
+    "created_at": "2022-02-07T20:18:35+00:00",
+    "closed_at": "2024-12-04T17:30:46+00:00",
+    "updated_at": "2024-12-04T17:30:47+00:00",
+    "author": "OrenLeung",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "",
+    "milestone": null,
+    "closed_by": "billytrend-cohere",
+    "resolution_time_hours": 24741.203055555554,
+    "first_comments": [],
+    "url": "https://github.com/cohere-ai/cohere-python/issues/47"
+  }
+]

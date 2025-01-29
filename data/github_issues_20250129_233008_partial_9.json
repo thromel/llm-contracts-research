@@ -1,0 +1,388 @@
+[
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 406,
+    "title": "[Feature Request]",
+    "body": "**What motivated you to submit this feature request?**\r\nA clear and concise description of why you are requesting this feature - e.g. \"Being able to do x would allow me to...\" \r\n\r\n**Describe the solution you'd like**\r\nA clear and concise description of what you want to happen.\r\n\r\n**Describe alternatives you've considered**\r\nA clear and concise description of any alternative solutions or features you've considered.\r\n\r\n**Additional context**\r\nAdd any other context or screenshots about the feature request here.\r\n",
+    "state": "closed",
+    "created_at": "2024-10-28T04:40:57+00:00",
+    "closed_at": "2024-10-29T18:29:17+00:00",
+    "updated_at": "2024-10-29T18:29:17+00:00",
+    "author": "crtejavardhanreddy",
+    "author_type": "User",
+    "comments_count": 0,
+    "reactions_count": 0,
+    "labels": "enhancement,status:needs-triage",
+    "milestone": null,
+    "closed_by": "anawishnoff",
+    "resolution_time_hours": 37.80555555555556,
+    "first_comments": [],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/406"
+  },
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 390,
+    "title": "[Bug] ModuleNotFoundError: No module named 'dateutil'",
+    "body": "**Is this a new bug?**\r\nYes\r\n\r\n- [x] I believe this is a new bug\r\n- [x] I have searched the existing Github issues and Community Forum, and I could not find an existing post for this bug\r\n\r\n**Describe the bug**\r\nIt is a problem within the new 5.3.0 version. When I downgrade to 5.2.0 it's working perfectly fine.\r\n\r\n**Error information**\r\n![Screenshot 2024-09-19 at 5 00 01 PM](https://github.com/user-attachments/assets/8d452dd2-660a-4c24-825a-1af0246ba0f6)\r\n\r\n**Steps to reproduce the issue locally**\r\nInstall latest version of pinecone via `pip install pinecone`\r\n\r\n**Environment**\r\n* OS Version: Windows 11 \r\n* Python version: python 3.11.2\r\n* Python SDK version: 5.3.0\r\n",
+    "state": "closed",
+    "created_at": "2024-09-19T12:12:41+00:00",
+    "closed_at": "2024-10-01T17:43:45+00:00",
+    "updated_at": "2024-10-01T17:43:54+00:00",
+    "author": "ARajgor",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "bug",
+    "milestone": null,
+    "closed_by": "anawishnoff",
+    "resolution_time_hours": 293.5177777777778,
+    "first_comments": [
+      {
+        "author": "anawishnoff",
+        "created_at": "2024-10-01T17:43:45+00:00",
+        "body": "This has been fixed in the latest release of the Python SDK - 5.3.1. Let us know if you're still hitting this. Thanks!"
+      }
+    ],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/390"
+  },
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 388,
+    "title": "[Bug] Pinecone has no attribute 'from_texts'",
+    "body": "---\r\n\r\n- [x] I believe this is a new bug\r\n- [x] I have searched the existing Github issues and Community Forum, and I could not find an existing post for this bug\r\n\r\n**Describe the bug**\r\nWhen attempting to create an embedding using Pinecone in a Google Colab notebook, an `AttributeError` is raised. The functionality that was working previously to generate embeddings from text chunks is now broken.\r\n\r\n**Error information**\r\nThe full stack trace of the error is as follows:\r\n```\r\nAttributeError                            Traceback (most recent call last)\r\n<ipython-input-18-dbd3c6635021> in <cell line: 8>()\r\n      6 \r\n      7 #creating Embedding for each of the text Chunk & storing\r\n----> 8 docsearch=pinecone.from_texts([t.page_cont\r\nThis should effectively communicate the issue you encountered using the provided bug report template.ent for t in text_chunks],embedding,index_name=index_name)\r\n\r\n/usr/local/lib/python3.10/dist-packages/pinecone/control/pinecone.py in from_texts(*args, **kwargs)\r\n    700     @staticmethod\r\n    701     def from_texts(*args, **kwargs):\r\n--> 702         raise AttributeError(_build_langchain_attribute_error_message(\"from_texts\"))\r\n    703 \r\n    704     @staticmethod\r\n\r\nAttributeError: from_texts is not a top-level attribute of the Pinecone class provided Pinecone has no attribute 'from_texts'\r\nby pinecone's official python package developed at https://github.com/pinecone-io/pinecone-python-client. You may have a name collision with an export from another dependency in your project that wraps Pinecone functionality and exports a similarly named class. Please refer to the following knowledge base article for more information: https://docs.pinecone.io/troubleshooting/pinecone-attribute-errors-with-langchain\r\n```\r\n\r\n**Steps to reproduce the issue locally**\r\n1. Run a Google Colab notebook.\r\n2. Install the necessary packages, including Pinecone and any dependencies related to LangChain.\r\n3. Attempt to create an embedding with the following code snippet:\r\n   ```python\r\n   docsearch = pinecone.from_texts([t.page_content for t in text_chunks], embedding, index_name=index_name)\r\n   ```\r\n4. The error occurs when executing this code.\r\n\r\n**Environment**\r\n* OS Version: Google Colab (Linux-based)\r\n* Python version: 3.10\r\n* Python SDK version: Pinecone Python Client from `pinecone-io/pinecone-python-client` (latest version installed via pip)\r\n\r\n**Additional context**\r\nThe issue seems to be related to a name collision between Pinecone's `from_texts` method and another dependency that might be wrapping Pinecone functionality. I am using the notebook environment in Google Colab, and a screenshot of the error is attached for reference.\r\n\r\n---",
+    "state": "closed",
+    "created_at": "2024-09-04T18:36:55+00:00",
+    "closed_at": "2024-09-09T17:24:30+00:00",
+    "updated_at": "2024-09-09T17:24:30+00:00",
+    "author": "Mukku27",
+    "author_type": "User",
+    "comments_count": 5,
+    "reactions_count": 0,
+    "labels": "bug",
+    "milestone": null,
+    "closed_by": "Mukku27",
+    "resolution_time_hours": 118.79305555555555,
+    "first_comments": [
+      {
+        "author": "mcpaddy",
+        "created_at": "2024-09-06T14:02:59+00:00",
+        "body": "@Mukku27 Thank you for raising this issue.\r\n\r\nThe Python Pinecone SDK does not have the function `from_text()` that's usually provided by Langchain. There was an issue when using an older version of Langchain where there could be a Python [namespace name collision](https://docs.pinecone.io/troubleshooting/pinecone-attribute-errors-with-langchain), so I would ensure that it is up to date and you have made the code changes,\r\n\r\nIf you can share the code or the Colab, we can help you further.\r\n\r\nYou might also find our [Langchain guide](https://docs.pinecone.io/integrations/langchain). useful too"
+      },
+      {
+        "author": "Mukku27",
+        "created_at": "2024-09-07T09:58:20+00:00",
+        "body": "![Screenshot from 2024-09-07 15-26-21](https://github.com/user-attachments/assets/879e0dd8-ab1c-4527-b72e-3692949c366d)\r\n"
+      },
+      {
+        "author": "Mukku27",
+        "created_at": "2024-09-07T09:59:42+00:00",
+        "body": "This is one cell of the whole  notebook\r\n"
+      },
+      {
+        "author": "mcpaddy",
+        "created_at": "2024-09-09T15:16:49+00:00",
+        "body": "Thank you for the code. Unfortunately, it's incorrect. As I mentioned previously, Pinecone does not have a `from_text` function. It comes from Langchain.\r\n\r\nHere is the correct way to use `from_texts()` from Langchain.\r\n\r\n```python\r\n    import os\r\n    from langchain_pinecone import PineconeVectorStore\r\n    from langchain_openai import OpenAIEmbeddings\r\n    from langchain_community.document_loaders import TextLoader\r\n    from langchain_text_splitters import CharacterTextSplitter\r\n\r\n    os.environ['OPENAI_API_KEY'] = '<YOUR_OPENAI_API_KEY>'\r\n    os.environ['PINECONE_API_KEY'] = '<YOUR_PINECONE_API_KEY>'\r\n\r\n    index_name = \"<YOUR_PINECONE_INDEX_NAME>\"\r\n    embeddings = OpenAIEmbeddings()\r\n\r\n    texts = [\"Tonight, I call on the Senate to: Pass the Freedom to Vote Act.\", \"ne of the most serious constitutional responsibilities a President has is nominating someone to serve on the United States Supreme Court.\", \"One of our nation’s top legal minds, who will continue Justice Breyer’s legacy of excellence.\"]\r\n\r\n    vectorstore_from_texts = PineconeVectorStore.from_texts(\r\n        texts,\r\n        index_name=index_name,\r\n        embedding=embeddings\r\n    )\r\n```\r\n\r\nThere are examples in our [Langchain guide](https://docs.pinecone.io/integrations/langchain)."
+      },
+      {
+        "author": "Mukku27",
+        "created_at": "2024-09-09T17:24:30+00:00",
+        "body": "Thank you  @mcpaddy  "
+      }
+    ],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/388"
+  },
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 374,
+    "title": "[documentation] DataFrame column name is wrong",
+    "body": "In `upsert_from_dataframe`, the correct DataFrame column name is `values`, and NOT `vector`\r\n\r\nhttps://github.com/pinecone-io/pinecone-python-client/blob/d9df37558ba35b7097dc4bc5c8101b576019caa2/pinecone/data/index.py#L230",
+    "state": "closed",
+    "created_at": "2024-07-25T09:04:26+00:00",
+    "closed_at": "2024-08-07T14:14:46+00:00",
+    "updated_at": "2024-08-07T14:14:46+00:00",
+    "author": "pfrischmann",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "documentation,status:on-roadmap",
+    "milestone": null,
+    "closed_by": "jseldess",
+    "resolution_time_hours": 317.1722222222222,
+    "first_comments": [
+      {
+        "author": "anawishnoff",
+        "created_at": "2024-08-06T14:48:05+00:00",
+        "body": "Hey @jseldess, would you mind making this quick fix? "
+      }
+    ],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/374"
+  },
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 295,
+    "title": "[Feature] `fetch()` with metadata filtering query",
+    "body": "### Is this your first time submitting a feature request?\n\n- [X] I have searched the existing issues, and I could not find an existing issue for this feature\n- [X] I am requesting a straightforward extension of existing client functionality\n\n### Describe the feature\n\nCurrently the `fetch()` method only allows fetching data from the index based on `ids`. It will be great to be able to fetch data using `query` filters (for ex: query={\"genre\": {\"eq\": [\"documentary\"]}}). This will improve the visibility in the index and namespaces.\n\n### Describe alternatives you've considered\n\nCurrently there is no alternative on doing this. Other than to fetch all the records and then do the filtering locally. This is not scalable and have very high latency as the index grows.\n\n### Who will this benefit?\n\nThis will improve the visibility of data in PineconeDB index\n\n### Are you interested in contributing this feature?\n\n_No response_\n\n### Anything else?\n\n_No response_",
+    "state": "closed",
+    "created_at": "2024-01-22T07:33:37+00:00",
+    "closed_at": "2024-08-07T19:16:25+00:00",
+    "updated_at": "2024-08-07T19:16:26+00:00",
+    "author": "deven298",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "enhancement,status:needs-triage",
+    "milestone": null,
+    "closed_by": "anawishnoff",
+    "resolution_time_hours": 4763.713333333333,
+    "first_comments": [
+      {
+        "author": "anawishnoff",
+        "created_at": "2024-08-07T19:16:25+00:00",
+        "body": "Thanks for filing this issue. We've passed your interest in these feature along to the relevant internal team, and will circle back if there's any update."
+      }
+    ],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/295"
+  },
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 230,
+    "title": "[Bug] Connection Leaks in manage.py, IndexOperationsApi, VectorOperationsApi",
+    "body": "### Is this a new bug in the Pinecone Python client?\r\n\r\n- [X] I believe this is a new bug in the Pinecone Python Client\r\n- [X] I have searched the existing issues, and I could not find an existing issue for this bug\r\n\r\n### Current Behavior\r\n\r\nYour python client has memory leaks that proved problematic...\r\n\r\nTop issue is this: you leak **5 descriptors per API call**, never to be reclaimed until eventually the Python process inevitably and eventually crashes because it exceeds max open file descriptors. Why does this happen? My answers are below...\r\n\r\nSample output from `lsof` to point out the problem; this is one of 32,000 file descriptor leaks created in relative short order using your product:\r\n\r\n```\r\n.... 10-20 thousand more above...\r\nPython 60130 robert.buck 7221u IPv4 0xd946e14d9f16b61b 0t0 TCP 192.168.0.103:60745->ec2-18-213-200-10.compute-1.amazonaws.com:https (ESTABLISHED)\r\nPython 60130 robert.buck 7222 PIPE 0x2727afc4fb51e58a 16384 ->0xd97beed562c859f2\r\nPython 60130 robert.buck 7223 PIPE 0xd97beed562c859f2 16384 ->0x2727afc4fb51e58a\r\nPython 60130 robert.buck 7224r PSXSEM 0t0 /mp-r4wqhiyk\r\nPython 60130 robert.buck 7225r PSXSEM 0t0 /mp-vpwtcej6\r\n.... 10-20 thousand more below...\r\n```\r\n\r\nI didn't know if it was your product or another product. So...\r\n\r\nI instrumented the socket.socket API in Python only to find out what's going on. I created a command line tool whose sole purpose is to crush your API to see how it breaks. It didn't take but seconds to break your API. This is (I suspect) related to other support events that were side-stepped by Pinecone.io support, related to service issues in AWS. I could trace the issues back to your product via some socket instrumentation:\r\n\r\n```\r\ndef generate_stack_trace():\r\n    stack = traceback.extract_stack()\r\n    print(f\"\\nStack Trace:\\n\")\r\n    for frame in stack:\r\n        filename, line_number, function_name, code = frame\r\n        print(f\"File: {filename}, Line: {line_number}, Function: {function_name}, Code: {code}\")\r\n    print(f\"\\n-------\\n\\n\")\r\n\r\nclass TraceSocket(socket.socket):\r\n    def __init__(self, *args, **kwargs):\r\n        super().__init__(*args, **kwargs)\r\n        logging.info(f\"socket created: {self.getsockname()}\")\r\n        generate_stack_trace()\r\n\r\n    def close(self) -> None:\r\n        logging.info(f\"socket closed: {self.getsockname()}\")\r\n        super().close()\r\n\r\n\r\nsocket.socket = TraceSocket\r\n```\r\n\r\nAnalysis...\r\n\r\nIn a nutshell, your code in `rest.py`, `api_client.py,` all go through great and appropriate lengths to ensure that connections can be reused and cleaned up when a client is disposed. But, that's where the goodness ends. Other parts have leaks... The rest of the code walks away from even taking advantage of Python's `with-idiom`. And responsibility of cleaning up after itself.\r\n\r\nLet's discuss the problems in your code step by step...\r\n\r\n**First up: [manage.py]**\r\n\r\n```\r\ndef _get_api_instance():\r\n    ...\r\n    api_client = ApiClient(configuration=client_config)\r\n    ...\r\n    api_instance = IndexOperationsApi(api_client)\r\n    return api_instance\r\n\r\n...\r\n\r\n# example call site, all call sites are completely broken...\r\n\r\ndef delete_index(name: str, timeout: int = None):\r\n    ...\r\n    api_instance = _get_api_instance()\r\n    ...\r\n```\r\n\r\nHere, no cleanup possible of the connection pool, and no opportunity for connection reuse, hence it's slow as sludge\r\nbecause of all the connection setup repeated again and again! Every call to any management API creates a new Client, and by implication a new connection pool, and by implication a single solitary connection. Which you never cleanup and results in a leaked file descriptor.\r\n\r\nAt the OS level, this means you have two leaked semaphores, AND two leaked pipes, AND one leaked socket. Five file descriptor leaks per API call. That's a lot of file descriptors leaked.\r\n\r\nThe proper choice would have been to change `manage.py` into a proper management API that takes a `ApiClient` as a constructor argument to the ManagementApi object, thus users can reuse the underlying pools. Not much different than `IndexOperationsApi` which does:\r\n\r\n```\r\n    def __init__(self, api_client=None):\r\n        if api_client is None:\r\n            api_client = ApiClient() # note this is a leak in all your existing APIs too!!!!\r\n        self.api_client = api_client\r\n```\r\n\r\n**Second up: [IndexOperationsApi,  VectorOperationsApi]**\r\n\r\nBoth APIs suffer the same issue; line numbers listed at the end of this report for where the leaks occur. But in a nutshell, the APIs permissively take an `api_client` as a constructor argument (good) but falls back to creating one if it wasn't provided (bad).\r\n\r\nWhy bad? Because the constructor defines OWNERSHIP of the objects it manages, in this case `ApiClient`. And the *OperationsApi* takes no steps to do any cleanup, hence leaks, if it did create the `ApiClient` object.\r\n\r\nMy suggestion would be to take away the `is None` block of code that creates an `ApiClient` on behalf of users, and demand that all users create the client, thus reused. As an alternative, introduce a new class property, named `owns_client`, and add `__enter__`, `__exit__`, and `close` methods. In the close method, if `owns_client` is `True`, then call close on the client. You know what to do in `__enter__` and `__exit__`, it should be plainly obvious (implement the `with-idiom`).\r\n\r\nThis will fix the leaks in these two APIs.\r\n\r\n**Detailed List of Leaks**\r\n\r\n- `manage.py` (5 leaks at line 56)\r\n- `IndexOperationsApi` (5 leaks at line 43)\r\n- `VectorOperationsApi `(5 leaks at line 50)\r\n\r\n### Expected Behavior\r\n\r\nThe product should NOT leak file descriptors.\r\n\r\n### Steps To Reproduce\r\n\r\nCreate a directory of 64000 single word documents. Ingest them concurrently (in parallel if possible, to speed things up), watch the python client fail (die/crash) because of leaked file descriptors.\r\n\r\nYou can monitor file descriptors in real time:\r\n\r\n```\r\n#!/bin/bash\r\n\r\n# Get the PID of the process\r\nPID=$(pgrep -f \"/Library/Frameworks/Python.framework/Versions/3.8/Resources/Python.app/Contents/MacOS/Python /Users/robert.buck/ws/workspaces/library-import/src/testing/venv/bin/driver crush -c 1000\")\r\n\r\n# Continuously monitor the open file count\r\nwhile true; do\r\n    echo \"Open files for PID $PID :\"\r\n    lsof -p $PID\r\n    open_file_count=$(lsof -p $PID | wc -l | awk '{print $1}')\r\n    echo \"Open file count for PID $PID: $open_file_count\"\r\n    sleep 5  # Adjust the interval as needed\r\ndone\r\n```\r\n\r\n### Relevant log output\r\n\r\n```shell\r\nSimilar to:\r\n\r\n\r\n.... 10-20 thousand more above...\r\nPython 60130 robert.buck 7221u IPv4 0xd946e14d9f16b61b 0t0 TCP 192.168.0.103:60745->ec2-18-213-200-10.compute-1.amazonaws.com:https (ESTABLISHED)\r\nPython 60130 robert.buck 7222 PIPE 0x2727afc4fb51e58a 16384 ->0xd97beed562c859f2\r\nPython 60130 robert.buck 7223 PIPE 0xd97beed562c859f2 16384 ->0x2727afc4fb51e58a\r\nPython 60130 robert.buck 7224r PSXSEM 0t0 /mp-r4wqhiyk\r\nPython 60130 robert.buck 7225r PSXSEM 0t0 /mp-vpwtcej6\r\n.... 10-20 thousand more below...\r\n```\r\n\r\nAnd...\r\n\r\n```\r\nWARNING:urllib3.connectionpool:Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7fa98a427af0>: Failed to establish a new connection: [Errno 16] Device or resource busy')': /vectors/upsert\r\nWARNING:urllib3.connectionpool:Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'SSLError(OSError(24, 'Too many open files'))': /vectors/upsert\r\nWARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7fa98a427310>: Failed to establish a new connection: [Errno 16] Device or resource busy')': /vectors/upsert\r\nWARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7fa98a427e20>: Failed to establish a new connection: [Errno 24] Too many open files')': /vectors/upsert\r\nWARNING:urllib3.connectionpool:Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7fa98a4270a0>: Failed to establish a new connection: [Errno 24] Too many open files')': /vectors/upsert\r\nWARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7fa98a4276a0>: Failed to establish a new connection: [Errno 24] Too many open files')': /vectors/upsert\r\nWARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7fa97fc98880>: Failed to establish a new connection: [Errno 16] Device or resource busy')': /vectors/upsert\r\nWARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7fa98dc96ac0>: Failed to establish a new connection: [Errno 16] Device or resource busy')': /vectors/upsert\r\nWARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'SSLError(OSError(24, 'Too many open files'))': /vectors/upsertINFO:root:Successfully shutdown the libtool import.Traceback (most recent call last):  File \"/usr/local/lib/python3.8/site-packages/urllib3/util/ssl_.py\", line 446, in ssl_wrap_socket    context.load_verify_locations(ca_certs, ca_cert_dir, ca_cert_data)OSError: [Errno 24] Too many open files\r\nThe above exception was the direct cause of the following exception:\r\nTraceback (most recent call last):  \r\n\r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/connectionpool.py\", line 791, in urlopen    response = self._make_request(  File \"/usr/local/lib/python3.8/site-packages/urllib3/connectionpool.py\", line 492, in _make_request    raise new_e  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/connectionpool.py\", line 468, in _make_request    self._validate_conn(conn)  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/connectionpool.py\", line 1097, in _validate_conn    conn.connect()  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/connection.py\", line 642, in connect    sock_and_verified = _ssl_wrap_socket_and_match_hostname(  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/connection.py\", line 783, in _ssl_wrap_socket_and_match_hostname    ssl_sock = ssl_wrap_socket(  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/util/ssl_.py\", line 448, in ssl_wrap_socket    raise SSLError(e) from eurllib3.exceptions.SSLError: [Errno 24] Too many open files\r\n\r\nThe above exception was the direct cause of the following exception:\r\nTraceback (most recent call last):  \r\n\r\nFile \"/usr/local/bin/libtool\", line 11, in <module>    load_entry_point('libtool==1.0.0', 'console_scripts', 'libtool')()  \r\nFile \"/usr/local/lib/python3.8/site-packages/libtool/__main__.py\", line 71, in main    args.func(args, verbose)  \r\nFile \"/usr/local/lib/python3.8/site-packages/libtool/command/load.py\", line 8, in load_action    loader.run()  \r\nFile \"/usr/local/lib/python3.8/site-packages/libtool/core/loader.py\", line 119, in run    loop.run_until_complete(asyncio.gather(*writer_tasks, ))  \r\nFile \"/usr/lib64/python3.8/asyncio/base_events.py\", line 616, in run_until_complete    return future.result()  \r\nFile \"/usr/local/lib/python3.8/site-packages/libtool/core/loader.py\", line 74, in writer    await plugin_writer(self.config, record, metadata)  \r\nFile \"/usr/local/lib/python3.8/site-packages/libtool/core/backend/pinecone/backend.py\", line 48, in write    Pinecone.from_texts(  \r\nFile \"/usr/local/lib/python3.8/site-packages/langchain/vectorstores/pinecone.py\", line 416, in from_texts    pinecone.add_texts(  \r\nFile \"/usr/local/lib/python3.8/site-packages/langchain/vectorstores/pinecone.py\", line 149, in add_texts    [res.get() for res in async_res]  \r\nFile \"/usr/local/lib/python3.8/site-packages/langchain/vectorstores/pinecone.py\", line 149, in <listcomp>    [res.get() for res in async_res]  \r\nFile \"/usr/lib64/python3.8/multiprocessing/pool.py\", line 771, in get    raise self._value  File \"/usr/lib64/python3.8/multiprocessing/pool.py\", line 125, in worker    result = (True, func(*args, **kwds))  \r\nFile \"/usr/local/lib/python3.8/site-packages/pinecone/core/client/api_client.py\", line 200, in __call_api    response_data = self.request(  \r\nFile \"/usr/local/lib/python3.8/site-packages/pinecone/core/client/api_client.py\", line 459, in request    return self.rest_client.POST(url,  \r\nFile \"/usr/local/lib/python3.8/site-packages/pinecone/core/client/rest.py\", line 271, in POST    return self.request(\"POST\", url,  \r\nFile \"/usr/local/lib/python3.8/site-packages/pinecone/core/client/rest.py\", line 157, in request    r = self.pool_manager.request(  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/_request_methods.py\", line 118, in request    return self.request_encode_body(  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/_request_methods.py\", line 217, in request_encode_body    return self.urlopen(method, url, **extra_kw)  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/poolmanager.py\", line 443, in urlopen    response = conn.urlopen(method, u.request_uri, **kw)  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/connectionpool.py\", line 875, in urlopen    return self.urlopen(  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/connectionpool.py\", line 875, in urlopen    return self.urlopen(  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/connectionpool.py\", line 875, in urlopen    return self.urlopen(  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/connectionpool.py\", line 845, in urlopen    retries = retries.increment(  \r\nFile \"/usr/local/lib/python3.8/site-packages/urllib3/util/retry.py\", line 515, in increment    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='m01-8113f38.svc.us-east-1-aws.pinecone.io', port=443): Max retries exceeded with url: /vectors/upsert (Caused by SSLError(OSError(24, 'Too many open files')))\r\n-- \r\n```\r\n```\r\n\r\n\r\n### Environment\r\n\r\n```markdown\r\n- OS: Mac, Red Hat Enterprise Linux, Any\r\n- Python: 3.8.2\r\n- pinecone: 2.2.4\r\n```\r\n\r\n\r\n### Additional Context\r\n\r\nWork-around, avoid the APIs that leak.",
+    "state": "closed",
+    "created_at": "2023-10-30T14:49:02+00:00",
+    "closed_at": "2024-08-09T14:02:11+00:00",
+    "updated_at": "2024-08-09T14:02:15+00:00",
+    "author": "rbuck-som",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "bug",
+    "milestone": null,
+    "closed_by": "anawishnoff",
+    "resolution_time_hours": 6815.219166666667,
+    "first_comments": [
+      {
+        "author": "anawishnoff",
+        "created_at": "2024-08-09T14:02:11+00:00",
+        "body": "As this issue is from last year, I'll go ahead and close this as stale. However please feel free to reopen or file a new issue if you're still having issues - thank you!"
+      }
+    ],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/230"
+  },
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 205,
+    "title": "[Bug] Failed to connect to all addresses",
+    "body": "### Is this a new bug in the Pinecone Python client?\n\n- [X] I believe this is a new bug in the Pinecone Python Client\n- [X] I have searched the existing issues, and I could not find an existing issue for this bug\n\n### Current Behavior\n\nI am simply trying to delete a specific namespace within my index using the following code:\r\n\r\n```\r\nimport os\r\nimport sys\r\nimport json\r\nimport pinecone\r\n\r\n# pinecone key\r\npinecone_env = xxxx\r\npinecone_key =  xxxx\r\n\r\n# Initializing index name\r\nindex_name = \"index_name\"\r\n# index = pinecone.Index(index_name)\r\nindex = pinecone.GRPCIndex(index_name)\r\nnamespace='namespace'\r\n\r\n# Initialize pinecone\r\npinecone.init(\r\n    api_key=pinecone_key,  # find at app.pinecone.io\r\n    environment=pinecone_env  # next to api key in console\r\n)\r\n\r\n# Delete namespace\r\nindex.delete(delete_all=True, namespace=namespace)\r\n\r\nprint('Namespace deleted')\r\n```\r\n\r\nDoing this, I get the following error:\r\n\r\n`PineconeException: UNKNOWN:failed to connect to all addresses; last error: UNAVAILABLE: ipv4:34.127.5.128:443: recvmsg:Connection reset by peer {created_time:\"2023-09-28T20:38:58.196686658+00:00\", grpc_status:14}`\r\n\r\nWould appreciate any insights into this\n\n### Expected Behavior\n\nExpected behavior was that the code would delete the specific namespace as requested.\n\n### Steps To Reproduce\n\nUse grpc-gateway-protoc-gen-openapiv2-0.1.0\n\n### Relevant log output\n\n_No response_\n\n### Environment\n\n_No response_\n\n### Additional Context\n\n_No response_",
+    "state": "closed",
+    "created_at": "2023-09-28T20:43:59+00:00",
+    "closed_at": "2024-08-06T15:25:59+00:00",
+    "updated_at": "2024-08-06T15:25:59+00:00",
+    "author": "Abe410",
+    "author_type": "User",
+    "comments_count": 1,
+    "reactions_count": 0,
+    "labels": "bug",
+    "milestone": null,
+    "closed_by": "anawishnoff",
+    "resolution_time_hours": 7506.7,
+    "first_comments": [
+      {
+        "author": "SID262000",
+        "created_at": "2023-11-28T18:05:56+00:00",
+        "body": "@Abe410 At a very high level, seems to be a network issue. Please let me know if you're still facing this issue while deleting the namespaces, Thanks"
+      }
+    ],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/205"
+  },
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 200,
+    "title": "[Bug] I can't create an exe using pinecone",
+    "body": "### Is this a new bug in the Pinecone Python client?\r\n\r\n- [X] I believe this is a new bug in the Pinecone Python Client\r\n- [X] I have searched the existing issues, and I could not find an existing issue for this bug\r\n\r\n### Current Behavior\r\n\r\nI am trying to extract an exe from the code I wrote with Pinecone using pyinstaller.\r\n`pyinstaller --onefile main.py -n pinecone.exe`\r\n\r\n### Expected Behavior\r\n\r\nI get this error while creating exe\r\n```\r\n185920 INFO: Fixing EXE headers\r\n186784 INFO: Building EXE from EXE-00.toc completed successfully.\r\nGenerating spec file...Traceback (most recent call last):\r\n  File \"main.py\", line 2, in <module>\r\n  File \"<frozen importlib._bootstrap>\", line 1027, in _find_and_load\r\n  File \"<frozen importlib._bootstrap>\", line 1006, in _find_and_load_unlocked\r\n  File \"<frozen importlib._bootstrap>\", line 688, in _load_unlocked\r\n  File \"PyInstaller\\loader\\pyimod02_importers.py\", line 385, in exec_module\r\n  File \"init.py\", line 2, in <module>\r\n  File \"<frozen importlib._bootstrap>\", line 1027, in _find_and_load\r\n  File \"<frozen importlib._bootstrap>\", line 1006, in _find_and_load_unlocked\r\n  File \"<frozen importlib._bootstrap>\", line 688, in _load_unlocked\r\n  File \"PyInstaller\\loader\\pyimod02_importers.py\", line 385, in exec_module\r\n  File \"nodes\\CreateIndex.py\", line 7, in <module>\r\n  File \"<frozen importlib._bootstrap>\", line 1027, in _find_and_load\r\n  File \"<frozen importlib._bootstrap>\", line 1006, in _find_and_load_unlocked\r\n  File \"<frozen importlib._bootstrap>\", line 688, in _load_unlocked\r\n  File \"PyInstaller\\loader\\pyimod02_importers.py\", line 385, in exec_module\r\n  File \"pinecone\\__init__.py\", line 4, in <module>\r\n  File \"<frozen importlib._bootstrap>\", line 1027, in _find_and_load\r\n  File \"<frozen importlib._bootstrap>\", line 1006, in _find_and_load_unlocked\r\n  File \"<frozen importlib._bootstrap>\", line 688, in _load_unlocked\r\n  File \"PyInstaller\\loader\\pyimod02_importers.py\", line 385, in exec_module\r\n  File \"pinecone\\core\\utils\\constants.py\", line 33, in <module>\r\n  File \"pinecone\\core\\utils\\__init__.py\", line 53, in get_environment\r\n  File \"pathlib.py\", line 1134, in read_text\r\n  File \"pathlib.py\", line 1119, in open\r\nFileNotFoundError: [Errno 2] No such file or directory: 'C:\\\\Users\\\\IKRAMM~1\\\\AppData\\\\Local\\\\Temp\\\\_MEI260042\\\\pinecone\\\\__environment__'\r\n[25284] Failed to execute script 'main' due to unhandled exception!\r\n2023/09/22 14:29:48 exit status 1\r\n\r\n```\r\n\r\n### Steps To Reproduce\r\n\r\n- I just wrote the following simple code and tried to create exe with pyinstaller\r\n1. the code \r\n```\r\nimport pinecone\r\n\r\napiKey = \"my_key\"\r\nenvironment = \"my\"\r\n\r\n\r\npinecone.init(api_key=apiKey,environment=environment)\r\na= pinecone.list_indexes()\r\nprint(a)\r\nparams={}\r\na['name']= \"helloworld\"\r\na['dimension'] = 8\r\n#pinecone.create_index(name=\"helloworld\", dimension=8, metric=\"euclidean\")\r\npinecone.create_index(**params)\r\npinecone.describe_index(\"helloworld\")\r\na= pinecone.list_indexes()\r\nprint(a)\r\n```\r\n2.  pyinstaller --onefile a.py -n test-pinecone.exe\r\n\r\n### Relevant log output\r\n\r\n_No response_\r\n\r\n### Environment\r\n\r\n```markdown\r\n- OS: windows 11\r\n- Python: 3.10.11\r\n- pinecone: 2.2.4\r\n- pyinstaller: 5.13.2\r\n```\r\n\r\n\r\n### Additional Context\r\n\r\n_No response_",
+    "state": "closed",
+    "created_at": "2023-09-22T13:00:58+00:00",
+    "closed_at": "2024-08-06T15:27:36+00:00",
+    "updated_at": "2024-08-06T15:27:37+00:00",
+    "author": "ikrammert",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "bug",
+    "milestone": null,
+    "closed_by": "anawishnoff",
+    "resolution_time_hours": 7658.443888888889,
+    "first_comments": [
+      {
+        "author": "daverigby",
+        "created_at": "2024-05-03T08:48:11+00:00",
+        "body": "Pinecone client initialisation has been significantly refactored as of v3.0.0  - global state including various code executed during `import pinecone` has been moved into the `Pinecone` and `Index` objects.\r\n\r\nAs such, I would recommend re-testing this with the latest version of the SDK - while I cannot guarantee the issue you were seeing was fixed (and I don't have a Windows environment readily available to test with), a lot of the internals have changed and you might have more success with v3 and upwards.\r\n"
+      },
+      {
+        "author": "anawishnoff",
+        "created_at": "2024-08-06T15:27:36+00:00",
+        "body": "Closing as this issue is stale - please reopen if you are still facing issues. Thanks!"
+      }
+    ],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/200"
+  },
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 173,
+    "title": "[Feature] Make client available through conda-forge",
+    "body": "### Is this your first time submitting a feature request?\n\n- [X] I have searched the existing issues, and I could not find an existing issue for this feature\n- [X] I am requesting a straightforward extension of existing client functionality\n\n### Describe the feature\n\nCurrently, the client can only be downloaded through pip. It would be great if the client could also be dowloaded via conda.\r\nThe most popular way to do that is through conda-forge. It is an open source platform that builds and distributes packages for conda. The process is easy and straightforward with tools such as [grayskull](https://github.com/conda/grayskull). \r\n\r\nCurrently, it is not possible to do that, as the license does not allow redistribution.\r\n\r\nRef:\r\n- https://conda-forge.org\r\n- https://github.com/conda-forge\r\n- https://github.com/pinecone-io/pinecone-python-client/blob/2265066d7caaefd474d3fe8ebd41346d2d4eff1b/LICENSE.txt#L13\n\n### Describe alternatives you've considered\n\nInstall with pip\n\n### Who will this benefit?\n\nEvery user that uses conda. Conda is heavily used in the scientific community and would open this tool up to it.\n\n### Are you interested in contributing this feature?\n\nI can submit the tool, I just need a different license that allows redistribution.\n\n### Anything else?\n\nI am a reviewer at conda-forge and can try to answer any questions that might occur.",
+    "state": "closed",
+    "created_at": "2023-05-26T16:54:33+00:00",
+    "closed_at": "2024-08-06T15:35:59+00:00",
+    "updated_at": "2024-08-06T15:35:59+00:00",
+    "author": "BastianZim",
+    "author_type": "User",
+    "comments_count": 2,
+    "reactions_count": 0,
+    "labels": "enhancement",
+    "milestone": null,
+    "closed_by": "anawishnoff",
+    "resolution_time_hours": 10510.690555555555,
+    "first_comments": [
+      {
+        "author": "daverigby",
+        "created_at": "2024-05-03T08:26:47+00:00",
+        "body": "Note that as of [v3](https://github.com/pinecone-io/pinecone-python-client/releases/tag/v3.0.0) pinecone-client has been relicensed under Apache-2.0, which should address any redistribution issues, if anyone in the conda ecosystem wants to add `pinecone-client` to conda-forge. "
+      },
+      {
+        "author": "BastianZim",
+        "created_at": "2024-05-03T12:36:40+00:00",
+        "body": "Awesome, thank you!"
+      }
+    ],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/173"
+  },
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 166,
+    "title": "[Bug] Error loading documents to Pinecone",
+    "body": "### Is this a new bug in the Pinecone Python client?\n\n- [X] I believe this is a new bug in the Pinecone Python Client\n- [X] I have searched the existing issues, and I could not find an existing issue for this bug\n\n### Current Behavior\n\nThrows an error when loading document vectors into Pinecone.\n\n### Expected Behavior\n\nI was expecting document vectors to be added to the index.\n\n### Steps To Reproduce\n\n1. Clone this repo https://github.com/ricardopinto/pinecone-test\r\n2. Update the code in `qa_docs.py` and add your apy key, region, and index name (5120 dimensions)\r\n3. Follow the instructions in the readme to download the model and start the app\r\n\n\n### Relevant log output\n\n```shell\nTraceback (most recent call last):\r\n  File \"/usr/local/lib/python3.10/dist-packages/urllib3/connectionpool.py\", line 703, in urlopen\r\n    httplib_response = self._make_request(\r\n  File \"/usr/local/lib/python3.10/dist-packages/urllib3/connectionpool.py\", line 398, in _make_request\r\n    conn.request(method, url, **httplib_request_kw)\r\n  File \"/usr/local/lib/python3.10/dist-packages/urllib3/connection.py\", line 244, in request\r\n    super(HTTPConnection, self).request(method, url, body=body, headers=headers)\r\n  File \"/usr/lib/python3.10/http/client.py\", line 1282, in request\r\n    self._send_request(method, url, body, headers, encode_chunked)\r\n  File \"/usr/lib/python3.10/http/client.py\", line 1328, in _send_request\r\n    self.endheaders(body, encode_chunked=encode_chunked)\r\n  File \"/usr/lib/python3.10/http/client.py\", line 1277, in endheaders\r\n    self._send_output(message_body, encode_chunked=encode_chunked)\r\n  File \"/usr/lib/python3.10/http/client.py\", line 1076, in _send_output\r\n    self.send(chunk)\r\n  File \"/usr/lib/python3.10/http/client.py\", line 998, in send\r\n    self.sock.sendall(data)\r\n  File \"/usr/lib/python3.10/ssl.py\", line 1237, in sendall\r\n    v = self.send(byte_view[count:])\r\n  File \"/usr/lib/python3.10/ssl.py\", line 1206, in send\r\n    return self._sslobj.write(data)\r\nssl.SSLEOFError: EOF occurred in violation of protocol (_ssl.c:2396)\r\n\r\nDuring handling of the above exception, another exception occurred:\r\n\r\nTraceback (most recent call last):\r\n  File \"/app/qa_docs.py\", line 27, in <module>\r\n    docsearch = Pinecone.from_documents(texts, embeddings, index_name=index_name)\r\n  File \"/usr/local/lib/python3.10/dist-packages/langchain/vectorstores/base.py\", line 218, in from_documents\r\n    return cls.from_texts(texts, embedding, metadatas=metadatas, **kwargs)\r\n  File \"/usr/local/lib/python3.10/dist-packages/langchain/vectorstores/pinecone.py\", line 246, in from_texts\r\n    index.upsert(vectors=list(to_upsert), namespace=namespace)\r\n  File \"/usr/local/lib/python3.10/dist-packages/pinecone/core/utils/error_handling.py\", line 17, in inner_func\r\n    return func(*args, **kwargs)\r\n  File \"/usr/local/lib/python3.10/dist-packages/pinecone/index.py\", line 147, in upsert\r\n    return self._upsert_batch(vectors, namespace, _check_type, **kwargs)\r\n  File \"/usr/local/lib/python3.10/dist-packages/pinecone/index.py\", line 231, in _upsert_batch\r\n    return self._vector_api.upsert(\r\n  File \"/usr/local/lib/python3.10/dist-packages/pinecone/core/client/api_client.py\", line 776, in __call__\r\n    return self.callable(self, *args, **kwargs)\r\n  File \"/usr/local/lib/python3.10/dist-packages/pinecone/core/client/api/vector_operations_api.py\", line 956, in __upsert\r\n    return self.call_with_http_info(**kwargs)\r\n  File \"/usr/local/lib/python3.10/dist-packages/pinecone/core/client/api_client.py\", line 838, in call_with_http_info\r\n    return self.api_client.call_api(\r\n  File \"/usr/local/lib/python3.10/dist-packages/pinecone/core/client/api_client.py\", line 413, in call_api\r\n    return self.__call_api(resource_path, method,\r\n  File \"/usr/local/lib/python3.10/dist-packages/pinecone/core/client/api_client.py\", line 200, in __call_api\r\n    response_data = self.request(\r\n  File \"/usr/local/lib/python3.10/dist-packages/pinecone/core/client/api_client.py\", line 459, in request\r\n    return self.rest_client.POST(url,\r\n  File \"/usr/local/lib/python3.10/dist-packages/pinecone/core/client/rest.py\", line 271, in POST\r\n    return self.request(\"POST\", url,\r\n  File \"/usr/local/lib/python3.10/dist-packages/pinecone/core/client/rest.py\", line 157, in request\r\n    r = self.pool_manager.request(\r\n  File \"/usr/local/lib/python3.10/dist-packages/urllib3/request.py\", line 78, in request\r\n    return self.request_encode_body(\r\n  File \"/usr/local/lib/python3.10/dist-packages/urllib3/request.py\", line 170, in request_encode_body\r\n    return self.urlopen(method, url, **extra_kw)\r\n  File \"/usr/local/lib/python3.10/dist-packages/urllib3/poolmanager.py\", line 376, in urlopen\r\n    response = conn.urlopen(method, u.request_uri, **kw)\r\n  File \"/usr/local/lib/python3.10/dist-packages/urllib3/connectionpool.py\", line 815, in urlopen\r\n    return self.urlopen(\r\n  File \"/usr/local/lib/python3.10/dist-packages/urllib3/connectionpool.py\", line 815, in urlopen\r\n    return self.urlopen(\r\n  File \"/usr/local/lib/python3.10/dist-packages/urllib3/connectionpool.py\", line 815, in urlopen\r\n    return self.urlopen(\r\n  File \"/usr/local/lib/python3.10/dist-packages/urllib3/connectionpool.py\", line 787, in urlopen\r\n    retries = retries.increment(\r\n  File \"/usr/local/lib/python3.10/dist-packages/urllib3/util/retry.py\", line 592, in increment\r\n    raise MaxRetryError(_pool, url, error or ResponseError(cause))\r\nurllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='test-7ae06e9.svc.asia-northeast1-gcp.pinecone.io', port=443): Max retries exceeded with url: /vectors/upsert (Caused by SSLError(SSLEOFError(8, 'EOF occurred in violation of protocol (_ssl.c:2396)')))\n```\n\n\n### Environment\n\n```markdown\n- OS: Ubuntu 22.04 host, docker image from ubuntu 22.04\r\n- Python: 3.10.6\r\n- pinecone: 2.2.1\n```\n\n\n### Additional Context\n\nreproducible code: https://github.com/ricardopinto/pinecone-test",
+    "state": "closed",
+    "created_at": "2023-04-23T23:05:43+00:00",
+    "closed_at": "2024-08-09T14:00:45+00:00",
+    "updated_at": "2024-08-09T14:00:53+00:00",
+    "author": "ricardopinto",
+    "author_type": "User",
+    "comments_count": 9,
+    "reactions_count": 0,
+    "labels": "bug",
+    "milestone": null,
+    "closed_by": "anawishnoff",
+    "resolution_time_hours": 11366.917222222222,
+    "first_comments": [
+      {
+        "author": "aandis",
+        "created_at": "2023-05-10T11:55:12+00:00",
+        "body": "hitting this too. Wanted to try out Pinecone in this AI boom and wasted a lot of time on this."
+      },
+      {
+        "author": "estebanpdl",
+        "created_at": "2023-05-19T17:20:13+00:00",
+        "body": "The same problem here. Has someone found a solution to this problem? Is it something about the ids format? I can create an index, get a description, and delete an index, but cannot add vectors to the index."
+      },
+      {
+        "author": "jrinder42",
+        "created_at": "2023-05-22T22:21:36+00:00",
+        "body": "Please see my comment in another issue [here](https://github.com/pinecone-io/pinecone-python-client/issues/162#issuecomment-1558023248). Basically, *requests* needs to verify SSL certificates from HTTPS requests. It seems that something is going awry in this codebase regarding this. You can use  *requests* with the verify parameter=False (**do not recommend**) or *urllib3* if you are unsure how to use the verify parameter with *requests*.\r\n\r\nAs a workaround, you can take the bits of Python you need (can pull from Pinecone examples) and create your own mini library of sorts utilizing the above solution. It is rather unfortunate, but it will solve this until an actual fix is implemented."
+      },
+      {
+        "author": "ricardopinto",
+        "created_at": "2023-05-22T22:47:40+00:00",
+        "body": "I ended up using pgvector"
+      },
+      {
+        "author": "estebanpdl",
+        "created_at": "2023-05-22T23:02:38+00:00",
+        "body": "Qdrant is also great."
+      }
+    ],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/166"
+  },
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 162,
+    "title": "[Bug] SSL Error when trying to `.list_indexes()`",
+    "body": "### Is this a new bug in the Pinecone Python client?\n\n- [X] I believe this is a new bug in the Pinecone Python Client\n- [X] I have searched the existing issues, and I could not find an existing issue for this bug\n\n### Current Behavior\n\nWhen trying to `.list_indexes()`, I'm getting a SSL error (see logs below). I do have `certifi` installed in the Python environment.\n\n### Expected Behavior\n\nSuccessfully able to list existing indexes.\n\n### Steps To Reproduce\n\n1. Import `pinecone`.\r\n2. Initialize `pinecone` with and `api_key` and `environment`.\r\n3. Run `pinecone.list_indexes()`.\n\n### Relevant log output\n\n```shell\nPython 3.11.3 | packaged by conda-forge | (main, Apr  6 2023, 08:50:54) [MSC v.1934 64 bit (AMD64)]\r\nType 'copyright', 'credits' or 'license' for more information\r\nIPython 8.12.0 -- An enhanced Interactive Python. Type '?' for help.\r\n\r\nIn [1]: import pinecone\r\n\r\nIn [2]: pinecone.init(api_key=\"<redacted>\", environment=\"us-east1-gcp\")\r\n\r\nIn [3]: pinecone.list_indexes()\r\n---------------------------------------------------------------------------\r\nSSLError                                  Traceback (most recent call last)\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\util\\ssl_.py:402, in ssl_wrap_socket(sock, keyfile, certfile, cert_reqs, ca_certs, server_hostname, ssl_version, ciphers, ssl_context, ca_cert_dir, key_password, ca_cert_data, tls_in_tls)\r\n    401 try:\r\n--> 402     context.load_verify_locations(ca_certs, ca_cert_dir, ca_cert_data)\r\n    403 except (IOError, OSError) as e:\r\n\r\nSSLError: [X509] PEM lib (_ssl.c:4149)\r\n\r\nDuring handling of the above exception, another exception occurred:\r\n\r\nSSLError                                  Traceback (most recent call last)\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\connectionpool.py:703, in HTTPConnectionPool.urlopen(self, method, url, body, headers, retries, redirect, assert_same_host, timeout, pool_timeout, release_conn, chunked, body_pos, **response_kw)\r\n    702 # Make the request on the httplib connection object.\r\n--> 703 httplib_response = self._make_request(\r\n    704     conn,\r\n    705     method,\r\n    706     url,\r\n    707     timeout=timeout_obj,\r\n    708     body=body,\r\n    709     headers=headers,\r\n    710     chunked=chunked,\r\n    711 )\r\n    713 # If we're going to release the connection in ``finally:``, then\r\n    714 # the response doesn't need to know about the connection. Otherwise\r\n    715 # it will also try to release it and we'll have a double-release\r\n    716 # mess.\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\connectionpool.py:386, in HTTPConnectionPool._make_request(self, conn, method, url, timeout, chunked, **httplib_request_kw)\r\n    385 try:\r\n--> 386     self._validate_conn(conn)\r\n    387 except (SocketTimeout, BaseSSLError) as e:\r\n    388     # Py2 raises this as a BaseSSLError, Py3 raises it as socket timeout.\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\connectionpool.py:1042, in HTTPSConnectionPool._validate_conn(self, conn)\r\n   1041 if not getattr(conn, \"sock\", None):  # AppEngine might not have  `.sock`\r\n-> 1042     conn.connect()\r\n   1044 if not conn.is_verified:\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\connection.py:419, in HTTPSConnection.connect(self)\r\n    417     context.load_default_certs()\r\n--> 419 self.sock = ssl_wrap_socket(\r\n    420     sock=conn,\r\n    421     keyfile=self.key_file,\r\n    422     certfile=self.cert_file,\r\n    423     key_password=self.key_password,\r\n    424     ca_certs=self.ca_certs,\r\n    425     ca_cert_dir=self.ca_cert_dir,\r\n    426     ca_cert_data=self.ca_cert_data,\r\n    427     server_hostname=server_hostname,\r\n    428     ssl_context=context,\r\n    429     tls_in_tls=tls_in_tls,\r\n    430 )\r\n    432 # If we're using all defaults and the connection\r\n    433 # is TLSv1 or TLSv1.1 we throw a DeprecationWarning\r\n    434 # for the host.\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\util\\ssl_.py:404, in ssl_wrap_socket(sock, keyfile, certfile, cert_reqs, ca_certs, server_hostname, ssl_version, ciphers, ssl_context, ca_cert_dir, key_password, ca_cert_data, tls_in_tls)\r\n    403     except (IOError, OSError) as e:\r\n--> 404         raise SSLError(e)\r\n    406 elif ssl_context is None and hasattr(context, \"load_default_certs\"):\r\n    407     # try to load OS default certs; works well on Windows (require Python3.4+)\r\n\r\nSSLError: [X509] PEM lib (_ssl.c:4149)\r\n\r\nDuring handling of the above exception, another exception occurred:\r\n\r\nMaxRetryError                             Traceback (most recent call last)\r\nCell In[3], line 1\r\n----> 1 pinecone.list_indexes()\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\pinecone\\manage.py:185, in list_indexes()\r\n    183 \"\"\"Lists all indexes.\"\"\"\r\n    184 api_instance = _get_api_instance()\r\n--> 185 response = api_instance.list_indexes()\r\n    186 return response\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\pinecone\\core\\client\\api_client.py:776, in Endpoint.__call__(self, *args, **kwargs)\r\n    765 def __call__(self, *args, **kwargs):\r\n    766     \"\"\" This method is invoked when endpoints are called\r\n    767     Example:\r\n    768\r\n   (...)\r\n    774\r\n    775     \"\"\"\r\n--> 776     return self.callable(self, *args, **kwargs)\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\pinecone\\core\\client\\api\\index_operations_api.py:1132, in IndexOperationsApi.__init__.<locals>.__list_indexes(self, **kwargs)\r\n   1128 kwargs['_check_return_type'] = kwargs.get(\r\n   1129     '_check_return_type', True\r\n   1130 )\r\n   1131 kwargs['_host_index'] = kwargs.get('_host_index')\r\n-> 1132 return self.call_with_http_info(**kwargs)\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\pinecone\\core\\client\\api_client.py:838, in Endpoint.call_with_http_info(self, **kwargs)\r\n    834     header_list = self.api_client.select_header_content_type(\r\n    835         content_type_headers_list)\r\n    836     params['header']['Content-Type'] = header_list\r\n--> 838 return self.api_client.call_api(\r\n    839     self.settings['endpoint_path'], self.settings['http_method'],\r\n    840     params['path'],\r\n    841     params['query'],\r\n    842     params['header'],\r\n    843     body=params['body'],\r\n    844     post_params=params['form'],\r\n    845     files=params['file'],\r\n    846     response_type=self.settings['response_type'],\r\n    847     auth_settings=self.settings['auth'],\r\n    848     async_req=kwargs['async_req'],\r\n    849     _check_type=kwargs['_check_return_type'],\r\n    850     _return_http_data_only=kwargs['_return_http_data_only'],\r\n    851     _preload_content=kwargs['_preload_content'],\r\n    852     _request_timeout=kwargs['_request_timeout'],\r\n    853     _host=_host,\r\n    854     collection_formats=params['collection_format'])\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\pinecone\\core\\client\\api_client.py:413, in ApiClient.call_api(self, resource_path, method, path_params, query_params, header_params, body, post_params, files, response_type, auth_settings, async_req, _return_http_data_only, collection_formats, _preload_content, _request_timeout, _host, _check_type)\r\n    359 \"\"\"Makes the HTTP request (synchronous) and returns deserialized data.\r\n    360\r\n    361 To make an async_req request, set the async_req parameter.\r\n   (...)\r\n    410     then the method will return the response directly.\r\n    411 \"\"\"\r\n    412 if not async_req:\r\n--> 413     return self.__call_api(resource_path, method,\r\n    414                            path_params, query_params, header_params,\r\n    415                            body, post_params, files,\r\n    416                            response_type, auth_settings,\r\n    417                            _return_http_data_only, collection_formats,\r\n    418                            _preload_content, _request_timeout, _host,\r\n    419                            _check_type)\r\n    421 return self.pool.apply_async(self.__call_api, (resource_path,\r\n    422                                                method, path_params,\r\n    423                                                query_params,\r\n   (...)\r\n    431                                                _request_timeout,\r\n    432                                                _host, _check_type))\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\pinecone\\core\\client\\api_client.py:200, in ApiClient.__call_api(self, resource_path, method, path_params, query_params, header_params, body, post_params, files, response_type, auth_settings, _return_http_data_only, collection_formats, _preload_content, _request_timeout, _host, _check_type)\r\n    196     url = _host + resource_path\r\n    198 try:\r\n    199     # perform request and return response\r\n--> 200     response_data = self.request(\r\n    201         method, url, query_params=query_params, headers=header_params,\r\n    202         post_params=post_params, body=body,\r\n    203         _preload_content=_preload_content,\r\n    204         _request_timeout=_request_timeout)\r\n    205 except ApiException as e:\r\n    206     e.body = e.body.decode('utf-8')\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\pinecone\\core\\client\\api_client.py:439, in ApiClient.request(self, method, url, query_params, headers, post_params, body, _preload_content, _request_timeout)\r\n    437 \"\"\"Makes the HTTP request using RESTClient.\"\"\"\r\n    438 if method == \"GET\":\r\n--> 439     return self.rest_client.GET(url,\r\n    440                                 query_params=query_params,\r\n    441                                 _preload_content=_preload_content,\r\n    442                                 _request_timeout=_request_timeout,\r\n    443                                 headers=headers)\r\n    444 elif method == \"HEAD\":\r\n    445     return self.rest_client.HEAD(url,\r\n    446                                  query_params=query_params,\r\n    447                                  _preload_content=_preload_content,\r\n    448                                  _request_timeout=_request_timeout,\r\n    449                                  headers=headers)\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\pinecone\\core\\client\\rest.py:236, in RESTClientObject.GET(self, url, headers, query_params, _preload_content, _request_timeout)\r\n    234 def GET(self, url, headers=None, query_params=None, _preload_content=True,\r\n    235         _request_timeout=None):\r\n--> 236     return self.request(\"GET\", url,\r\n    237                         headers=headers,\r\n    238                         _preload_content=_preload_content,\r\n    239                         _request_timeout=_request_timeout,\r\n    240                         query_params=query_params)\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\pinecone\\core\\client\\rest.py:202, in RESTClientObject.request(self, method, url, query_params, headers, body, post_params, _preload_content, _request_timeout)\r\n    199             raise ApiException(status=0, reason=msg)\r\n    200     # For `GET`, `HEAD`\r\n    201     else:\r\n--> 202         r = self.pool_manager.request(method, url,\r\n    203                                       fields=query_params,\r\n    204                                       preload_content=_preload_content,\r\n    205                                       timeout=timeout,\r\n    206                                       headers=headers)\r\n    207 except urllib3.exceptions.SSLError as e:\r\n    208     msg = \"{0}\\n{1}\".format(type(e).__name__, str(e))\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\request.py:74, in RequestMethods.request(self, method, url, fields, headers, **urlopen_kw)\r\n     71 urlopen_kw[\"request_url\"] = url\r\n     73 if method in self._encode_url_methods:\r\n---> 74     return self.request_encode_url(\r\n     75         method, url, fields=fields, headers=headers, **urlopen_kw\r\n     76     )\r\n     77 else:\r\n     78     return self.request_encode_body(\r\n     79         method, url, fields=fields, headers=headers, **urlopen_kw\r\n     80     )\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\request.py:96, in RequestMethods.request_encode_url(self, method, url, fields, headers, **urlopen_kw)\r\n     93 if fields:\r\n     94     url += \"?\" + urlencode(fields)\r\n---> 96 return self.urlopen(method, url, **extra_kw)\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\poolmanager.py:376, in PoolManager.urlopen(self, method, url, redirect, **kw)\r\n    374     response = conn.urlopen(method, url, **kw)\r\n    375 else:\r\n--> 376     response = conn.urlopen(method, u.request_uri, **kw)\r\n    378 redirect_location = redirect and response.get_redirect_location()\r\n    379 if not redirect_location:\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\connectionpool.py:815, in HTTPConnectionPool.urlopen(self, method, url, body, headers, retries, redirect, assert_same_host, timeout, pool_timeout, release_conn, chunked, body_pos, **response_kw)\r\n    810 if not conn:\r\n    811     # Try again\r\n    812     log.warning(\r\n    813         \"Retrying (%r) after connection broken by '%r': %s\", retries, err, url\r\n    814     )\r\n--> 815     return self.urlopen(\r\n    816         method,\r\n    817         url,\r\n    818         body,\r\n    819         headers,\r\n    820         retries,\r\n    821         redirect,\r\n    822         assert_same_host,\r\n    823         timeout=timeout,\r\n    824         pool_timeout=pool_timeout,\r\n    825         release_conn=release_conn,\r\n    826         chunked=chunked,\r\n    827         body_pos=body_pos,\r\n    828         **response_kw\r\n    829     )\r\n    831 # Handle redirect?\r\n    832 redirect_location = redirect and response.get_redirect_location()\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\connectionpool.py:815, in HTTPConnectionPool.urlopen(self, method, url, body, headers, retries, redirect, assert_same_host, timeout, pool_timeout, release_conn, chunked, body_pos, **response_kw)\r\n    810 if not conn:\r\n    811     # Try again\r\n    812     log.warning(\r\n    813         \"Retrying (%r) after connection broken by '%r': %s\", retries, err, url\r\n    814     )\r\n--> 815     return self.urlopen(\r\n    816         method,\r\n    817         url,\r\n    818         body,\r\n    819         headers,\r\n    820         retries,\r\n    821         redirect,\r\n    822         assert_same_host,\r\n    823         timeout=timeout,\r\n    824         pool_timeout=pool_timeout,\r\n    825         release_conn=release_conn,\r\n    826         chunked=chunked,\r\n    827         body_pos=body_pos,\r\n    828         **response_kw\r\n    829     )\r\n    831 # Handle redirect?\r\n    832 redirect_location = redirect and response.get_redirect_location()\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\connectionpool.py:815, in HTTPConnectionPool.urlopen(self, method, url, body, headers, retries, redirect, assert_same_host, timeout, pool_timeout, release_conn, chunked, body_pos, **response_kw)\r\n    810 if not conn:\r\n    811     # Try again\r\n    812     log.warning(\r\n    813         \"Retrying (%r) after connection broken by '%r': %s\", retries, err, url\r\n    814     )\r\n--> 815     return self.urlopen(\r\n    816         method,\r\n    817         url,\r\n    818         body,\r\n    819         headers,\r\n    820         retries,\r\n    821         redirect,\r\n    822         assert_same_host,\r\n    823         timeout=timeout,\r\n    824         pool_timeout=pool_timeout,\r\n    825         release_conn=release_conn,\r\n    826         chunked=chunked,\r\n    827         body_pos=body_pos,\r\n    828         **response_kw\r\n    829     )\r\n    831 # Handle redirect?\r\n    832 redirect_location = redirect and response.get_redirect_location()\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\connectionpool.py:787, in HTTPConnectionPool.urlopen(self, method, url, body, headers, retries, redirect, assert_same_host, timeout, pool_timeout, release_conn, chunked, body_pos, **response_kw)\r\n    784 elif isinstance(e, (SocketError, HTTPException)):\r\n    785     e = ProtocolError(\"Connection aborted.\", e)\r\n--> 787 retries = retries.increment(\r\n    788     method, url, error=e, _pool=self, _stacktrace=sys.exc_info()[2]\r\n    789 )\r\n    790 retries.sleep()\r\n    792 # Keep track of the error for the retry warning.\r\n\r\nFile ~\\scoop\\apps\\mambaforge\\current\\envs\\llm\\Lib\\site-packages\\urllib3\\util\\retry.py:592, in Retry.increment(self, method, url, response, error, _pool, _stacktrace)\r\n    581 new_retry = self.new(\r\n    582     total=total,\r\n    583     connect=connect,\r\n   (...)\r\n    588     history=history,\r\n    589 )\r\n    591 if new_retry.is_exhausted():\r\n--> 592     raise MaxRetryError(_pool, url, error or ResponseError(cause))\r\n    594 log.debug(\"Incremented Retry for (url='%s'): %r\", url, new_retry)\r\n    596 return new_retry\r\n\r\nMaxRetryError: HTTPSConnectionPool(host='controller.us-east1-gcp.pinecone.io', port=443): Max retries exceeded with url: /databases (Caused by SSLError(SSLError(524297, '[X509] PEM lib (_ssl.c:4149)')))\r\n\r\nIn [4]:\n```\n\n\n### Environment\n\n```markdown\n- OS: Windows 10\r\n- Python: Python 3.11.3\r\n- pinecone: 2.2.1\n```\n\n\n### Additional Context\n\nI'm able to successfully able to ping the hostname (`controller.us-east1-gcp.pinecone.io`). So network connectivity appears to be working.\r\n\r\nI haven't found a way to disable SSL verification.",
+    "state": "closed",
+    "created_at": "2023-04-10T18:29:53+00:00",
+    "closed_at": "2024-08-06T15:34:58+00:00",
+    "updated_at": "2024-08-06T15:34:59+00:00",
+    "author": "oddrationale",
+    "author_type": "User",
+    "comments_count": 8,
+    "reactions_count": 0,
+    "labels": "bug",
+    "milestone": null,
+    "closed_by": "anawishnoff",
+    "resolution_time_hours": 11613.084722222222,
+    "first_comments": [
+      {
+        "author": "lparisi",
+        "created_at": "2023-04-11T15:25:53+00:00",
+        "body": "Hi, can you double check your Environment name, I was having the same error, but my env name had a typo."
+      },
+      {
+        "author": "oddrationale",
+        "created_at": "2023-04-11T16:07:04+00:00",
+        "body": "Hello!\r\n\r\nSo, you were correct that I had the wrong environment. I checked my pinecone account and I am on `us-east4-gcp` not `us-east1-gcp`.\r\n\r\nHowever, I tried again with the correct environment:\r\n\r\n```python\r\npinecone.init(api_key=\"<redacted>\", environment=\"us-east4-gcp\")\r\n```\r\n\r\nBut I still get the same error when trying to `.list_indexes()`:\r\n\r\n```\r\nMaxRetryError: HTTPSConnectionPool(host='controller.us-east4-gcp.pinecone.io', port=443): Max retries exceeded with url: /databases (Caused by SSLError(SSLError(524297, '[X509] PEM lib (_ssl.c:4149)')))\r\n```"
+      },
+      {
+        "author": "philipk19238",
+        "created_at": "2023-04-14T03:12:49+00:00",
+        "body": "+1 getting same error"
+      },
+      {
+        "author": "SimonB97",
+        "created_at": "2023-04-25T18:37:16+00:00",
+        "body": "+1 same issue for me"
+      },
+      {
+        "author": "jrinder42",
+        "created_at": "2023-05-22T21:18:20+00:00",
+        "body": "I had the same issue and I believe it is due to the *requests* package and how it handles ssl. If you take the Python code with *requests* and swap it with something like *urllib3*, it will potentially work (as it did for me). I took the curl commands, put them in a curl-to-Python converter, and then swapped *requests* with *urllib3*.\r\n\r\nThe real issue is that you have to link to an ssl cert for verification. You can use *requests* if you know how to use the verify parameter (i.e. linking to a trusted CA). You can read more about it [here](https://requests.readthedocs.io/en/latest/user/advanced/)"
+      }
+    ],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/162"
+  },
+  {
+    "repository": "pinecone-io/pinecone-python-client",
+    "issue_number": 150,
+    "title": "Compatiblility with Jina Docarray",
+    "body": "I'm looking to use pinecone as the vector database backend with Jina but it doesn't seem to be supported natively in the Docarray repo yet (They support milvus and others). Is this something pinecone couple help implement and merge into Jina? I opened an issue with them [here](https://github.com/docarray/docarray/issues/1245)",
+    "state": "closed",
+    "created_at": "2023-03-16T06:54:53+00:00",
+    "closed_at": "2024-08-06T16:16:46+00:00",
+    "updated_at": "2024-08-06T16:16:47+00:00",
+    "author": "NOT-HAL9000",
+    "author_type": "User",
+    "comments_count": 3,
+    "reactions_count": 0,
+    "labels": "enhancement,wontfix",
+    "milestone": null,
+    "closed_by": "anawishnoff",
+    "resolution_time_hours": 12225.364722222223,
+    "first_comments": [
+      {
+        "author": "NOT-HAL9000",
+        "created_at": "2023-05-08T05:03:11+00:00",
+        "body": "@gdj0nes Hey Gareth, reaching out on behalf of the Jina.ai/docararay team to see if pinecone would like to help build a docarray connector. See discussion at: https://github.com/docarray/docarray/issues/1245 .\r\n\r\nThanks!"
+      },
+      {
+        "author": "NOT-HAL9000",
+        "created_at": "2023-05-08T05:05:42+00:00",
+        "body": "@benjaminran @rajat08 "
+      },
+      {
+        "author": "anawishnoff",
+        "created_at": "2024-08-06T16:16:46+00:00",
+        "body": "Thank you for posting this! Updating this issue to say that unfortunately this is not on our team's roadmap for the near future."
+      }
+    ],
+    "url": "https://github.com/pinecone-io/pinecone-python-client/issues/150"
+  }
+]
