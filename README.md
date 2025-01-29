@@ -116,7 +116,3 @@ The contract violation analysis will add:
 ## Contributing
 
 Feel free to open issues or submit pull requests with improvements.
-
-## License
-
-[Add your chosen license] 
