@@ -1,7 +1,7 @@
 import os
 import json
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from tqdm import tqdm
 from typing import List, Dict, Any
 from utils import (
@@ -33,14 +33,23 @@ def fetch_closed_issues(
 
         # Set default date range if not provided
         if not end_date:
-            end_date = datetime.now()
+            end_date = datetime.now(timezone.utc)
         if not start_date:
             # Last 6 months by default
             start_date = end_date - timedelta(days=180)
 
+        # Ensure dates are timezone-aware
+        if start_date.tzinfo is None:
+            start_date = start_date.replace(tzinfo=timezone.utc)
+        if end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=timezone.utc)
+
         # Create query string for GitHub API
-        query = f"repo:{repo_name} is:issue is:closed closed:{
-            start_date.strftime('%Y-%m-%d')}..{end_date.strftime('%Y-%m-%d')}"
+        query = "repo:{} is:issue is:closed closed:{}..{}".format(
+            repo_name,
+            start_date.strftime('%Y-%m-%d'),
+            end_date.strftime('%Y-%m-%d')
+        )
 
         # Fetch issues using search API
         for issue in tqdm(repo.get_issues(state='closed'), desc=f'Fetching issues from {repo_name}'):
@@ -103,8 +112,8 @@ def main():
     # Get list of repositories to analyze
     repositories = get_relevant_repositories()
 
-    # Set date range (last 6 months by default)
-    end_date = datetime.now()
+    # Set date range (last 6 months by default) with timezone awareness
+    end_date = datetime.now(timezone.utc)
     start_date = end_date - timedelta(days=180)
 
     # Fetch issues from all repositories

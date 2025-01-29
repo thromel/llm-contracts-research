@@ -41,8 +41,11 @@ def is_relevant_issue(issue: Issue) -> bool:
     }
 
     # Check if any relevant keywords are in the title or body
-    text_to_check = f"{issue.title.lower()} {issue.body.lower()
-                                             if issue.body else ''}"
+    title = issue.title.lower()
+    body = issue.body.lower() if issue.body else ''
+    text_to_check = (
+        f"{title} {body}"
+    )
     return any(keyword in text_to_check for keyword in relevant_keywords)
 
 
@@ -107,35 +110,34 @@ def format_issue_data(issue: Issue) -> Dict[str, Any]:
 def get_relevant_repositories() -> List[str]:
     """Return a list of relevant repositories to analyze, organized by category."""
     return [
-        # Major LLM API Providers
+        # Major Commercial LLM Providers
         'openai/openai-python',
-        'anthropics/anthropic-sdk-python',
+        'anthropic/anthropic-python',
         'cohere-ai/cohere-python',
 
-        # LLM Frameworks and Tools
-        'huggingface/transformers',
-        'langchain-ai/langchain',
-        'microsoft/semantic-kernel',
-        'microsoft/guidance',
-        'hwchase17/langchain',
+        # Open Source LLM Organizations
+        'mistralai/mistralai-python',
+        'deepseek-ai/deepseek-coder',
+        'nvidia/NeMo',
 
-        # Vector Databases
+        # LLM Development Tools
+        'huggingface/transformers',
+        'langchain-ai/langchain-python',
+
+        # Vector Databases & Embeddings
         'chroma-core/chroma',
         'pinecone-io/pinecone-python-client',
         'weaviate/weaviate-python-client',
 
-        # LLM-powered Development Tools
-        'microsoft/promptflow',
-        'langgenius/dify',
-        'microsoft/semantic-kernel',
-
-        # Model Serving and Deployment
-        'pytorch/serve',
-        'triton-inference-server/server',
-        'microsoft/DeepSpeed',
+        # Chinese LLM Companies
+        'QwenLM/Qwen-7B',
+        'THUDM/ChatGLM-6B',
 
         # LLM Safety and Evaluation
-        'anthropics/constitutive-ai',
         'EleutherAI/lm-evaluation-harness',
-        'huggingface/evaluate'
+
+        # Model Training & Deployment
+        'microsoft/DeepSpeed',
+        'microsoft/semantic-kernel',
+        'pytorch/serve'
     ]
