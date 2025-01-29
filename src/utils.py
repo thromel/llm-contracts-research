@@ -24,29 +24,11 @@ def get_github_client() -> Github:
 
 def is_relevant_issue(issue: Issue) -> bool:
     """
-    Determine if an issue is relevant for analysis based on specific criteria.
+    Determine if an issue is relevant for analysis.
+    Only filters out pull requests.
     """
     # Skip pull requests
-    if issue.pull_request:
-        return False
-
-    # Keywords related to LLM contracts and API usage
-    relevant_keywords = {
-        'api', 'token', 'rate limit', 'quota', 'billing', 'cost',
-        'pricing', 'usage', 'limit', 'throttle', 'error', 'exception',
-        'authentication', 'key', 'credit', 'subscription', 'plan',
-        'payment', 'charge', 'free tier', 'enterprise',
-        'performance', 'latency', 'timeout', 'concurrent',
-        'model', 'prompt', 'completion', 'embedding'
-    }
-
-    # Check if any relevant keywords are in the title or body
-    title = issue.title.lower()
-    body = issue.body.lower() if issue.body else ''
-    text_to_check = (
-        f"{title} {body}"
-    )
-    return any(keyword in text_to_check for keyword in relevant_keywords)
+    return not issue.pull_request
 
 
 def get_issue_comments(issue: Issue, max_comments: int = 5) -> List[Dict[str, Any]]:
@@ -70,6 +52,13 @@ def format_issue_data(issue: Issue) -> Dict[str, Any]:
     """Format a GitHub issue into a dictionary for CSV export with enhanced fields."""
     comments = get_issue_comments(issue)
 
+    # Safely get reaction count
+    try:
+        reactions_count = sum(getattr(reaction, 'total_count', 0)
+                              for reaction in issue.get_reactions())
+    except Exception:
+        reactions_count = 0
+
     return {
         # Basic Information
         'repository': issue.repository.full_name,
@@ -89,7 +78,7 @@ def format_issue_data(issue: Issue) -> Dict[str, Any]:
 
         # Engagement Metrics
         'comments_count': issue.comments,
-        'reactions_count': sum(reaction.total_count for reaction in issue.get_reactions()),
+        'reactions_count': reactions_count,
 
         # Labels and Categorization
         'labels': ','.join([label.name for label in issue.labels]),
@@ -112,17 +101,16 @@ def get_relevant_repositories() -> List[str]:
     return [
         # Major Commercial LLM Providers
         'openai/openai-python',
-        'anthropic/anthropic-python',
         'cohere-ai/cohere-python',
 
         # Open Source LLM Organizations
-        'mistralai/mistralai-python',
-        'deepseek-ai/deepseek-coder',
-        'nvidia/NeMo',
+        'mistralai/mistralai',
+        'deepseek-ai/DeepSeek-Coder',
+        'NVIDIA/NeMo',
 
         # LLM Development Tools
         'huggingface/transformers',
-        'langchain-ai/langchain-python',
+        'langchain-ai/langchain',
 
         # Vector Databases & Embeddings
         'chroma-core/chroma',
@@ -130,8 +118,8 @@ def get_relevant_repositories() -> List[str]:
         'weaviate/weaviate-python-client',
 
         # Chinese LLM Companies
-        'QwenLM/Qwen-7B',
-        'THUDM/ChatGLM-6B',
+        'QwenLM/Qwen',
+        'THUDM/ChatGLM2-6B',
 
         # LLM Safety and Evaluation
         'EleutherAI/lm-evaluation-harness',
