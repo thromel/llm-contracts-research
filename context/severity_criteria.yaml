@@ -1,73 +1,13 @@
-severity_levels:
-  critical:
-    description: "Severe violations requiring immediate attention"
-    criteria:
-      - "Security vulnerabilities"
-      - "Data breaches"
-      - "Complete service outage"
-      - "Legal/compliance violations"
-    response_time: "immediate"
-    escalation: "required"
-    notification: "immediate"
-
-  high:
-    description: "Serious violations affecting multiple users or core functionality"
-    criteria:
-      - "Service partially unavailable"
-      - "Data loss or corruption"
-      - "Significant performance degradation"
-      - "Breaking API changes"
-    response_time: "within 4 hours"
-    escalation: "required"
-    notification: "within 1 hour"
-
-  medium:
-    description: "Violations affecting limited functionality or specific users"
-    criteria:
-      - "Intermittent issues"
-      - "Minor data inconsistencies"
-      - "Performance issues"
-      - "Feature limitations"
-    response_time: "within 24 hours"
-    escalation: "optional"
-    notification: "within 12 hours"
-
-  low:
-    description: "Minor violations with minimal impact"
-    criteria:
-      - "Documentation inconsistencies"
-      - "Cosmetic issues"
-      - "Minor inconveniences"
-      - "Edge case bugs"
-    response_time: "within 72 hours"
-    escalation: "not required"
-    notification: "in regular updates"
-
-impact_factors:
-  user_scope:
-    - "Number of affected users"
-    - "Type of users affected (enterprise, free, etc.)"
-    - "Geographic distribution"
-  
-  functionality:
-    - "Core vs. peripheral features"
-    - "Availability of workarounds"
-    - "Duration of impact"
-  
-  business_impact:
-    - "Revenue impact"
-    - "Reputation damage"
-    - "Legal/compliance risks"
-    - "Customer trust"
-
-assessment_guidelines:
-  - "Consider both immediate and long-term impacts"
-  - "Evaluate potential for escalation"
-  - "Account for cumulative effects"
-  - "Consider dependencies and downstream effects"
-
-metadata:
-  version: "1.0"
-  last_updated: "YYYY-MM-DD"
-  review_frequency: "quarterly"
-  notes: "Template for severity criteria - adjust based on research findings" 
+system_crash: High severity - Results in complete system failure
+performance_degradation: Medium severity - Impacts system performance but doesn't
+  cause failure
+data_corruption: High severity - Causes incorrect data processing or storage, potentially
+  leading to incorrect system behavior or data loss
+hang: Medium severity - Causes the system to become unresponsive, requiring restart
+  or intervention but not leading to data loss
+incorrect_functionality: High severity - Leads to incorrect system behavior, producing
+  wrong outputs or failing to complete tasks as intended
+memory_out_of_bound: High severity - Causes the system to exceed its memory allocation,
+  potentially leading to crashes or system instability
+unknown: Low severity - The impact of the violation is unclear or not immediately
+  apparent, requiring further investigation to assess the severity
