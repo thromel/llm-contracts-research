@@ -1,72 +1,10 @@
-violation_types:
-  - name: "API Breaking Change"
-    description: "Changes that break backward compatibility"
-    indicators:
-      - "Version incompatibility"
-      - "Breaking API changes"
-      - "Deprecated functionality"
-    severity_default: "high"
-    detection_signals:
-      - "Version-specific errors"
-      - "Compatibility warnings"
-
-  - name: "Rate Limit Violation"
-    description: "Issues with rate limiting and quotas"
-    indicators:
-      - "Unexpected throttling"
-      - "Quota exceeded"
-      - "Rate limit changes"
-    severity_default: "medium"
-    detection_signals:
-      - "429 errors"
-      - "Throttling messages"
-
-  - name: "Performance Contract Violation"
-    description: "Violations of performance guarantees"
-    indicators:
-      - "Response time degradation"
-      - "Latency issues"
-      - "Timeout frequency"
-    severity_default: "medium"
-    detection_signals:
-      - "Timeout errors"
-      - "Performance metrics"
-
-  - name: "Model Behavior Change"
-    description: "Unexpected changes in model behavior"
-    indicators:
-      - "Output format changes"
-      - "Quality regression"
-      - "Consistency issues"
-    severity_default: "high"
-    detection_signals:
-      - "Quality complaints"
-      - "Behavior differences"
-
-  - name: "Authentication/Authorization"
-    description: "Issues with access control and authentication"
-    indicators:
-      - "Token invalidation"
-      - "Permission changes"
-      - "Access revocation"
-    severity_default: "high"
-    detection_signals:
-      - "401/403 errors"
-      - "Authentication failures"
-
-  - name: "Data Privacy/Security"
-    description: "Violations of data handling agreements"
-    indicators:
-      - "Data exposure"
-      - "Privacy breaches"
-      - "Security vulnerabilities"
-    severity_default: "critical"
-    detection_signals:
-      - "Security reports"
-      - "Privacy complaints"
-
-metadata:
-  version: "1.0"
-  last_updated: "YYYY-MM-DD"
-  source: "Research analysis"
-  notes: "Template for violation types - customize based on research findings" 
+input_value_violation: Occurs when unacceptable input values are supplied to an API
+  method
+input_type_violation: Happens when the type of input supplied to an API method is
+  unacceptable or does not match the expected type
+method_order_violation: Involves incorrect ordering of API method calls that are required
+  to follow a specific sequence
+missing_dependency_violation: Occurs when there is a missing input value or type dependency
+  between arguments or between an argument and a method call
+missing_option_violation: Happens when the client does not follow one of the multiple
+  choices provided for maintaining contracts for an API method

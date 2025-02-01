@@ -1,72 +1,34 @@
-examples:
-  - title: "Rate Limit Change Without Notice"
-    description: "API provider reduced rate limits without prior notification"
-    analysis:
-      is_violation: true
-      violation_type: "Rate Limit Violation"
-      severity: "high"
-      impact:
-        description: "Production systems failed due to unexpected throttling"
-        affected_users: "Enterprise customers"
-        scope: "Global"
-      resolution:
-        was_addressed: true
-        resolution_type: "Policy Change"
-        effectiveness: "Provider implemented notification policy"
-      evidence:
-        - "Sudden increase in 429 errors"
-        - "No prior communication"
-        - "Multiple customer complaints"
-
-  - title: "Breaking Change in Response Format"
-    description: "Model output format changed without version update"
-    analysis:
-      is_violation: true
-      violation_type: "API Breaking Change"
-      severity: "high"
-      impact:
-        description: "Parsing failures in downstream applications"
-        affected_users: "All API users"
-        scope: "Global"
-      resolution:
-        was_addressed: true
-        resolution_type: "Version Update"
-        effectiveness: "Proper versioning implemented"
-      evidence:
-        - "JSON structure changes"
-        - "Client application errors"
-        - "Version number unchanged"
-
-  - title: "Performance Degradation"
-    description: "Response times exceeded SLA without notification"
-    analysis:
-      is_violation: true
-      violation_type: "Performance Contract Violation"
-      severity: "medium"
-      impact:
-        description: "Increased latency affecting user experience"
-        affected_users: "High-volume users"
-        scope: "Regional"
-      resolution:
-        was_addressed: true
-        resolution_type: "Infrastructure Upgrade"
-        effectiveness: "Performance restored to SLA levels"
-      evidence:
-        - "Latency metrics"
-        - "SLA breach records"
-        - "Customer tickets"
-
-  - title: "Feature Request"
-    description: "Request for new model capability"
-    analysis:
-      is_violation: false
-      categorization:
-        primary_category: "Feature Request"
-        subcategory: "Model Capability"
-      explanation: "Not a violation as it requests new functionality"
-      tags: ["enhancement", "feature-request"]
-
-metadata:
-  version: "1.0"
-  last_updated: "YYYY-MM-DD"
-  notes: "Template examples - update with real cases from research" 
+incorrect_tensor_shape:
+  description: 'The matmul() API from TensorFlow requires that both of the arguments
+    should be a Tensor with one of the following types: float16, float32, float64,
+    int32, complex64, complex128. Supplying arguments of different types leads to
+    a type error and program crash.'
+  type: input_validation_violation
+  severity: high
+  impact: Program crashes with a type error.
+missing_preprocessing_step:
+  description: For the Scikit-learn API linear_model.SGDClassifier, partial_fit()
+    requires the data provided as arguments to be shuffled. Failure to shuffle the
+    data leads to incorrect model training.
+  type: preprocessing_violation
+  severity: medium
+  impact: Leads to incorrect model training due to unshuffled data.
+inadequate_activation_function:
+  description: Using categorical_crossentropy as the loss function in Keras requires
+    a softmax activation in the final layer. Omitting softmax activation results in
+    model training errors.
+  type: model_configuration_violation
+  severity: medium
+  impact: Results in model training errors due to incorrect loss function configuration.
+unmatched_input_dimensions:
+  description: In TensorFlow, the decode() method expects a byte string as input.
+    Supplying an input of a different type or format results in a runtime error.
+  type: input_validation_violation
+  severity: high
+  impact: Causes a runtime error due to type mismatch.
+missing_method_order:
+  description: In TensorFlow, calling tf.wholeFileReader() must be followed by tf.train.start_queue_runners()
+    to avoid hanging. Failure to follow this order results in the program hanging.
+  type: method_order_violation
+  severity: high
+  impact: Program hangs waiting for input due to missing method call order.
