@@ -21,7 +21,15 @@ CONTEXT_DIR.mkdir(exist_ok=True)
 # API settings
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4-0125-preview')
+OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
+OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
+
+# OpenAI API settings
+OPENAI_TEMPERATURE = float(os.getenv('OPENAI_TEMPERATURE', '0.3'))
+OPENAI_MAX_TOKENS = int(os.getenv('OPENAI_MAX_TOKENS', '1000'))
+OPENAI_TOP_P = float(os.getenv('OPENAI_TOP_P', '1.0'))
+OPENAI_FREQUENCY_PENALTY = float(os.getenv('OPENAI_FREQUENCY_PENALTY', '0.0'))
+OPENAI_PRESENCE_PENALTY = float(os.getenv('OPENAI_PRESENCE_PENALTY', '0.0'))
 
 # GitHub API settings
 GITHUB_API_VERSION = '2022-11-28'

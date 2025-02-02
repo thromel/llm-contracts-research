@@ -1,0 +1,41 @@
+{
+  "total_issues": 500,
+  "total_violations": 73,
+  "violation_rate": 14.6,
+  "violation_types": {
+    "missing_dependency_violation": 23,
+    "input_value_violation": 16,
+    "input_type_violation": 16,
+    "missing_option_violation": 13,
+    "performance_degradation": 2,
+    "method_order_violation": 1,
+    "incorrect_functionality": 1,
+    "hang": 1
+  },
+  "violation_percentages": {
+    "missing_dependency_violation": 4.6,
+    "input_value_violation": 3.2,
+    "input_type_violation": 3.2,
+    "missing_option_violation": 2.6,
+    "performance_degradation": 0.4,
+    "method_order_violation": 0.2,
+    "incorrect_functionality": 0.2,
+    "hang": 0.2
+  },
+  "severity_distribution": {
+    "high": 47,
+    "medium": 12,
+    "High": 4,
+    "Medium": 3,
+    "performance_degradation": 2,
+    "incorrect_functionality": 2,
+    "unknown": 2,
+    "low": 1
+  },
+  "average_confidence_score": 2.746987951807229,
+  "resolution_time_stats": {
+    "violation_issues_avg_hours": 668.5630136986302,
+    "non_violation_issues_avg_hours": 1254.9314519906325,
+    "overall_avg_hours": 1169.3216599999998
+  }
+}
