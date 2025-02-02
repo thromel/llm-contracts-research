@@ -254,14 +254,59 @@ class GitHubIssuesAnalyzer:
         for issue in issues:
             issue_body = issue.get('body') or ''
             issue_comments = issue.get('comments') or ''
+
+            # Sanitize sensitive data before analysis
+            sanitized_body = self._sanitize_text(issue_body)
+            sanitized_comments = self._sanitize_text(issue_comments)
+
             analysis = self.analyze_issue(
                 issue.get('title', 'No Title'),
-                issue_body,
-                issue_comments)
+                sanitized_body,
+                sanitized_comments)
+
             # Merge issue data with analysis result
-            result = {**issue, **analysis}
+            # Only include non-sensitive fields
+            safe_issue_data = {
+                'number': issue.get('number'),
+                'title': issue.get('title'),
+                'state': issue.get('state'),
+                'created_at': issue.get('created_at'),
+                'closed_at': issue.get('closed_at'),
+                'labels': issue.get('labels', []),
+                'url': issue.get('url'),
+                'resolution_time': issue.get('resolution_time')
+            }
+            result = {**safe_issue_data, **analysis}
             analyses.append(result)
         return analyses
+
+    def _sanitize_text(self, text: str) -> str:
+        """Remove potential sensitive information from text."""
+        if not text:
+            return ""
+
+        # Common patterns for sensitive data
+        patterns = [
+            (r'sk-[a-zA-Z0-9]{48}', '[OPENAI_KEY]'),  # OpenAI API keys
+            (r'ghp_[a-zA-Z0-9]{36}', '[GITHUB_TOKEN]'),  # GitHub tokens
+            # Email addresses
+            (r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', '[EMAIL]'),
+            # Generic API keys
+            (r'(?i)api[_-]?key[_-]?(?:=|\s*:\s*)\s*["\']?[\w\-]{32,}["\']?', '[API_KEY]'),
+            # Secret keys
+            (r'(?i)secret[_-]?key[_-]?(?:=|\s*:\s*)\s*["\']?[\w\-]{32,}["\']?', '[SECRET_KEY]'),
+            # Passwords
+            (r'(?i)password[_-]?(?:=|\s*:\s*)\s*["\']?[^\s"\']{8,}["\']?', '[PASSWORD]'),
+            # Generic tokens
+            (r'(?i)token[_-]?(?:=|\s*:\s*)\s*["\']?[\w\-]{32,}["\']?', '[TOKEN]')
+        ]
+
+        import re
+        sanitized = text
+        for pattern, replacement in patterns:
+            sanitized = re.sub(pattern, replacement, sanitized)
+
+        return sanitized
 
     def save_results(self, results: List[Dict[str, Any]], output_dir: Path = None) -> None:
         """Save analysis results to JSON and optionally CSV formats."""
@@ -273,12 +318,35 @@ class GitHubIssuesAnalyzer:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         base_name = 'github_issues_analysis_{}'.format(timestamp)
 
+        # Ensure we're not saving any sensitive data
+        sanitized_results = []
+        for result in results:
+            sanitized_result = {
+                'number': result.get('number'),
+                'title': result.get('title'),
+                'state': result.get('state'),
+                'created_at': result.get('created_at'),
+                'closed_at': result.get('closed_at'),
+                'labels': result.get('labels', []),
+                'url': result.get('url'),
+                'resolution_time': result.get('resolution_time'),
+                'has_violation': result.get('has_violation'),
+                'violation_type': result.get('violation_type'),
+                'severity': result.get('severity'),
+                'description': result.get('description'),
+                'confidence': result.get('confidence'),
+                'resolution_status': result.get('resolution_status'),
+                'resolution_details': result.get('resolution_details')
+            }
+            sanitized_results.append(sanitized_result)
+
         # Save as JSON
         if getattr(settings, "JSON_EXPORT", False):
             json_path = output_dir / '{}.json'.format(base_name)
             try:
                 with open(json_path, 'w', encoding='utf-8') as f:
-                    json.dump(results, f, indent=2, ensure_ascii=False)
+                    json.dump(sanitized_results, f,
+                              indent=2, ensure_ascii=False)
                 logger.info("Saved JSON results to {}".format(json_path))
             except Exception as e:
                 logger.error("Error saving JSON results: {}".format(str(e)))
@@ -286,7 +354,7 @@ class GitHubIssuesAnalyzer:
         # Save as CSV if requested
         if getattr(settings, "CSV_EXPORT", False):
             try:
-                df = pd.DataFrame(results)
+                df = pd.DataFrame(sanitized_results)
                 csv_path = output_dir / '{}.csv'.format(base_name)
                 df.to_csv(csv_path, index=False)
                 logger.info("Saved CSV results to {}".format(csv_path))
