@@ -1,20 +1,35 @@
 contract_violations:
   Single_API_Method:
     Data_Type:
-    - Primitive_Type
-    - Built-in_Type
-    - Reference_Type
-    - ML_Type
+      - Primitive_Type         # Basic data types (e.g., int, float, string) mismatch errors.
+      - Built-in_Type          # Complex built-in structures (e.g., list, dict, tuple) issues.
+      - Reference_Type         # Object or reference type mismatches (e.g., function objects, class instances).
+      - ML_Type                # ML-specific tensor or array type constraints (e.g., float32 tensors).
     Boolean_Expression_Type:
-    - Intra-argument_Contract
-    - Inter-argument_Contract
+      - Intra-argument_Contract   # Conditions expressed solely on a single argument (e.g., value ranges).
+      - Inter-argument_Contract   # Relationships or dependencies between two or more arguments.
+      
   API_Method_Order:
-  - Always
-  - Eventually
+    Temporal_Order:
+      - Always                 # The ordering must hold at all execution points.
+      - Eventually             # The required ordering must be satisfied at some point in execution.
+      
   Hybrid:
     SAM_AMO_Interdependency:
-    - SAM_Level_3_And_AMO_Level_2
+      - SAM_Level_3_And_AMO_Level_2  # Combined violations where behavioral (SAM) and temporal (AMO) rules interdepend.
     Selection:
-    - SAM_Level_3
-    - AMO_Level_2
-    - Combination_of_SAM_and_AMO
+      - SAM_Level_3            # Violation resolved by satisfying the SAM (behavioral) constraint.
+      - AMO_Level_2            # Violation resolved by satisfying the AMO (temporal) constraint.
+      - Combination_of_SAM_and_AMO   # Cases where both behavioral and temporal contracts must be jointly satisfied.
+
+  # LLM-specific contract categories
+  LLM_Specific:
+    Prompt_Formatting:
+      - Required_Prompt_Structure  # Enforces specific formatting or structure in the input prompt.
+      - Expected_Token_Range       # Constraints on the token count or token type in prompts to ensure efficient processing.
+    Context_Management:
+      - External_Context_Consistency  # Ensures that externally supplied context (e.g., retrieved documents, metadata) aligns with the prompt.
+      - Internal_Context_Maintenance  # Rules for preserving conversation history or internal state across interactions.
+    Output_Validation:
+      - Expected_Response_Format   # Specifies formatting, style, or schema that the output must follow.
+      - Inference_Consistency      # Checks for consistency in reasoning or output when similar inputs are given.

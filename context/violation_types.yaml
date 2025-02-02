@@ -1,10 +1,61 @@
-input_value_violation: Occurs when unacceptable input values are supplied to an API
-  method
-input_type_violation: Happens when the type of input supplied to an API method is
-  unacceptable or does not match the expected type
-method_order_violation: Involves incorrect ordering of API method calls that are required
-  to follow a specific sequence
-missing_dependency_violation: Occurs when there is a missing input value or type dependency
-  between arguments or between an argument and a method call
-missing_option_violation: Happens when the client does not follow one of the multiple
-  choices provided for maintaining contracts for an API method
+input_value_violation: >
+  Occurs when unacceptable or out-of-range input values are supplied to an API method.
+  For example, in ML APIs this might be a tensor or hyperparameter value that falls
+  outside the acceptable bounds, potentially causing crashes, degraded performance,
+  or incorrect outputs. In the context of LLM contracts, this could also involve prompt
+  values (e.g., overly long or improperly formatted prompts) that lead to suboptimal
+  responses.
+insights_input_value_violation: >
+  In ML systems, ensuring input values adhere to expected ranges is critical to prevent
+  runtime failures or unpredictable behavior. For LLMs, proper prompt validation is key
+  to maintaining response quality. Automated checks (both at static analysis and runtime)
+  can help mitigate these issues by validating inputs before they trigger deeper failures.
+
+input_type_violation: >
+  Happens when the type of input provided to an API method does not match the expected type.
+  This includes cases where an API expects a specific data structure (e.g., a tensor,
+  list, or dictionary) and receives an incompatible type, which can result in runtime errors
+  or system instability. For LLM APIs, this may involve inputs that are not in the expected
+  format (e.g., plain text vs. structured JSON), leading to misinterpretation of the prompt.
+insights_input_type_violation: >
+  Type mismatches can lead to subtle bugs that are difficult to trace. In ML, a tensor of an
+  incorrect type may not trigger errors until later in the pipeline, while for LLMs, using an
+  unexpected input format might cause the model to misinterpret the prompt entirely. Robust
+  type checking—potentially via static analysis or dynamic contract enforcement—can reduce these risks.
+
+method_order_violation: >
+  Involves the incorrect ordering of API method calls that are required to follow a prescribed
+  sequence. Many ML APIs demand that certain setup or configuration calls (e.g., initializing
+  session contexts, starting queue runners) occur in a particular order to ensure proper system
+  behavior. Similarly, LLM APIs may require that context-setting or prompt updating functions
+  be called before generating responses; failing to adhere to these sequences can lead to errors
+  or degraded output quality.
+insights_method_order_violation: >
+  The correct sequence of API calls is essential for both ML and LLM systems. In ML, an out-of-order
+  call may leave resources uninitialized or lead to a hanging system. For LLMs, ensuring that context
+  and prompt history are updated before inference is critical to maintaining coherence in responses.
+  Tools that monitor and enforce API call sequences can be invaluable in these environments.
+
+missing_dependency_violation: >
+  Occurs when there is a missing dependency between inputs—either between multiple arguments
+  or between an argument and a required method call. This includes scenarios where an API method
+  relies on a prior configuration, value initialization, or type conversion that was omitted.
+  In LLM scenarios, this might be reflected in a failure to supply necessary context or metadata
+  alongside a prompt, thereby undermining the model's ability to generate contextually relevant responses.
+insights_missing_dependency_violation: >
+  Dependencies between inputs or between calls are often implicit in API contracts. In ML, missing
+  dependencies may result in unpredictable outcomes such as training instability. For LLMs, the lack of
+  required contextual information can lead to responses that are off-topic or factually incorrect.
+  Explicitly documenting and enforcing these dependencies can help prevent such issues.
+
+missing_option_violation: >
+  Happens when the client does not follow one of the multiple acceptable alternatives provided
+  by the API's contract for correct usage. For example, an API might allow either a specific type of
+  preprocessed input or an alternative method ordering to maintain contract correctness. For LLM
+  APIs, this could involve choosing between different prompt templates or context management strategies,
+  where failure to adopt one of the recommended options leads to suboptimal or erroneous behavior.
+insights_missing_option_violation: >
+  Flexibility in API usage is often provided by allowing multiple acceptable options. However, failing
+  to select one of these options can result in contract violations that degrade system performance or output
+  quality. For LLMs, where multiple prompt strategies might exist, ensuring that one of the predefined formats
+  is used is crucial. Enhancing documentation and automated guidance can help users select the proper option.

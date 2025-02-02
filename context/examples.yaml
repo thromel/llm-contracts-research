@@ -1,34 +1,52 @@
 incorrect_tensor_shape:
-  description: 'The matmul() API from TensorFlow requires that both of the arguments
-    should be a Tensor with one of the following types: float16, float32, float64,
-    int32, complex64, complex128. Supplying arguments of different types leads to
-    a type error and program crash.'
+  description: >
+    The matmul() API from TensorFlow requires that both arguments be Tensors with
+    one of the following element types: float16, float32, float64, int32, complex64, or complex128.
+    Supplying Tensors with mismatched types leads to a type error and a subsequent program crash.
   type: input_validation_violation
   severity: high
-  impact: Program crashes with a type error.
+  impact: Program crashes due to a type mismatch.
+  recommendation: Ensure that all tensors provided to tf.matmul() are explicitly cast
+    to one of the supported types before the operation is performed.
+
 missing_preprocessing_step:
-  description: For the Scikit-learn API linear_model.SGDClassifier, partial_fit()
-    requires the data provided as arguments to be shuffled. Failure to shuffle the
-    data leads to incorrect model training.
+  description: >
+    For the Scikit-learn API linear_model.SGDClassifier, the partial_fit() method requires that
+    the input data is shuffled. Failure to shuffle the data results in an improper training process,
+    which can adversely affect model performance.
   type: preprocessing_violation
   severity: medium
-  impact: Leads to incorrect model training due to unshuffled data.
+  impact: Incorrect model training due to unshuffled data.
+  recommendation: Integrate a data shuffling step in the preprocessing pipeline prior to invoking
+    partial_fit(), or verify that the input data is randomized.
+
 inadequate_activation_function:
-  description: Using categorical_crossentropy as the loss function in Keras requires
-    a softmax activation in the final layer. Omitting softmax activation results in
-    model training errors.
+  description: >
+    When using categorical_crossentropy as the loss function in Keras, it is mandatory to employ
+    a softmax activation function in the final layer of the model. Omitting this step leads to
+    training errors and poor convergence.
   type: model_configuration_violation
   severity: medium
-  impact: Results in model training errors due to incorrect loss function configuration.
+  impact: Model training errors due to incorrect configuration of the loss function.
+  recommendation: Modify the model architecture to include a softmax activation layer at the end
+    when using categorical_crossentropy, ensuring consistency between the loss function and the output layer.
+
 unmatched_input_dimensions:
-  description: In TensorFlow, the decode() method expects a byte string as input.
-    Supplying an input of a different type or format results in a runtime error.
+  description: >
+    In TensorFlow, the decode() method expects an input in the form of a byte string.
+    Providing an input of an incorrect type or improperly formatted data results in a runtime error.
   type: input_validation_violation
   severity: high
-  impact: Causes a runtime error due to type mismatch.
+  impact: Causes a runtime error due to type or format mismatch.
+  recommendation: Validate and convert the input data to a byte string before passing it to decode().
+
 missing_method_order:
-  description: In TensorFlow, calling tf.wholeFileReader() must be followed by tf.train.start_queue_runners()
-    to avoid hanging. Failure to follow this order results in the program hanging.
+  description: >
+    In TensorFlow, after calling tf.wholeFileReader(), it is essential to follow up with
+    a call to tf.train.start_queue_runners() to prevent the program from hanging.
+    Failure to enforce this order results in the program waiting indefinitely for input.
   type: method_order_violation
   severity: high
-  impact: Program hangs waiting for input due to missing method call order.
+  impact: The program hangs because the required method call sequence is not maintained.
+  recommendation: Enforce the proper sequencing by ensuring that tf.train.start_queue_runners()
+    is called immediately after tf.wholeFileReader() as part of the API usage guidelines.

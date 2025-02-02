@@ -1,13 +1,35 @@
-system_crash: High severity - Results in complete system failure
-performance_degradation: Medium severity - Impacts system performance but doesn't
-  cause failure
-data_corruption: High severity - Causes incorrect data processing or storage, potentially
-  leading to incorrect system behavior or data loss
-hang: Medium severity - Causes the system to become unresponsive, requiring restart
-  or intervention but not leading to data loss
-incorrect_functionality: High severity - Leads to incorrect system behavior, producing
-  wrong outputs or failing to complete tasks as intended
-memory_out_of_bound: High severity - Causes the system to exceed its memory allocation,
-  potentially leading to crashes or system instability
-unknown: Low severity - The impact of the violation is unclear or not immediately
-  apparent, requiring further investigation to assess the severity
+severity_criteria:
+  system_crash:
+    severity: High
+    description: "Results in complete system failure. This violation causes an abrupt termination of the application, rendering the system inoperable."
+    recommendation: "Implement rigorous precondition checks and fallback mechanisms to prevent complete crashes. Use automated testing to detect such failures early."
+  
+  performance_degradation:
+    severity: Medium
+    description: "Impacts system performance but does not cause a full failure. The violation leads to slower response times or increased resource usage."
+    recommendation: "Optimize the affected code paths and consider performance profiling to identify and address bottlenecks."
+  
+  data_corruption:
+    severity: High
+    description: "Causes incorrect data processing or storage, potentially leading to wrong system behavior or data loss. This violation affects data integrity and consistency."
+    recommendation: "Implement validation checks and redundancy measures (e.g., checksums, transaction logging) to detect and recover from data corruption events."
+  
+  hang:
+    severity: Medium
+    description: "Causes the system to become unresponsive, requiring a restart or manual intervention. Although the system does not crash, the interruption can significantly impact user experience."
+    recommendation: "Utilize timeouts and watchdog timers to detect and recover from hangs, and improve error logging to diagnose the root cause."
+  
+  incorrect_functionality:
+    severity: High
+    description: "Leads to incorrect system behavior, producing wrong outputs or failing to complete tasks as intended. This can compromise the correctness of the system's results."
+    recommendation: "Enhance unit testing and integration tests with clear functional requirements. Consider formal verification for critical components."
+  
+  memory_out_of_bound:
+    severity: High
+    description: "Causes the system to exceed its allocated memory, potentially leading to crashes or severe instability. This violation can quickly escalate under heavy workloads."
+    recommendation: "Apply memory profiling and static analysis tools to detect leaks and over-allocation, and enforce strict resource limits where possible."
+  
+  unknown:
+    severity: Low
+    description: "The impact of the violation is unclear or not immediately apparent. Further investigation is needed to determine the severity and potential impact."
+    recommendation: "Monitor the system closely and collect additional diagnostic information to clarify the impact. Use exploratory testing to uncover hidden issues."
