@@ -2,10 +2,11 @@
 
 import os
 import json
+import signal
 from pathlib import Path
 from datetime import datetime
 import yaml
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from openai import OpenAI
 from src.config import settings
 from src.utils.logger import setup_logger
@@ -19,6 +20,66 @@ logger = setup_logger(__name__)
 # Constants for the prompt configuration
 PROMPT_TEMPERATURE = 0.7
 PROMPT_MAX_TOKENS = 1024
+
+
+class CheckpointManager:
+    """Manages checkpoints for the GitHub issues analysis process."""
+
+    def __init__(self, output_dir: Path = None):
+        """Initialize the checkpoint manager."""
+        if output_dir is None:
+            output_dir = Path(settings.DATA_DIR) / 'analyzed'
+        self.output_dir = output_dir
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.checkpoint_file = self.output_dir / 'analysis_checkpoint.json'
+
+    def save_checkpoint(self, analyzed_issues: List[Dict], current_index: int,
+                        total_issues: List[Dict], repo_name: str) -> None:
+        """Save the current analysis state to a checkpoint file."""
+        checkpoint_data = {
+            'timestamp': datetime.now().isoformat(),
+            'analyzed_issues': analyzed_issues,
+            'current_index': current_index,
+            'total_issues': total_issues,
+            'repo_name': repo_name
+        }
+
+        # Save to temporary file first to prevent corruption
+        temp_checkpoint = self.checkpoint_file.with_suffix('.tmp')
+        try:
+            with open(temp_checkpoint, 'w', encoding='utf-8') as f:
+                json.dump(checkpoint_data, f, indent=2, ensure_ascii=False)
+            # Atomic rename to prevent corruption
+            temp_checkpoint.replace(self.checkpoint_file)
+            logger.info(f"Checkpoint saved at index {current_index}")
+        except Exception as e:
+            logger.error(f"Error saving checkpoint: {str(e)}")
+            if temp_checkpoint.exists():
+                temp_checkpoint.unlink()
+
+    def load_checkpoint(self) -> Optional[Dict]:
+        """Load the latest checkpoint if it exists."""
+        if not self.checkpoint_file.exists():
+            return None
+
+        try:
+            with open(self.checkpoint_file, 'r', encoding='utf-8') as f:
+                checkpoint_data = json.load(f)
+            logger.info(f"Loaded checkpoint from index {
+                        checkpoint_data['current_index']}")
+            return checkpoint_data
+        except Exception as e:
+            logger.error(f"Error loading checkpoint: {str(e)}")
+            return None
+
+    def clear_checkpoint(self) -> None:
+        """Clear the existing checkpoint file."""
+        if self.checkpoint_file.exists():
+            try:
+                self.checkpoint_file.unlink()
+                logger.info("Checkpoint cleared")
+            except Exception as e:
+                logger.error(f"Error clearing checkpoint: {str(e)}")
 
 
 class GitHubIssuesAnalyzer:
@@ -281,23 +342,67 @@ def main():
                         help='GitHub repository to analyze (format: owner/repo)')
     parser.add_argument('--issues', type=int, default=100,
                         help='Number of issues to analyze')
+    parser.add_argument('--resume', action='store_true',
+                        help='Resume from the latest checkpoint if it exists')
+    parser.add_argument('--checkpoint-interval', type=int, default=5,
+                        help='Number of issues to process before creating a checkpoint')
     args = parser.parse_args()
 
+    # Initialize checkpoint manager
+    checkpoint_mgr = CheckpointManager()
+
+    # Initialize analyzer
+    analyzer = GitHubIssuesAnalyzer()
+
+    # Flag to track if we're shutting down
+    is_shutting_down = False
+
+    def signal_handler(signum, frame):
+        """Handle shutdown signals gracefully."""
+        nonlocal is_shutting_down
+        if is_shutting_down:
+            logger.warning("Forced shutdown requested. Exiting immediately.")
+            exit(1)
+
+        logger.info(
+            "Shutdown signal received. Saving checkpoint before exit...")
+        is_shutting_down = True
+
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     try:
-        # Initialize analyzer
-        analyzer = GitHubIssuesAnalyzer()
+        # Check for existing checkpoint if resume is requested
+        checkpoint_data = None
+        if args.resume:
+            checkpoint_data = checkpoint_mgr.load_checkpoint()
+            if checkpoint_data:
+                logger.info("Resuming from checkpoint...")
+                analyzed_issues = checkpoint_data['analyzed_issues']
+                current_index = checkpoint_data['current_index']
+                issues = checkpoint_data['total_issues']
+                if args.repo != checkpoint_data['repo_name']:
+                    logger.warning(
+                        f"Warning: Checkpoint is for repo {
+                            checkpoint_data['repo_name']}, "
+                        f"but analyzing {args.repo}")
+            else:
+                logger.info("No checkpoint found. Starting fresh analysis.")
 
-        # Fetch and analyze issues
-        issues = analyzer.fetch_issues(
-            repo_name=args.repo, num_issues=args.issues)
-        logger.info("Fetched {} issues".format(len(issues)))
+        # If no checkpoint or not resuming, fetch issues
+        if not checkpoint_data:
+            issues = analyzer.fetch_issues(
+                repo_name=args.repo, num_issues=args.issues)
+            logger.info("Fetched {} issues".format(len(issues)))
+            analyzed_issues = []
+            current_index = 0
 
-        # Save raw data first
+        # Save raw data
         output_dir = Path(settings.DATA_DIR) / 'analyzed'
         output_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        raw_csv_path = output_dir / \
-            'github_issues_raw_{}.csv'.format(timestamp)
+        raw_csv_path = output_dir / f'github_issues_raw_{timestamp}.csv'
 
         df = pd.DataFrame(issues)
         df.to_csv(raw_csv_path, index=False)
@@ -305,36 +410,51 @@ def main():
 
         # Analyze issues
         logger.info("Starting issue analysis")
-        analyzed_issues = []
 
         # Create progress bar for issue analysis
-        for issue in tqdm(issues, desc="Analyzing issues", unit="issue"):
-            try:
-                analysis = analyzer.analyze_issue(
-                    issue.get('title', ''), issue.get('body', ''))
-                analyzed_issue = {**issue, **analysis}
-                analyzed_issues.append(analyzed_issue)
+        with tqdm(total=len(issues), initial=current_index,
+                  desc="Analyzing issues", unit="issue") as pbar:
+            while current_index < len(issues) and not is_shutting_down:
+                try:
+                    issue = issues[current_index]
+                    analysis = analyzer.analyze_issue(
+                        issue.get('title', ''), issue.get('body', ''))
+                    analyzed_issue = {**issue, **analysis}
+                    analyzed_issues.append(analyzed_issue)
 
-                # Save intermediate results every 10 issues
-                if len(analyzed_issues) % 10 == 0:
-                    intermediate_path = output_dir / \
-                        'github_issues_analysis_{}_{}.csv'.format(
-                            timestamp, len(analyzed_issues))
-                    pd.DataFrame(analyzed_issues).to_csv(
-                        intermediate_path, index=False)
-                    logger.info("Saved intermediate results to {}".format(
-                        intermediate_path))
+                    # Update progress
+                    current_index += 1
+                    pbar.update(1)
 
-            except Exception as e:
-                logger.error("Error analyzing issue {}: {}".format(
-                    issue.get('number'), str(e)))
-                continue
+                    # Create checkpoint at specified intervals
+                    if current_index % args.checkpoint_interval == 0:
+                        checkpoint_mgr.save_checkpoint(
+                            analyzed_issues, current_index, issues, args.repo)
 
-        # Save final results
-        analyzer.save_results(analyzed_issues)
+                except Exception as e:
+                    logger.error("Error analyzing issue {}: {}".format(
+                        issue.get('number'), str(e)))
+                    current_index += 1  # Skip problematic issue
+                    continue
+
+        # Save final results if we have analyzed any issues
+        if analyzed_issues:
+            if is_shutting_down:
+                logger.info("Saving final checkpoint before shutdown...")
+                checkpoint_mgr.save_checkpoint(
+                    analyzed_issues, current_index, issues, args.repo)
+            else:
+                logger.info("Analysis complete. Saving final results...")
+                analyzer.save_results(analyzed_issues)
+                # Clear checkpoint since we completed successfully
+                checkpoint_mgr.clear_checkpoint()
 
     except Exception as e:
         logger.error("Error during overall analysis: {}".format(str(e)))
+        # Save checkpoint on error
+        if 'analyzed_issues' in locals() and 'current_index' in locals():
+            checkpoint_mgr.save_checkpoint(
+                analyzed_issues, current_index, issues, args.repo)
 
 
 if __name__ == '__main__':
