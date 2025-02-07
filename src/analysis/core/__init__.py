@@ -10,6 +10,10 @@ from src.analysis.core.checkpoint import (
     CheckpointError,
     CheckpointIOError
 )
+from src.analysis.core.data_loader import (
+    CSVDataLoader,
+    DataLoadError
+)
 
 __all__ = [
     'IssueAnalyzer',
@@ -17,5 +21,7 @@ __all__ = [
     'GitHubIssuesAnalyzer',
     'CheckpointManager',
     'CheckpointError',
-    'CheckpointIOError'
+    'CheckpointIOError',
+    'CSVDataLoader',
+    'DataLoadError'
 ]
