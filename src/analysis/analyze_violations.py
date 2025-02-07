@@ -40,28 +40,18 @@ def analyze_violations(csv_path: str) -> Dict[str, Any]:
                         'title': title,
                         'severity': severity,
                         'confidence': confidence,
-                        'comments_analysis': {
-                            'total_comments': comments_count,
-                            'comments_text': comments,
-                            'violation_confirmed': violation_confirmed,
-                            'resolution_notes': resolution
-                        }
+                        'resolution_status': status,
+                        'resolution_details': details
                     }
-                    for url, title, severity, confidence, comments_count, comments, violation_confirmed, resolution in
+                    for url, title, severity, confidence, status, details in
                     zip(type_violations['url'],
                         type_violations['title'],
                         type_violations['severity'],
                         type_violations['confidence'],
-                        type_violations['comments_count'],
-                        type_violations['comments'],
-                        type_violations['violation_confirmed'],
-                        type_violations['resolution'])
+                        type_violations['resolution_status'],
+                        type_violations['resolution_details'])
                 ]
             }
-
-        # Calculate confirmed violations
-        confirmed_violations = violations[violations['violation_confirmed'] == True]
-        total_confirmed = len(confirmed_violations)
 
         # Get counts for each severity level
         severity_counts = violations['severity'].value_counts().to_dict()
@@ -85,8 +75,6 @@ def analyze_violations(csv_path: str) -> Dict[str, Any]:
         return {
             'total_issues': total_issues,
             'total_violations': total_violations,
-            'total_confirmed_violations': total_confirmed,
-            'confirmation_rate': (total_confirmed/total_violations)*100 if total_violations > 0 else 0,
             'violation_types': violation_types,
             'violation_details': violation_urls,
             'violation_percentages': violation_percentages,
@@ -120,10 +108,6 @@ def save_analysis(analysis: Dict[str, Any], output_dir: Path, input_filename: st
         print("Total Issues Analyzed: {}".format(analysis['total_issues']))
         print("Total Violations Found: {}".format(
             analysis['total_violations']))
-        print("Total Confirmed Violations: {}".format(
-            analysis['total_confirmed_violations']))
-        print("Confirmation Rate: {:.2f}%".format(
-            analysis['confirmation_rate']))
 
         print("\nViolation Types:")
         for vtype, count in analysis['violation_types'].items():
@@ -133,15 +117,12 @@ def save_analysis(analysis: Dict[str, Any], output_dir: Path, input_filename: st
             for issue in analysis['violation_details'][vtype]['issues']:
                 print("    - {} (Severity: {}, Confidence: {})".format(
                     issue['url'], issue['severity'], issue['confidence']))
-                comments_analysis = issue['comments_analysis']
-                if comments_analysis['total_comments'] > 0:
-                    print("      Comments: {} | Violation Confirmed: {}".format(
-                        comments_analysis['total_comments'],
-                        'Yes' if comments_analysis['violation_confirmed'] else 'No'
-                    ))
-                    if comments_analysis['resolution_notes']:
-                        print("      Resolution: {}".format(
-                            comments_analysis['resolution_notes']))
+                if issue['resolution_status']:
+                    print("      Resolution Status: {}".format(
+                        issue['resolution_status']))
+                if issue['resolution_details']:
+                    print("      Resolution Details: {}".format(
+                        issue['resolution_details']))
 
         print("\nSeverity Distribution:")
         for severity, count in analysis['severity_distribution'].items():
