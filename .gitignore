@@ -82,3 +82,5 @@ ENV/
 
 # Project specific
 data/*.csv 
+data/analysis/*.json
+data/analysis/*.csv

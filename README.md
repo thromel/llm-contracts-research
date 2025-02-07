@@ -1,47 +1,16 @@
-# LLM Contracts Research
+# GitHub Issues Contract Violation Analyzer
 
-This project analyzes LLM contracts by collecting and processing GitHub issues from relevant repositories. The analysis focuses on understanding patterns, challenges, and solutions in LLM-related issues, with a particular emphasis on identifying contract violations.
+A tool for analyzing GitHub issues to identify and categorize API contract violations.
 
-## Project Overview
+## Features
 
-### Data Collection
-- Fetches closed issues from major LLM-related repositories
-- Collects comprehensive issue data including:
-  - Basic issue information (title, body, state)
-  - Author information
-  - Temporal data (creation, closure, resolution time)
-  - Engagement metrics (comments, reactions)
-  - Labels and categorization
-  - First few comments for context
+- Analyze GitHub issues for potential API contract violations
+- Support for both direct GitHub API fetching and CSV file input
+- Automatic checkpointing for long-running analyses
+- Graceful shutdown handling
+- Detailed analysis results in both CSV and JSON formats
 
-### Repositories Analyzed
-- **Commercial LLM Providers**: OpenAI, Cohere
-- **Open Source LLM Organizations**: Mistral AI, DeepSeek, NVIDIA
-- **LLM Development Tools**: Hugging Face, LangChain
-- **Vector Databases**: Chroma, Pinecone, Weaviate
-- **Chinese LLM Companies**: Qwen, ChatGLM2
-- **LLM Safety & Evaluation**: EleutherAI
-- **Model Training & Deployment**: Microsoft DeepSpeed, Semantic Kernel, PyTorch Serve
-
-### Features
-1. **Robust Data Collection**:
-   - Batch processing with periodic saves
-   - Rate limit handling
-   - Error recovery
-   - Progress tracking
-
-2. **Data Export**:
-   - CSV format for tabular analysis
-   - Detailed JSON with full context
-   - Summary statistics
-
-3. **Automated Analysis** (Planned):
-   - LLM-based contract violation detection
-   - Classification of issue types
-   - Pattern identification
-   - Trend analysis
-
-## Setup
+## Installation
 
 1. Clone the repository:
 ```bash
@@ -49,70 +18,96 @@ git clone https://github.com/yourusername/llm-contracts-research.git
 cd llm-contracts-research
 ```
 
-2. Create a virtual environment and activate it:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows, use: venv\Scripts\activate
-```
-
-3. Install dependencies:
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Create a `.env` file with your tokens:
-```
-GITHUB_TOKEN=your_github_token_here
-OPENAI_API_KEY=your_openai_key_here  # For contract analysis
+3. Create a `.env` file with your configuration:
+```env
+GITHUB_TOKEN=your_github_token
+OPENAI_API_KEY=your_openai_key
+OPENAI_MODEL=your_model_name
+OPENAI_BASE_URL=your_api_base_url
+
+# Analysis Settings
+BATCH_SIZE=50
+MAX_COMMENTS_PER_ISSUE=10
+DEFAULT_LOOKBACK_DAYS=1000
 ```
 
 ## Usage
 
-1. Fetch GitHub Issues:
+### Analyzing Issues from GitHub
+
+To analyze issues directly from a GitHub repository:
+
 ```bash
-python src/fetch_issues.py
+python -m src.analysis.main --repo owner/repo --issues 100
 ```
 
-2. Analyze Contract Violations (Coming Soon):
+### Analyzing Issues from CSV
+
+To analyze issues from a previously saved CSV file:
+
 ```bash
-python src/analyze_contracts.py
+python -m src.analysis.main --input-csv path/to/issues.csv
+```
+
+### Additional Options
+
+- `--resume`: Resume from the last checkpoint if available
+- `--checkpoint-interval N`: Create checkpoints every N issues (default: 5)
+
+### Examples
+
+1. Analyze 50 issues from the OpenAI Python client repository:
+```bash
+python -m src.analysis.main --repo openai/openai-python --issues 50
+```
+
+2. Resume a previously interrupted analysis:
+```bash
+python -m src.analysis.main --repo openai/openai-python --issues 50 --resume
+```
+
+3. Analyze issues from a CSV file:
+```bash
+python -m src.analysis.main --input-csv data/raw/github_issues.csv
 ```
 
 ## Project Structure
 
 ```
-llm-contracts-research/
-├── data/               # Directory for storing collected data
-│   ├── raw/           # Raw GitHub issues data
-│   └── analyzed/      # Results of LLM analysis
-├── src/               # Source code
-│   ├── fetch_issues.py    # GitHub issues collection
-│   ├── analyze_contracts.py    # Contract violation analysis (planned)
-│   └── utils.py           # Utility functions
-├── requirements.txt    # Project dependencies
-└── README.md          # Project documentation
+src/
+├── analysis/
+│   │   ├── __init__.py
+│   │   ├── analyzer.py      # Core analysis functionality
+│   │   ├── checkpoint.py    # Checkpoint management
+│   │   └── data_loader.py   # Data loading utilities
+│   └── main.py             # Main entry point
+├── config/
+│   └── settings.py         # Configuration settings
+└── utils/
+    └── logger.py          # Logging utilities
 ```
 
-## Data Format
+## Output
 
-### Issue Collection
-Each collected issue includes:
-- Repository information
-- Issue details (title, body, state)
-- Temporal data
-- Author information
-- Engagement metrics
-- Labels and categorization
-- Comments (first 5 for context)
+The analyzer generates several output files in the `data/analyzed` directory:
 
-### Analysis Output (Planned)
-The contract violation analysis will add:
-- Contract violation classification
-- Violation type categorization
-- Confidence scores
-- Supporting evidence
-- Recommended resolutions
+- `github_issues_analysis_TIMESTAMP_raw.csv`: Raw analysis data
+- `github_issues_analysis_TIMESTAMP_final.csv`: Final analysis results
+- `analysis_checkpoint.json`: Checkpoint file (temporary)
 
 ## Contributing
 
-Feel free to open issues or submit pull requests with improvements.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
