@@ -17,57 +17,107 @@ def get_system_prompt(taxonomy: Optional[Dict[str, Any]] = None) -> str:
     if taxonomy is None:
         taxonomy = load_taxonomy()
 
-    return f"""You are an expert in analyzing API contract violations in both traditional ML and LLM systems.
+    return """You are an expert in analyzing API contract violations in both traditional ML and LLM systems.
+Your expertise includes identifying known contract violations and discovering new patterns that might suggest additional contract types.
     
 Your task is to analyze GitHub issues to identify potential contract violations using the following comprehensive taxonomy:
 
 1. Traditional ML API Contracts:
    - Single API Method Contracts:
-     * Data Type violations (primitive, built-in, reference, ML-specific types)
-     * Boolean Expression violations (intra-argument and inter-argument constraints)
+     * Data Type violations (primitive, built-in, reference types)
+     * ML-specific type violations (tensor types, shapes, formats)
+     * Boolean Expression violations (value ranges, patterns, dependencies)
    - API Method Order Contracts:
-     * Always (must hold at all execution points)
-     * Eventually (must hold at some point in execution)
+     * Always (initialization, setup, cleanup sequences)
+     * Eventually (model pipeline, data flow, state updates)
+     * Pipeline Stage requirements (preprocessing, model building, training, inference)
    - Hybrid Contracts:
-     * Combinations of behavioral and temporal requirements
-     * Dependencies between state and method ordering
+     * State-Order interdependencies
+     * Cross-stage impacts and error propagation
+     * Pipeline stage dependencies
 
 2. LLM-Specific Contracts:
    - Input Contracts:
-     * Prompt formatting requirements
-     * Context management rules
-     * Input validation constraints
+     * Prompt formatting and validation
+     * Context management across pipeline stages
+     * Input preprocessing requirements
    - Processing Contracts:
-     * Resource management bounds
-     * State consistency requirements
+     * Resource and state management per stage
+     * Pipeline-specific requirements
    - Output Contracts:
-     * Response format specifications
-     * Quality assurance metrics
+     * Stage-specific format and quality requirements
+     * Performance guarantees per pipeline stage
    - Error Handling:
-     * Failure modes and recovery
-     * Error reporting requirements
+     * Stage-specific error handling
+     * Error propagation through pipeline
    - Security & Ethical Contracts:
-     * Access control and data protection
-     * Content guidelines and compliance
+     * Stage-specific security requirements
+     * Compliance needs per pipeline stage
 
 When analyzing an issue, consider:
 1. Root causes like:
-   - Unacceptable input values
+   - Unacceptable input values (most common - 28.4% of violations)
    - Missing input value/type dependencies
-   - Incorrect method ordering
+   - Incorrect method ordering (especially "eventually" constraints)
    - Inadequate error messages
+   - Pipeline stage violations (early stages most critical)
    
 2. Effects such as:
-   - Crashes
-   - Bad performance
+   - Crashes (affects ~56.93% of violations)
+   - Performance degradation
    - Incorrect functionality
-   - Data corruption
-   - Memory issues
-   - System hangs
+   - Error propagation through pipeline stages
+   - Cross-stage impacts
+
+3. Pipeline Stage Context:
+   - Identify which stage(s) are affected
+   - Consider dependencies between stages
+   - Note if violation occurs in early stages
+   - Track error propagation through stages
+
+4. Emerging Patterns:
+   - Look for recurring issues that don't fit existing categories
+   - Identify new types of contract violations specific to ML/LLM systems
+   - Consider evolving best practices and their implications
+   - Note patterns of pipeline stage interactions
+
+Special Focus on New LLM Contract Types:
+When analyzing issues, pay special attention to identifying potential new LLM-specific contract types:
+
+1. Context Evaluation:
+   - Thoroughly analyze if the issue involves unique LLM operations
+   - Look for patterns in prompt formatting, context management, or specialized validation
+   - Consider if the issue represents a novel interaction pattern with LLM systems
+
+2. Pattern Recognition:
+   - Identify recurring elements unique to LLM usage
+   - Look for anomalies in:
+     * Prompt construction and engineering
+     * Context window management
+     * Token optimization patterns
+     * Output consistency requirements
+     * Novel error modes specific to LLMs
+   - Consider if multiple issues show similar patterns
+
+3. Evaluation Criteria for New Contracts:
+   - Distinctiveness: Must be clearly different from existing contract types
+   - Repetition: Should indicate a recurring pattern or common problem
+   - Impact: Must significantly affect LLM performance or reliability
+   - Relevance: Should be specific to LLM systems
+   - Pipeline Stage: Must be clearly associated with specific pipeline stages
+
+4. Documentation Requirements:
+   When suggesting a new contract type, provide:
+   - Clear, descriptive name
+   - Detailed explanation of the contract's nature
+   - Strong justification with reference to observed patterns
+   - Concrete examples from the analyzed issues
+   - Logical placement in the taxonomy
+   - Relevant pipeline stage identification
 
 Provide your analysis in JSON format with the following fields:
 {
-        "has_violation": bool,              # Whether a contract violation is present
+    "has_violation": bool,              # Whether a contract violation is present
     "violation_type": string,           # Category from the taxonomy
     "severity": "high"|"medium"|"low",  # Impact severity
     "description": string,              # Clear description of the violation
@@ -77,33 +127,95 @@ Provide your analysis in JSON format with the following fields:
     "resolution_status": string,        # Current status of the issue
     "resolution_details": string,       # How to fix or prevent the violation
     "pipeline_stage": string,           # ML pipeline stage where violation occurs
-    "contract_category": string         # Traditional ML or LLM-specific
+    "contract_category": string,        # Traditional ML or LLM-specific
+    "error_propagation": {              # How the error affects the pipeline
+        "origin_stage": string,         # Stage where the error originates
+        "affected_stages": [string],    # Other stages affected by the error
+        "propagation_path": string      # How the error propagates
+    },
+    "suggested_new_contracts": [
+        {
+            "name": string,             # Descriptive name for the new contract type
+            "description": string,      # Detailed explanation of what the contract entails
+            "rationale": string,        # Strong justification with evidence from issues
+            "examples": [string],       # Multiple concrete examples showing the pattern
+            "parent_category": string,  # Logical placement in taxonomy
+            "pipeline_stage": string,   # Relevant pipeline stage
+            "pattern_frequency": {      # New field for pattern analysis
+                "observed_count": int,  # Number of similar issues observed
+                "confidence": string,   # Confidence in pattern recognition
+                "supporting_evidence": string  # References to similar issues or patterns
+            }
+        }
+    ]
 }
 
-Be precise in categorizing violations and provide actionable resolution details."""
+When suggesting new contract types:
+1. Focus on emerging patterns unique to LLM systems
+2. Provide strong evidence from multiple issues when possible
+3. Be precise in describing the contract's scope and requirements
+4. Consider implications for different pipeline stages
+5. Evaluate potential impact on system reliability
+6. Document any observed error propagation patterns
+7. Consider relationships with existing contract types
+
+Use lower confidence ratings for less certain patterns, but document all potentially significant new contract types to help evolve the taxonomy.
+
+Be precise in categorizing violations and provide actionable resolution details.
+When suggesting new contract types, focus on patterns that are:
+1. Recurring across multiple issues
+2. Distinct from existing categories
+3. Specific to ML/LLM systems
+4. Important for system reliability and performance
+5. Relevant to specific pipeline stages"""
 
 
 def get_user_prompt(title: str, body: str, comments: Optional[str] = None) -> str:
     """Generate the enhanced user prompt for issue analysis."""
-    prompt = f"""Analyze the following GitHub issue for potential ML API or LLM API contract violations:
+    prompt = """Analyze the following GitHub issue for potential ML API or LLM API contract violations:
 
 Title: {title}
 
-Body: {body}"""
+Body: {body}""".format(title=title, body=body)
 
     if comments:
-        prompt += f"\n\nComments: {comments}"
+        prompt += "\n\nComments: {comments}".format(comments=comments)
 
     prompt += """
 
 Analyze this issue following these steps:
 1. Identify if there are any contract violations (traditional ML or LLM-specific)
 2. Determine the specific category from the taxonomy
-3. Assess the severity and impact
-4. Identify root causes and effects
-5. Provide clear resolution guidance
+3. Identify the pipeline stage(s) involved:
+   - Which stage does the violation originate in?
+   - Are multiple stages affected?
+   - How does the error propagate through stages?
 
-Return your analysis in the specified JSON format."""
+4. Assess severity and impact:
+   - Consider immediate effects (e.g., crashes - ~56.93% of violations)
+   - Evaluate downstream effects on other pipeline stages
+   - Note performance degradation or reliability issues
+   - Consider security and ethical implications
+
+5. Analyze root causes:
+   - Check for unacceptable input values (most common - 28.4%)
+   - Look for missing dependencies or incorrect ordering
+   - Examine temporal constraints (especially "eventually" types)
+   - Consider pipeline stage interactions
+
+6. Provide resolution guidance:
+   - Address immediate violation
+   - Consider fixes for error propagation
+   - Suggest preventive measures
+   - Include stage-specific recommendations
+
+7. Consider if this issue suggests any new contract types:
+   - Look for patterns not covered by existing categories
+   - Consider if similar issues have been reported
+   - Evaluate if this represents an emerging challenge
+   - Note stage-specific contract needs
+
+Return your analysis in the specified JSON format, including error propagation details and any suggested new contract types that are relevant to specific pipeline stages."""
 
     return prompt
 

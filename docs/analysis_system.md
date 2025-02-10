@@ -2,7 +2,26 @@
 
 ## Overview
 
-This system analyzes GitHub issues to identify and categorize API contract violations in both traditional ML and LLM systems. It uses an enhanced taxonomy based on research from "What Kinds of Contracts Do ML APIs Need?" and incorporates continuous learning to discover new contract types.
+This system analyzes GitHub issues to identify and categorize API contract violations in both traditional ML and LLM systems. It uses an enhanced taxonomy based on research from "What Kinds of Contracts Do ML APIs Need?" (2307.14465v1) and incorporates continuous learning to discover new contract types.
+
+## Research Insights
+
+The system's design is heavily influenced by key findings from the research paper:
+
+1. **Contract Type Distribution**:
+   - 28.4% of violations involve unacceptable input values
+   - 56.93% of violations lead to system crashes
+   - Early pipeline stage violations are most critical
+
+2. **Contract Categories**:
+   - Most frequent: Single API Method contracts (argument constraints)
+   - Second most common: API Method Order contracts (temporal requirements)
+   - Unique to ML: Hybrid contracts combining behavioral and temporal aspects
+
+3. **Pipeline Stage Impact**:
+   - Violations in early stages (preprocessing, model construction) are most critical
+   - Effects often propagate through multiple pipeline stages
+   - Stage-specific contract requirements are essential
 
 ## Key Features
 
@@ -18,17 +37,23 @@ This system analyzes GitHub issues to identify and categorize API contract viola
      * Error Handling (failure modes, error reporting)
      * Security & Ethical Contracts (access control, content guidelines)
 
-2. **Contract Discovery**
-   - Identifies emerging patterns in issues
-   - Suggests new contract types
-   - Provides rationale and examples for suggestions
-   - Helps evolve the taxonomy
+2. **Pipeline Stage Analysis**
+   - Stage identification
+   - Cross-stage impact assessment
+   - Error propagation tracking
+   - Stage-specific requirements
 
-3. **Detailed Analysis**
+3. **Contract Discovery**
+   - Identifies emerging patterns
+   - Suggests new contract types
+   - Provides rationale and examples
+   - Maps to pipeline stages
+
+4. **Detailed Analysis**
    - Root cause identification
    - Impact assessment
    - Resolution guidance
-   - Confidence scoring
+   - Error propagation tracking
 
 ## Usage
 
@@ -56,7 +81,7 @@ The system provides analysis results in JSON format:
 ```json
 {
     "has_violation": true,
-    "violation_type": "Single_API_Method.Data_Type",
+    "violation_type": "Single_API_Method.Data_Type.ML_Type.Tensor_Type",
     "severity": "high",
     "description": "Incorrect tensor type passed to model",
     "confidence": "high",
@@ -66,13 +91,19 @@ The system provides analysis results in JSON format:
     "resolution_details": "Convert input to float32 tensor",
     "pipeline_stage": "preprocessing",
     "contract_category": "Traditional ML",
+    "error_propagation": {
+        "origin_stage": "preprocessing",
+        "affected_stages": ["model_training", "inference"],
+        "propagation_path": "Invalid tensor type affects model weights computation"
+    },
     "suggested_new_contracts": [
         {
-            "name": "Input_Type_Conversion",
-            "description": "Contracts for automatic type conversion handling",
-            "rationale": "Recurring issues with type conversion failures",
-            "examples": ["string to tensor conversion", "numpy to torch tensor"],
-            "parent_category": "Single_API_Method.Data_Type"
+            "name": "Tensor_Conversion_Contract",
+            "description": "Automatic tensor type conversion handling",
+            "rationale": "Common issue with tensor type mismatches",
+            "examples": ["string to tensor", "numpy to torch tensor"],
+            "parent_category": "Single_API_Method.Data_Type.ML_Type",
+            "pipeline_stage": "preprocessing"
         }
     ]
 }
@@ -83,25 +114,49 @@ The system provides analysis results in JSON format:
 The system uses the following criteria for severity assessment:
 
 ### High Severity
-- System crashes or becomes unusable
+- System crashes (affects ~56.93% of violations)
 - Data loss or corruption
 - Security vulnerabilities
-- Significant financial impact
-- Complete failure of core functionality
+- Early pipeline stage violations
+- Cross-stage impact
 
 ### Medium Severity
-- Degraded performance
-- Partial loss of functionality
+- Performance degradation
+- Partial functionality loss
+- Limited pipeline impact
 - Workaround available
-- Limited impact on users
-- Non-critical feature affected
+- Later stage violations
 
 ### Low Severity
 - Minor inconvenience
 - Cosmetic issues
-- Edge cases only
-- Easy workaround available
-- Minimal user impact
+- Single stage impact
+- Easy workaround
+- No downstream effects
+
+## Pipeline Stage Analysis
+
+The system analyzes violations in the context of ML pipeline stages:
+
+1. **Data Preprocessing**
+   - Input validation
+   - Data transformation
+   - Feature engineering
+
+2. **Model Construction**
+   - Architecture definition
+   - Layer configuration
+   - Hyperparameter setting
+
+3. **Training**
+   - Batch processing
+   - Optimization
+   - Validation
+
+4. **Inference**
+   - Prediction
+   - Output formatting
+   - Post-processing
 
 ## Contract Discovery Process
 
@@ -109,14 +164,16 @@ The system actively looks for new contract types by:
 
 1. Analyzing patterns across multiple issues
 2. Identifying gaps in existing categories
-3. Evaluating emerging challenges in ML/LLM systems
-4. Considering industry best practices
+3. Evaluating emerging challenges
+4. Considering pipeline stage context
+5. Tracking error propagation
 
 When suggesting new contracts, it provides:
 - Clear name and description
 - Rationale for creation
 - Example scenarios
-- Placement in taxonomy
+- Pipeline stage relevance
+- Propagation patterns
 
 ## Integration
 
@@ -127,11 +184,12 @@ The system integrates with:
 
 ## Configuration
 
-Key settings can be configured in `settings.py`:
+Key settings in `settings.py`:
 - OpenAI model selection
 - Analysis parameters
 - Output formats
 - Storage locations
+- Pipeline stage definitions
 
 ## Contributing
 
