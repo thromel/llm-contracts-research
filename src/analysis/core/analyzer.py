@@ -77,6 +77,7 @@ class GitHubIssuesAnalyzer(IssueAnalyzer, IssueFetcher):
         self.system_prompt = get_system_prompt()
         self.results_dir = Path(settings.DATA_DIR) / 'analysis'
         self.results_dir.mkdir(parents=True, exist_ok=True)
+        self.github_client = Github(settings.GITHUB_TOKEN)
 
     def analyze_issue(self, title: str, body: str, comments: Optional[str] = None) -> Dict[str, Any]:
         """Analyze a GitHub issue for contract violations using the enhanced taxonomy.
@@ -199,5 +200,65 @@ class GitHubIssuesAnalyzer(IssueAnalyzer, IssueFetcher):
         Returns:
             List of issue dictionaries
         """
-        # TODO: Implement GitHub API integration
-        raise NotImplementedError("GitHub API integration not implemented")
+        try:
+            logger.info(f"Fetching {num_issues} issues from {repo_name}")
+
+            # Get repository
+            repo = self.github_client.get_repo(repo_name)
+
+            issues = []
+            total_fetched = 0
+            skipped_prs = 0
+
+            # Fetch issues with progress bar
+            with tqdm(total=num_issues, desc="Fetching issues", unit="issue") as pbar:
+                for issue in repo.get_issues(state='all'):
+                    if total_fetched >= num_issues:
+                        break
+
+                    # Skip pull requests
+                    if not issue.pull_request:
+                        # Get comments
+                        comments = []
+                        if issue.comments > 0:
+                            try:
+                                comments = [
+                                    {
+                                        'body': comment.body,
+                                        'created_at': comment.created_at.isoformat(),
+                                        'user': comment.user.login if comment.user else None
+                                    }
+                                    for comment in issue.get_comments()[:settings.MAX_COMMENTS_PER_ISSUE]
+                                ]
+                            except Exception as e:
+                                logger.warning(
+                                    f"Error fetching comments for issue #{issue.number}: {e}")
+
+                        # Format issue data
+                        issue_data = {
+                            'number': issue.number,
+                            'title': issue.title,
+                            'body': issue.body,
+                            'state': issue.state,
+                            'created_at': issue.created_at.isoformat(),
+                            'closed_at': issue.closed_at.isoformat() if issue.closed_at else None,
+                            'labels': [label.name for label in issue.labels],
+                            'url': issue.html_url,
+                            'user': issue.user.login if issue.user else None,
+                            'first_comments': comments,
+                            'resolution_time': (issue.closed_at - issue.created_at).total_seconds() / 3600 if issue.closed_at else None
+                        }
+
+                        issues.append(issue_data)
+                        total_fetched += 1
+                        pbar.update(1)
+                    else:
+                        skipped_prs += 1
+
+            logger.info(
+                f"Successfully fetched {total_fetched} issues (skipped {skipped_prs} pull requests)")
+            return issues
+
+        except Exception as e:
+            logger.error(f"Error fetching issues: {e}")
+            raise

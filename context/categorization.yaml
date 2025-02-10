@@ -4,23 +4,50 @@ contract_violations:
       - Primitive_Type         # Basic data types (e.g., int, float, string) mismatch errors.
       - Built-in_Type          # Complex built-in structures (e.g., list, dict, tuple) issues.
       - Reference_Type         # Object or reference type mismatches (e.g., function objects, class instances).
-      - ML_Type                # ML-specific tensor or array type constraints (e.g., float32 tensors).
+      - ML_Type:              # ML-specific tensor or array type constraints
+          - Tensor_Type       # Tensor type mismatches (e.g., float32 vs float64)
+          - Shape_Dimension   # Tensor shape and dimension requirements
+          - Array_Format     # Array format specifications (e.g., channels_first vs channels_last)
+          - Device_Type      # Device placement requirements (e.g., CPU vs GPU tensors)
     Boolean_Expression_Type:
-      - Intra-argument_Contract   # Conditions expressed solely on a single argument (e.g., value ranges).
-      - Inter-argument_Contract   # Relationships or dependencies between two or more arguments.
+      - Intra-argument_Contract:   # Conditions expressed solely on a single argument
+          - Value_Range           # Acceptable ranges for numeric values
+          - Format_Pattern       # Required patterns or formats
+          - Validation_Rule      # Custom validation requirements
+      - Inter-argument_Contract:  # Relationships between arguments
+          - Dependency_Rule      # One argument depends on another
+          - Mutual_Exclusion    # Arguments that cannot be used together
+          - Combination_Rule    # Required argument combinations
       
   API_Method_Order:
     Temporal_Order:
-      - Always                 # The ordering must hold at all execution points.
-      - Eventually             # The required ordering must be satisfied at some point in execution.
+      - Always:                # The ordering must hold at all execution points
+          - Initialization    # Required initialization sequence
+          - Setup_Sequence   # Required setup steps
+          - Cleanup_Order    # Required cleanup sequence
+      - Eventually:           # The required ordering must be satisfied at some point
+          - Model_Pipeline   # Model building and training sequence
+          - Data_Flow       # Data preprocessing and transformation sequence
+          - State_Update    # State modification requirements
+      - Pipeline_Stage:      # Stage-specific ordering requirements
+          - Preprocessing   # Data preparation stage
+          - Model_Building  # Architecture definition stage
+          - Training       # Model training stage
+          - Inference     # Model inference stage
       
   Hybrid:
     SAM_AMO_Interdependency:
-      - SAM_Level_3_And_AMO_Level_2  # Combined violations where behavioral (SAM) and temporal (AMO) rules interdepend.
+      - SAM_Level_3_And_AMO_Level_2  # Combined violations where behavioral and temporal rules interdepend
+      - State_Dependent_Order        # Order requirements that depend on state
+      - Order_Dependent_State       # State requirements that depend on order
     Selection:
-      - SAM_Level_3            # Violation resolved by satisfying the SAM (behavioral) constraint.
-      - AMO_Level_2            # Violation resolved by satisfying the AMO (temporal) constraint.
-      - Combination_of_SAM_and_AMO   # Cases where both behavioral and temporal contracts must be jointly satisfied.
+      - SAM_Level_3            # Violation resolved by satisfying the SAM (behavioral) constraint
+      - AMO_Level_2            # Violation resolved by satisfying the AMO (temporal) constraint
+      - Combination_of_SAM_and_AMO   # Cases where both behavioral and temporal contracts must be jointly satisfied
+    Pipeline_Effects:
+      - Cross_Stage_Impact    # Violations affecting multiple pipeline stages
+      - Error_Propagation    # How errors propagate through stages
+      - Stage_Dependencies   # Dependencies between different stages
 
   # Enhanced LLM-specific contract categories
   LLM_Specific:
@@ -30,64 +57,77 @@ contract_violations:
         - Token_Constraints         # Constraints on token count, type, or special tokens
         - Template_Adherence        # Requirements for following specific prompt templates
       Context_Management:
-        - External_Context_Validity  # Validation of externally supplied context (docs, metadata)
-        - Context_Window_Limits     # Constraints on context window size and management
-        - History_Maintenance       # Rules for conversation history preservation
+        - External_Context_Validity  # Validation of externally supplied context
+        - Context_Window_Limits     # Constraints on context window size
+        - History_Maintenance       # Rules for conversation history
+        - Pipeline_Context         # Context requirements per pipeline stage
       Input_Validation:
-        - Input_Type_Constraints    # Type checking for input parameters (strings, embeddings)
+        - Input_Type_Constraints    # Type checking for input parameters
         - Input_Length_Bounds       # Minimum/maximum length requirements
         - Character_Set_Restrictions # Allowed/disallowed character sets
+        - Preprocessing_Rules       # Required preprocessing steps
 
     Processing_Contracts:
       Resource_Management:
-        - Memory_Bounds            # Memory usage constraints for processing
+        - Memory_Bounds            # Memory usage constraints
         - Compute_Requirements     # Minimum compute capability requirements
         - Batch_Size_Limits        # Constraints on batch processing
+        - Pipeline_Resources       # Stage-specific resource requirements
       State_Management:
-        - Model_State_Consistency  # Requirements for model state preservation
+        - Model_State_Consistency  # Requirements for model state
         - Cache_Management         # Rules for managing response caching
-        - Session_Handling         # Session state maintenance requirements
+        - Session_Handling         # Session state maintenance
+        - Pipeline_State          # Pipeline stage state requirements
 
     Output_Contracts:
       Response_Format:
-        - Schema_Compliance        # Output must follow specific JSON/YAML schema
-        - Style_Guidelines         # Required formatting/style in responses
+        - Schema_Compliance        # Output must follow specific schema
+        - Style_Guidelines         # Required formatting/style
         - Length_Constraints       # Output length restrictions
+        - Stage_Output_Format     # Stage-specific output requirements
       Quality_Assurance:
         - Semantic_Validity        # Ensuring output makes logical sense
-        - Factual_Consistency      # Maintaining consistency with known facts
+        - Factual_Consistency      # Maintaining consistency with facts
         - Safety_Compliance        # Meeting content safety requirements
+        - Stage_Quality_Checks    # Stage-specific quality requirements
       Performance_Guarantees:
         - Response_Time_Bounds     # Maximum allowed response time
         - Accuracy_Thresholds      # Minimum required accuracy levels
-        - Reliability_Standards    # Required uptime and reliability metrics
+        - Reliability_Standards    # Required uptime and reliability
+        - Stage_Performance      # Stage-specific performance requirements
 
     Error_Handling:
       Failure_Modes:
         - Graceful_Degradation     # Requirements for handling partial failures
         - Fallback_Behavior        # Specified behavior when primary path fails
-        - Error_Recovery           # Steps required for recovery after errors
+        - Error_Recovery           # Steps required for recovery
+        - Stage_Specific_Handling # Stage-specific error handling
       Error_Reporting:
         - Error_Format             # Required format for error messages
         - Diagnostic_Information   # Required debugging information
-        - User_Feedback           # Requirements for user-facing error messages
+        - User_Feedback           # Requirements for user-facing messages
+        - Error_Propagation       # How errors affect downstream stages
 
     Security_Contracts:
       Access_Control:
         - Authentication_Requirements  # Required authentication methods
-        - Authorization_Rules         # Permission requirements for operations
+        - Authorization_Rules         # Permission requirements
         - Rate_Limiting              # Usage rate restrictions
+        - Stage_Access_Control       # Stage-specific access requirements
       Data_Protection:
         - PII_Handling              # Rules for handling personal information
         - Data_Retention            # Requirements for data storage/deletion
         - Encryption_Requirements    # Required encryption standards
+        - Stage_Data_Protection     # Stage-specific data protection
 
     Ethical_Contracts:
       Content_Guidelines:
         - Content_Restrictions      # Prohibited content types
         - Bias_Prevention          # Requirements for bias mitigation
-        - Transparency_Rules       # Required disclosures about AI generation
+        - Transparency_Rules       # Required disclosures
+        - Stage_Ethics            # Stage-specific ethical requirements
       Compliance_Requirements:
-        - Regulatory_Adherence     # Compliance with specific regulations
+        - Regulatory_Adherence     # Compliance with regulations
         - Audit_Trail             # Required logging for compliance
-        - Certification_Standards  # Required certifications/standards
+        - Certification_Standards  # Required certifications
+        - Stage_Compliance        # Stage-specific compliance requirements
