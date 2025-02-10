@@ -100,7 +100,11 @@ class AnalysisOrchestrator:
                     try:
                         issue = issues[current_index]
                         analysis = self.analyzer.analyze_issue(
-                            issue.get('title', ''), issue.get('body', ''))
+                            issue.get('title', ''),
+                            issue.get('body', ''),
+                            ', '.join(comment['body'] for comment in issue.get(
+                                'first_comments', []))
+                        )
                         analyzed_issue = {**issue, **analysis}
                         analyzed_issues.append(analyzed_issue)
 
