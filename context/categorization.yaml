@@ -22,14 +22,72 @@ contract_violations:
       - AMO_Level_2            # Violation resolved by satisfying the AMO (temporal) constraint.
       - Combination_of_SAM_and_AMO   # Cases where both behavioral and temporal contracts must be jointly satisfied.
 
-  # LLM-specific contract categories
+  # Enhanced LLM-specific contract categories
   LLM_Specific:
-    Prompt_Formatting:
-      - Required_Prompt_Structure  # Enforces specific formatting or structure in the input prompt.
-      - Expected_Token_Range       # Constraints on the token count or token type in prompts to ensure efficient processing.
-    Context_Management:
-      - External_Context_Consistency  # Ensures that externally supplied context (e.g., retrieved documents, metadata) aligns with the prompt.
-      - Internal_Context_Maintenance  # Rules for preserving conversation history or internal state across interactions.
-    Output_Validation:
-      - Expected_Response_Format   # Specifies formatting, style, or schema that the output must follow.
-      - Inference_Consistency      # Checks for consistency in reasoning or output when similar inputs are given.
+    Input_Contracts:
+      Prompt_Formatting:
+        - Structure_Requirements     # Specific formatting or structure required in prompts
+        - Token_Constraints         # Constraints on token count, type, or special tokens
+        - Template_Adherence        # Requirements for following specific prompt templates
+      Context_Management:
+        - External_Context_Validity  # Validation of externally supplied context (docs, metadata)
+        - Context_Window_Limits     # Constraints on context window size and management
+        - History_Maintenance       # Rules for conversation history preservation
+      Input_Validation:
+        - Input_Type_Constraints    # Type checking for input parameters (strings, embeddings)
+        - Input_Length_Bounds       # Minimum/maximum length requirements
+        - Character_Set_Restrictions # Allowed/disallowed character sets
+
+    Processing_Contracts:
+      Resource_Management:
+        - Memory_Bounds            # Memory usage constraints for processing
+        - Compute_Requirements     # Minimum compute capability requirements
+        - Batch_Size_Limits        # Constraints on batch processing
+      State_Management:
+        - Model_State_Consistency  # Requirements for model state preservation
+        - Cache_Management         # Rules for managing response caching
+        - Session_Handling         # Session state maintenance requirements
+
+    Output_Contracts:
+      Response_Format:
+        - Schema_Compliance        # Output must follow specific JSON/YAML schema
+        - Style_Guidelines         # Required formatting/style in responses
+        - Length_Constraints       # Output length restrictions
+      Quality_Assurance:
+        - Semantic_Validity        # Ensuring output makes logical sense
+        - Factual_Consistency      # Maintaining consistency with known facts
+        - Safety_Compliance        # Meeting content safety requirements
+      Performance_Guarantees:
+        - Response_Time_Bounds     # Maximum allowed response time
+        - Accuracy_Thresholds      # Minimum required accuracy levels
+        - Reliability_Standards    # Required uptime and reliability metrics
+
+    Error_Handling:
+      Failure_Modes:
+        - Graceful_Degradation     # Requirements for handling partial failures
+        - Fallback_Behavior        # Specified behavior when primary path fails
+        - Error_Recovery           # Steps required for recovery after errors
+      Error_Reporting:
+        - Error_Format             # Required format for error messages
+        - Diagnostic_Information   # Required debugging information
+        - User_Feedback           # Requirements for user-facing error messages
+
+    Security_Contracts:
+      Access_Control:
+        - Authentication_Requirements  # Required authentication methods
+        - Authorization_Rules         # Permission requirements for operations
+        - Rate_Limiting              # Usage rate restrictions
+      Data_Protection:
+        - PII_Handling              # Rules for handling personal information
+        - Data_Retention            # Requirements for data storage/deletion
+        - Encryption_Requirements    # Required encryption standards
+
+    Ethical_Contracts:
+      Content_Guidelines:
+        - Content_Restrictions      # Prohibited content types
+        - Bias_Prevention          # Requirements for bias mitigation
+        - Transparency_Rules       # Required disclosures about AI generation
+      Compliance_Requirements:
+        - Regulatory_Adherence     # Compliance with specific regulations
+        - Audit_Trail             # Required logging for compliance
+        - Certification_Standards  # Required certifications/standards
