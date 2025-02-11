@@ -13,8 +13,8 @@ from src.config import settings
 from src.utils.logger import setup_logger
 from src.analysis.core.prompts import get_system_prompt, get_user_prompt
 from src.analysis.core.clients.base import LLMClient
-from src.analysis.core.processors.cleaner import ResponseCleaner
-from src.analysis.core.processors.validator import ResponseValidator
+from src.analysis.core.processors.cleaner import MarkdownResponseCleaner
+from src.analysis.core.processors.validator import ContractAnalysisValidator
 from src.analysis.core.storage.base import ResultsStorage
 from src.analysis.core.dto import (
     GithubIssueDTO,
@@ -24,6 +24,8 @@ from src.analysis.core.dto import (
     dict_to_contract_analysis_dto,
     dict_to_github_issue_dto
 )
+from src.analysis.core.clients.github import GitHubAPIClient
+from src.analysis.core.processors.checkpoint import CheckpointHandler
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +36,8 @@ class ContractAnalyzer:
     def __init__(
         self,
         llm_client: LLMClient,
-        response_cleaner: ResponseCleaner,
-        response_validator: ResponseValidator,
+        response_cleaner: MarkdownResponseCleaner,
+        response_validator: ContractAnalysisValidator,
         results_storage: ResultsStorage
     ):
         """Initialize analyzer with components.
@@ -116,8 +118,8 @@ class ContractAnalyzer:
         results = AnalysisResultsDTO(
             metadata=metadata, analyzed_issues=analyzed_issues)
         self.results_storage.save_results(
-            [issue.__dict__ for issue in results.analyzed_issues],
-            results.metadata.__dict__
+            analyzed_issues=analyzed_issues,
+            metadata=metadata
         )
 
     def _get_error_analysis(self, error_msg: str) -> ContractAnalysisDTO:
@@ -147,7 +149,6 @@ class ContractAnalyzer:
                 "impact": "unknown"
             },
             "error_propagation": {
-                "origin_stage": "analysis",
                 "affected_stages": [],
                 "propagation_path": "Analysis error contained"
             }
@@ -156,139 +157,126 @@ class ContractAnalyzer:
 
 
 class GitHubIssuesAnalyzer:
-    """GitHub issues analyzer implementation."""
+    """Analyzer for GitHub issues."""
 
-    def __init__(self, repo_name: Optional[str] = None):
-        """Initialize GitHub issues analyzer.
+    def __init__(
+        self,
+        llm_client: LLMClient,
+        github_token: str,
+        storage: ResultsStorage,
+        checkpoint_handler: Optional[CheckpointHandler] = None
+    ):
+        """Initialize analyzer.
 
         Args:
-            repo_name: Optional repository name
+            llm_client: LLM client for analysis
+            github_token: GitHub API token
+            storage: Results storage
+            checkpoint_handler: Optional checkpoint handler
         """
-        self.repo_name = repo_name
+        self.llm_client = llm_client
+        self.github_client = GitHubAPIClient(github_token)
+        self.storage = storage
+        self.checkpoint_handler = checkpoint_handler or CheckpointHandler()
 
-        # Initialize components
-        openai_settings = {
-            'api_key': settings.OPENAI_API_KEY,
-            'model': settings.OPENAI_MODEL,
-            'max_retries': settings.MAX_RETRIES,
-            'timeout': 30.0,
-            'temperature': settings.OPENAI_TEMPERATURE,
-            'max_tokens': settings.OPENAI_MAX_TOKENS,
-            'top_p': settings.OPENAI_TOP_P,
-            'frequency_penalty': settings.OPENAI_FREQUENCY_PENALTY,
-            'presence_penalty': settings.OPENAI_PRESENCE_PENALTY
-        }
-
-        # Add base URL if specified
-        if hasattr(settings, 'OPENAI_BASE_URL'):
-            openai_settings['base_url'] = settings.OPENAI_BASE_URL
-
-        from src.analysis.core.clients.openai import OpenAIClient
-        from src.analysis.core.processors.cleaner import MarkdownResponseCleaner
-        from src.analysis.core.processors.validator import ContractAnalysisValidator
-        from src.analysis.core.storage.json_storage import JSONResultsStorage
-
-        llm_client = OpenAIClient(**openai_settings)
-        response_cleaner = MarkdownResponseCleaner()
-        response_validator = ContractAnalysisValidator()
-        results_storage = JSONResultsStorage(
-            Path(settings.DATA_DIR) / 'analysis')
-
-        self.analyzer = ContractAnalyzer(
+        # Initialize contract analyzer with concrete implementations
+        self.contract_analyzer = ContractAnalyzer(
             llm_client=llm_client,
-            response_cleaner=response_cleaner,
-            response_validator=response_validator,
-            results_storage=results_storage
+            response_cleaner=MarkdownResponseCleaner(),
+            response_validator=ContractAnalysisValidator(),
+            results_storage=storage
         )
 
-        self.github_client = Github(settings.GITHUB_TOKEN)
-
-    def analyze_issue(self, title: str, body: str, comments: Optional[str] = None) -> ContractAnalysisDTO:
-        """Analyze a single issue."""
-        return self.analyzer.analyze_issue(title, body, comments)
-
-    def save_results(self, analyzed_issues: List[ContractAnalysisDTO]) -> None:
-        """Save analysis results."""
-        metadata = AnalysisMetadataDTO(
-            repository=self.repo_name,
-            analysis_timestamp=datetime.now().strftime("%Y%m%d_%H%M%S"),
-            num_issues=len(analyzed_issues)
-        )
-        self.analyzer.save_results(analyzed_issues, metadata)
-
-    def fetch_issues(self, repo_name: str, num_issues: int) -> List[GithubIssueDTO]:
-        """Fetch issues from GitHub repository.
+    def analyze_repository(
+        self,
+        repo_name: str,
+        num_issues: int = 100,
+        checkpoint_interval: int = 10
+    ) -> AnalysisResultsDTO:
+        """Analyze issues from a GitHub repository.
 
         Args:
             repo_name: Repository name (owner/repo)
-            num_issues: Number of issues to fetch
+            num_issues: Number of issues to analyze
+            checkpoint_interval: Number of issues between checkpoints
 
         Returns:
-            List of GithubIssueDTO objects
+            Analysis results
         """
         try:
-            logger.info(f"Fetching {num_issues} issues from {repo_name}")
-            repo = self.github_client.get_repo(repo_name)
+            # Get repository info
+            repo_info = self.github_client.get_repo_info(repo_name)
+            logger.info(f"Analyzing repository: {repo_info['full_name']}")
 
-            issues = []
-            total_fetched = 0
-            skipped_prs = 0
+            # Fetch issues
+            issues = self.github_client.fetch_issues(repo_name, num_issues)
 
-            with tqdm(total=num_issues, desc="Fetching issues", unit="issue") as pbar:
-                for issue in repo.get_issues(state='all'):
-                    if total_fetched >= num_issues:
-                        break
+            # Create metadata
+            metadata = AnalysisMetadataDTO(
+                repository=repo_info,
+                analysis_timestamp=datetime.now().isoformat(),
+                num_issues=len(issues)
+            )
 
-                    if not issue.pull_request:
-                        issue_data = self._process_issue(issue)
-                        issues.append(dict_to_github_issue_dto(issue_data))
-                        total_fetched += 1
-                        pbar.update(1)
-                    else:
-                        skipped_prs += 1
+            # Analyze issues
+            analyzed_issues = []
+            for i, issue in enumerate(issues):
+                try:
+                    analysis = self.contract_analyzer.analyze_issue(
+                        title=issue.title,
+                        body=issue.body,
+                        comments=', '.join(
+                            comment.body for comment in issue.first_comments)
+                    )
+                    analyzed_issues.append(analysis)
 
-            logger.info(
-                f"Successfully fetched {total_fetched} issues (skipped {skipped_prs} pull requests)")
-            return issues
+                    # Save checkpoint if needed
+                    if (i + 1) % checkpoint_interval == 0:
+                        self.checkpoint_handler.save_checkpoint(
+                            analyzed_issues=analyzed_issues,
+                            metadata=metadata
+                        )
+                        logger.info(f"Saved checkpoint after {i + 1} issues")
+
+                except Exception as e:
+                    logger.error(f"Error analyzing issue {issue.number}: {e}")
+                    continue
+
+            # Save final results
+            results = AnalysisResultsDTO(
+                metadata=metadata,
+                analyzed_issues=analyzed_issues
+            )
+            self.contract_analyzer.save_results(
+                analyzed_issues=analyzed_issues, metadata=metadata)
+            logger.info("Analysis complete")
+
+            return results
 
         except Exception as e:
-            logger.error(f"Error fetching issues: {e}")
+            logger.error(f"Error analyzing repository: {e}")
             raise
 
-    def _process_issue(self, issue) -> Dict[str, Any]:
-        """Process a single GitHub issue.
+    def analyze_issue(self, title: str, body: str, comments: Optional[str] = None) -> ContractAnalysisDTO:
+        """Analyze a GitHub issue for contract violations.
 
         Args:
-            issue: GitHub issue object
+            title: Issue title
+            body: Issue body
+            comments: Optional issue comments
 
         Returns:
-            Issue data dictionary
+            Analysis results as ContractAnalysisDTO
         """
-        comments = []
-        if issue.comments > 0:
-            try:
-                comments = [
-                    {
-                        'body': comment.body,
-                        'created_at': comment.created_at.isoformat(),
-                        'user': comment.user.login if comment.user else None
-                    }
-                    for comment in issue.get_comments()[:settings.MAX_COMMENTS_PER_ISSUE]
-                ]
-            except Exception as e:
-                logger.warning(
-                    f"Error fetching comments for issue #{issue.number}: {e}")
+        return self.contract_analyzer.analyze_issue(title, body, comments)
 
-        return {
-            'number': issue.number,
-            'title': issue.title,
-            'body': issue.body,
-            'state': issue.state,
-            'created_at': issue.created_at.isoformat(),
-            'closed_at': issue.closed_at.isoformat() if issue.closed_at else None,
-            'labels': [label.name for label in issue.labels],
-            'url': issue.html_url,
-            'user': issue.user.login if issue.user else None,
-            'first_comments': comments,
-            'resolution_time': (issue.closed_at - issue.created_at).total_seconds() / 3600 if issue.closed_at else None
-        }
+    def _get_error_analysis(self, error_msg: str) -> ContractAnalysisDTO:
+        """Generate error analysis result.
+
+        Args:
+            error_msg: Error message
+
+        Returns:
+            Error analysis as ContractAnalysisDTO
+        """
+        return self.contract_analyzer._get_error_analysis(error_msg)

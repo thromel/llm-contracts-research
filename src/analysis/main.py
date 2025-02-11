@@ -3,10 +3,14 @@
 import argparse
 import signal
 from pathlib import Path
+from datetime import datetime
 
 from src.analysis.core.analyzer import GitHubIssuesAnalyzer
-from src.analysis.core.checkpoint import CheckpointManager
+from src.analysis.core.processors.checkpoint import CheckpointHandler
 from src.analysis.core.data_loader import CSVDataLoader, DataLoadError
+from src.analysis.core.storage.json_storage import JSONResultsStorage
+from src.analysis.core.clients.openai import OpenAIClient
+from src.analysis.core.dto import AnalysisMetadataDTO
 from src.config import settings
 from src.utils.logger import setup_logger
 from tqdm import tqdm
@@ -17,7 +21,7 @@ logger = setup_logger(__name__)
 class AnalysisOrchestrator:
     """Orchestrates the GitHub issues analysis process."""
 
-    def __init__(self, analyzer: GitHubIssuesAnalyzer, checkpoint_mgr: CheckpointManager):
+    def __init__(self, analyzer: GitHubIssuesAnalyzer, checkpoint_mgr: CheckpointHandler):
         """Initialize the orchestrator.
 
         Args:
@@ -87,11 +91,18 @@ class AnalysisOrchestrator:
                     if not repo_name or not num_issues:
                         raise ValueError(
                             "Either input_csv or both repo_name and num_issues must be provided")
-                    issues = self.analyzer.fetch_issues(
+                    issues = self.analyzer.github_client.fetch_issues(
                         repo_name=repo_name, num_issues=num_issues)
                     logger.info("Fetched {} issues".format(len(issues)))
                 analyzed_issues = []
                 current_index = 0
+
+            # Create metadata for checkpoints and results
+            metadata = AnalysisMetadataDTO(
+                repository=repo_name,
+                analysis_timestamp=datetime.now().isoformat(),
+                num_issues=len(issues)
+            )
 
             # Create progress bar for issue analysis
             with tqdm(total=len(issues), initial=current_index,
@@ -99,14 +110,14 @@ class AnalysisOrchestrator:
                 while current_index < len(issues) and not self.is_shutting_down:
                     try:
                         issue = issues[current_index]
+                        # Access DTO attributes directly
                         analysis = self.analyzer.analyze_issue(
-                            issue.get('title', ''),
-                            issue.get('body', ''),
-                            ', '.join(comment['body'] for comment in issue.get(
-                                'first_comments', []))
+                            title=issue.title,
+                            body=issue.body,
+                            comments=', '.join(
+                                comment.body for comment in issue.first_comments)
                         )
-                        analyzed_issue = {**issue, **analysis}
-                        analyzed_issues.append(analyzed_issue)
+                        analyzed_issues.append(analysis)
 
                         # Update progress
                         current_index += 1
@@ -115,11 +126,15 @@ class AnalysisOrchestrator:
                         # Create checkpoint at specified intervals
                         if current_index % checkpoint_interval == 0:
                             self.checkpoint_mgr.save_checkpoint(
-                                analyzed_issues, current_index, issues, repo_name)
+                                analyzed_issues=analyzed_issues,
+                                metadata=metadata
+                            )
+                            logger.info(
+                                "Saved checkpoint after {} issues".format(current_index))
 
                     except Exception as exc:
                         logger.error("Error analyzing issue {}: {}".format(
-                            issue.get('number'), str(exc)))
+                            issue.number, str(exc)))
                         current_index += 1  # Skip problematic issue
                         continue
 
@@ -128,10 +143,16 @@ class AnalysisOrchestrator:
                 if self.is_shutting_down:
                     logger.info("Saving final checkpoint before shutdown...")
                     self.checkpoint_mgr.save_checkpoint(
-                        analyzed_issues, current_index, issues, repo_name)
+                        analyzed_issues=analyzed_issues,
+                        metadata=metadata
+                    )
                 else:
                     logger.info("Analysis complete. Saving final results...")
-                    self.analyzer.save_results(analyzed_issues)
+                    results = self.analyzer.analyze_repository(
+                        repo_name=repo_name,
+                        num_issues=num_issues,
+                        checkpoint_interval=checkpoint_interval
+                    )
                     # Clear checkpoint since we completed successfully
                     self.checkpoint_mgr.clear_checkpoint()
 
@@ -140,7 +161,9 @@ class AnalysisOrchestrator:
             # Save checkpoint on error
             if 'analyzed_issues' in locals() and 'current_index' in locals():
                 self.checkpoint_mgr.save_checkpoint(
-                    analyzed_issues, current_index, issues, repo_name)
+                    analyzed_issues=analyzed_issues,
+                    metadata=metadata
+                )
             raise
 
 
@@ -171,10 +194,32 @@ def main():
 
     # Initialize components
     output_dir = Path(settings.DATA_DIR) / 'analyzed'
-    analyzer = GitHubIssuesAnalyzer(repo_name=args.repo if args.repo else None)
-    checkpoint_mgr = CheckpointManager(output_dir=output_dir)
+    storage = JSONResultsStorage(output_dir=output_dir)
+    checkpoint_mgr = CheckpointHandler()
+
+    # Initialize OpenAI client
+    openai_settings = {
+        'api_key': settings.OPENAI_API_KEY,
+        'model': settings.OPENAI_MODEL,
+        'max_retries': settings.MAX_RETRIES,
+        'timeout': 30.0,
+        'temperature': settings.OPENAI_TEMPERATURE,
+        'max_tokens': settings.OPENAI_MAX_TOKENS,
+        'top_p': settings.OPENAI_TOP_P,
+        'frequency_penalty': settings.OPENAI_FREQUENCY_PENALTY,
+        'presence_penalty': settings.OPENAI_PRESENCE_PENALTY
+    }
+    if hasattr(settings, 'OPENAI_BASE_URL'):
+        openai_settings['base_url'] = settings.OPENAI_BASE_URL
+    llm_client = OpenAIClient(**openai_settings)
 
     # Create and run orchestrator
+    analyzer = GitHubIssuesAnalyzer(
+        llm_client=llm_client,
+        github_token=settings.GITHUB_TOKEN,
+        storage=storage,
+        checkpoint_handler=checkpoint_mgr
+    )
     orchestrator = AnalysisOrchestrator(analyzer, checkpoint_mgr)
     orchestrator.setup_signal_handlers()
 

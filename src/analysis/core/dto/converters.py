@@ -60,7 +60,6 @@ def dict_to_new_contract_dto(data: Dict[str, Any]) -> NewContractDTO:
         rationale=data['rationale'],
         examples=data['examples'],
         parent_category=data['parent_category'],
-        pipeline_stage=data['pipeline_stage'],
         pattern_frequency=dict_to_pattern_frequency_dto(
             data['pattern_frequency'])
     )
@@ -79,7 +78,6 @@ def dict_to_comment_analysis_dto(data: Dict[str, Any]) -> CommentAnalysisDTO:
 def dict_to_error_propagation_dto(data: Dict[str, Any]) -> ErrorPropagationDTO:
     """Convert dictionary to ErrorPropagationDTO."""
     return ErrorPropagationDTO(
-        origin_stage=data['origin_stage'],
         affected_stages=data['affected_stages'],
         propagation_path=data['propagation_path']
     )
@@ -97,7 +95,6 @@ def dict_to_contract_analysis_dto(data: Dict[str, Any]) -> ContractAnalysisDTO:
         effects=data['effects'],
         resolution_status=data['resolution_status'],
         resolution_details=data['resolution_details'],
-        pipeline_stage=data['pipeline_stage'],
         contract_category=data['contract_category'],
         comment_analysis=dict_to_comment_analysis_dto(
             data['comment_analysis']),
