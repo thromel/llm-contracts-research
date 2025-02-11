@@ -83,8 +83,7 @@ class ContractAnalysisValidator:
 
     def _validate_error_propagation(self, error_prop: Dict[str, Any]) -> None:
         """Validate error propagation fields."""
-        required_fields = ["origin_stage",
-                           "affected_stages", "propagation_path"]
+        required_fields = ["affected_stages", "propagation_path"]
         missing = [field for field in required_fields if field not in error_prop]
         if missing:
             raise KeyError(

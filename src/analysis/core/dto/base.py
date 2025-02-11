@@ -45,7 +45,6 @@ class NewContractDTO:
     rationale: str
     examples: List[str]
     parent_category: str
-    pipeline_stage: str
     pattern_frequency: PatternFrequencyDTO
 
 
@@ -61,7 +60,6 @@ class CommentAnalysisDTO:
 @dataclass
 class ErrorPropagationDTO:
     """DTO for error propagation analysis."""
-    origin_stage: str
     affected_stages: List[str]
     propagation_path: str
 
@@ -78,7 +76,6 @@ class ContractAnalysisDTO:
     effects: List[str]
     resolution_status: str
     resolution_details: str
-    pipeline_stage: str
     contract_category: str
     comment_analysis: CommentAnalysisDTO
     error_propagation: ErrorPropagationDTO
