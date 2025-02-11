@@ -14,7 +14,7 @@ A tool for analyzing GitHub issues to identify and categorize API contract viola
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/llm-contracts-research.git
+git clone https://github.com/thromel/llm-contracts-research.git
 cd llm-contracts-research
 ```
 
