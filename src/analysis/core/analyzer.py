@@ -213,21 +213,41 @@ class GitHubIssuesAnalyzer:
 
             # Create metadata
             metadata = AnalysisMetadataDTO(
-                repository=repo_info,
+                repository=repo_info['full_name'],
                 analysis_timestamp=datetime.now().isoformat(),
-                num_issues=len(issues)
+                num_issues=len(issues),
+                repository_url=repo_info.get('html_url'),
+                repository_owner=repo_info.get('owner', {}).get('login'),
+                repository_name=repo_info.get('name'),
+                repository_description=repo_info.get('description'),
+                repository_stars=repo_info.get('stargazers_count'),
+                repository_forks=repo_info.get('forks_count'),
+                repository_language=repo_info.get('language'),
+                analysis_version=settings.ANALYSIS_VERSION,
+                analysis_model=settings.ANALYSIS_MODEL,
+                analysis_batch_id=datetime.now().strftime("%Y%m%d_%H%M%S")
             )
 
             # Analyze issues
             analyzed_issues = []
             for i, issue in enumerate(issues):
                 try:
+                    # Update issue metadata
                     analysis = self.contract_analyzer.analyze_issue(
                         title=issue.title,
                         body=issue.body,
                         comments=', '.join(
                             comment.body for comment in issue.first_comments)
                     )
+                    # Add issue metadata
+                    analysis.issue_url = issue.html_url
+                    analysis.issue_number = issue.number
+                    analysis.issue_title = issue.title
+                    analysis.repository_name = repo_info.get('name')
+                    analysis.repository_owner = repo_info.get(
+                        'owner', {}).get('login')
+                    analysis.analysis_timestamp = datetime.now().isoformat()
+
                     analyzed_issues.append(analysis)
 
                     # Save checkpoint if needed
