@@ -3,11 +3,13 @@
 import json
 import logging
 from typing import Optional
+from datetime import datetime
 
 from src.analysis.core.prompts import get_system_prompt, get_user_prompt
 from src.analysis.core.clients.base import LLMClient
 from src.analysis.core.interfaces import IAnalyzer, IResponseCleaner, IResponseValidator
 from src.analysis.core.dto import ContractAnalysisDTO, dict_to_contract_analysis_dto
+from src.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,33 @@ class ContractAnalyzer(IAnalyzer):
 
             try:
                 self.response_validator.validate(analysis_dict)
+                # Initialize default values for required fields
+                analysis_dict.update({
+                    "has_violation": analysis_dict.get("has_violation", False),
+                    "violation_type": analysis_dict.get("violation_type", "None"),
+                    "severity": analysis_dict.get("severity", "low"),
+                    "description": analysis_dict.get("description", "No violation detected"),
+                    "confidence": analysis_dict.get("confidence", "low"),
+                    "root_cause": analysis_dict.get("root_cause", "Not applicable"),
+                    "effects": analysis_dict.get("effects", []),
+                    "resolution_status": analysis_dict.get("resolution_status", "Not required"),
+                    "resolution_details": analysis_dict.get("resolution_details", "No resolution needed"),
+                    "contract_category": analysis_dict.get("contract_category", "None"),
+                    "comment_analysis": analysis_dict.get("comment_analysis", {
+                        "supporting_evidence": [],
+                        "frequency": "Not applicable",
+                        "workarounds": [],
+                        "impact": "None"
+                    }),
+                    "error_propagation": analysis_dict.get("error_propagation", {
+                        "affected_stages": [],
+                        "propagation_path": "None"
+                    }),
+                    "suggested_new_contracts": analysis_dict.get("suggested_new_contracts", []),
+                    "analysis_timestamp": datetime.now().isoformat(),
+                    "analysis_version": settings.ANALYSIS_VERSION,
+                    "analysis_model": settings.ANALYSIS_MODEL
+                })
                 return dict_to_contract_analysis_dto(analysis_dict)
             except (KeyError, ValueError, TypeError) as e:
                 logger.error(f"Invalid analysis structure: {e}")
@@ -100,7 +129,9 @@ class ContractAnalyzer(IAnalyzer):
         Returns:
             Error analysis as ContractAnalysisDTO
         """
+        current_time = datetime.now().isoformat()
         error_dict = {
+            # Core analysis fields
             "has_violation": False,
             "violation_type": "ERROR",
             "severity": "low",
@@ -111,15 +142,34 @@ class ContractAnalyzer(IAnalyzer):
             "resolution_status": "ERROR",
             "resolution_details": "Please try analyzing the issue again",
             "contract_category": "unknown",
+
+            # Comment analysis
             "comment_analysis": {
                 "supporting_evidence": [],
                 "frequency": "unknown",
                 "workarounds": [],
                 "impact": "unknown"
             },
+
+            # Error details
             "error_propagation": {
                 "affected_stages": [],
                 "propagation_path": "Analysis error contained"
-            }
+            },
+
+            # Additional data
+            "suggested_new_contracts": [],
+
+            # Issue metadata - will be overridden by orchestrator
+            "issue_url": "",
+            "issue_number": 0,
+            "issue_title": "",
+            "repository_name": "",
+            "repository_owner": "",
+
+            # Analysis metadata
+            "analysis_timestamp": current_time,
+            "analysis_version": getattr(settings, 'ANALYSIS_VERSION', '1.0.0'),
+            "analysis_model": getattr(settings, 'ANALYSIS_MODEL', 'unknown')
         }
         return dict_to_contract_analysis_dto(error_dict)

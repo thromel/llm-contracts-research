@@ -75,6 +75,11 @@ class AnalysisOrchestrator(IAnalysisOrchestrator):
             for i, issue in enumerate(issues):
                 try:
                     analysis = self._analyze_single_issue(issue, repo_info)
+                    # Update analysis with metadata
+                    analysis.repository_name = metadata.repository_name
+                    analysis.repository_owner = metadata.repository_owner
+                    analysis.analysis_version = metadata.analysis_version
+                    analysis.analysis_model = metadata.analysis_model
                     analyzed_issues.append(analysis)
 
                     if self.progress_tracker:
@@ -88,6 +93,13 @@ class AnalysisOrchestrator(IAnalysisOrchestrator):
 
                 except Exception as e:
                     logger.error(f"Error analyzing issue {issue.number}: {e}")
+                    # Create error analysis with proper metadata
+                    error_analysis = self.analyzer._get_error_analysis(str(e))
+                    error_analysis.repository_name = metadata.repository_name
+                    error_analysis.repository_owner = metadata.repository_owner
+                    error_analysis.analysis_version = metadata.analysis_version
+                    error_analysis.analysis_model = metadata.analysis_model
+                    analyzed_issues.append(error_analysis)
                     continue
 
             # Save final results if we have analyzed any issues
@@ -102,8 +114,19 @@ class AnalysisOrchestrator(IAnalysisOrchestrator):
                     logger.info("Analysis complete. Saving final results...")
                     # Create final results DTO
                     results = AnalysisResultsDTO(
-                        metadata=metadata, analyzed_issues=analyzed_issues
+                        metadata=metadata,
+                        analyzed_issues=analyzed_issues
                     )
+
+                    # Save results using all configured storage types
+                    for storage in self.storage:
+                        storage.save_results(
+                            analyzed_issues=analyzed_issues,
+                            metadata=metadata
+                        )
+                        logger.info(
+                            f"Saved final results using {storage.__class__.__name__}")
+
                     # Clear checkpoint since we completed successfully
                     self.checkpoint_manager.clear_checkpoint()
 
@@ -126,22 +149,52 @@ class AnalysisOrchestrator(IAnalysisOrchestrator):
         Returns:
             Analysis results
         """
-        analysis = self.analyzer.analyze_issue(
-            title=issue.title,
-            body=issue.body,
-            comments=', '.join(
-                comment.body for comment in issue.get_comments())
-        )
+        try:
+            # Extract issue data with defaults
+            title = getattr(issue, 'title', '')
+            body = getattr(issue, 'body', '')
+            comments = [
+                comment.body for comment in issue.get_comments()
+            ] if hasattr(issue, 'get_comments') else []
+            comments_str = ', '.join(comments) if comments else None
 
-        # Add issue metadata
-        analysis.issue_url = issue.html_url
-        analysis.issue_number = issue.number
-        analysis.issue_title = issue.title
-        analysis.repository_name = repo_info.get('name')
-        analysis.repository_owner = repo_info.get('owner', {}).get('login')
-        analysis.analysis_timestamp = datetime.now().isoformat()
+            # Perform analysis
+            analysis = self.analyzer.analyze_issue(
+                title=title,
+                body=body,
+                comments=comments_str
+            )
 
-        return analysis
+            # Add issue metadata with defaults
+            analysis.issue_url = getattr(issue, 'html_url', '')
+            analysis.issue_number = getattr(issue, 'number', 0)
+            analysis.issue_title = title
+            analysis.repository_name = repo_info.get('name', 'unknown')
+            analysis.repository_owner = repo_info.get(
+                'owner', {}).get('login', 'unknown')
+            analysis.analysis_timestamp = datetime.now().isoformat()
+            analysis.analysis_version = getattr(
+                settings, 'ANALYSIS_VERSION', '1.0.0')
+            analysis.analysis_model = getattr(
+                settings, 'ANALYSIS_MODEL', 'unknown')
+
+            return analysis
+        except Exception as e:
+            logger.error(f"Error in _analyze_single_issue: {str(e)}")
+            # Create error analysis with proper metadata
+            error_analysis = self.analyzer._get_error_analysis(str(e))
+            error_analysis.issue_url = getattr(issue, 'html_url', '')
+            error_analysis.issue_number = getattr(issue, 'number', 0)
+            error_analysis.issue_title = getattr(issue, 'title', '')
+            error_analysis.repository_name = repo_info.get('name', 'unknown')
+            error_analysis.repository_owner = repo_info.get(
+                'owner', {}).get('login', 'unknown')
+            error_analysis.analysis_timestamp = datetime.now().isoformat()
+            error_analysis.analysis_version = getattr(
+                settings, 'ANALYSIS_VERSION', '1.0.0')
+            error_analysis.analysis_model = getattr(
+                settings, 'ANALYSIS_MODEL', 'unknown')
+            return error_analysis
 
     def _handle_intermediate_save(
         self,
@@ -193,19 +246,23 @@ class AnalysisOrchestrator(IAnalysisOrchestrator):
             Analysis metadata
         """
         return AnalysisMetadataDTO(
-            repository=repo_info['full_name'],
+            repository=repo_info.get('full_name') or "unknown",
             analysis_timestamp=datetime.now().isoformat(),
             num_issues=num_issues,
-            repository_url=repo_info.get('html_url'),
-            repository_owner=repo_info.get('owner', {}).get('login'),
-            repository_name=repo_info.get('name'),
-            repository_description=repo_info.get('description'),
-            repository_stars=repo_info.get('stargazers_count'),
-            repository_forks=repo_info.get('forks_count'),
-            repository_language=repo_info.get('language'),
-            analysis_version=settings.ANALYSIS_VERSION,
-            analysis_model=settings.ANALYSIS_MODEL,
-            analysis_batch_id=datetime.now().strftime("%Y%m%d_%H%M%S")
+            repository_url=repo_info.get(
+                'html_url') or f"https://github.com/{repo_info.get('full_name', 'unknown')}",
+            repository_owner=(repo_info.get('owner') or {}
+                              ).get('login') or "unknown",
+            repository_name=repo_info.get('name') or "unknown",
+            repository_description=repo_info.get('description') or "",
+            repository_stars=repo_info.get('stargazers_count') if repo_info.get(
+                'stargazers_count') is not None else 0,
+            repository_forks=repo_info.get('forks_count') if repo_info.get(
+                'forks_count') is not None else 0,
+            repository_language=repo_info.get('language') or "unknown",
+            analysis_version=settings.ANALYSIS_VERSION or "1.0.0",
+            analysis_model=settings.ANALYSIS_MODEL or "violation-detection-v1",
+            analysis_batch_id=settings.ANALYSIS_BATCH_ID or "batch_default",
         )
 
     def _create_intermediate_metadata(

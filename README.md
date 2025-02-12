@@ -194,3 +194,17 @@ The analyzer generates several output files in the `data/analyzed` directory:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## How to Contribute
+
+We welcome contributions from the community! If you'd like to contribute improvements, fixes, or new features, please follow these guidelines:
+
+1. Fork the repository and clone your fork.
+2. Create a new branch for your changes (e.g., feature/your-feature or fix/issue-number).
+3. Make your changes with clear, concise commit messages.
+4. Ensure that your code adheres to the project's coding style (PEP 8).
+5. Write tests for your changes where applicable.
+6. Push your branch and open a pull request describing your changes.
+7. Consult the issue tracker before making major changes to avoid duplicated efforts.
+
+Thank you for your interest in contributing to GitHub Issues Contract Violation Analyzer!
