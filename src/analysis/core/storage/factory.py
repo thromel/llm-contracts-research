@@ -42,11 +42,16 @@ class StorageFactory:
             try:
                 if storage_type == 'json':
                     json_dir = settings.EXPORT_DIR / 'json'
+                    json_dir.mkdir(parents=True, exist_ok=True)
                     storage_impls.append(
                         JSONResultsStorage(output_dir=json_dir))
                     logger.info("Created JSON storage implementation")
 
                 elif storage_type == 'mongodb':
+                    if not settings.MONGODB_URI or not settings.MONGODB_DB:
+                        logger.warning(
+                            "MongoDB settings not configured, skipping MongoDB storage")
+                        continue
                     storage_impls.append(MongoDBRepository(
                         connection_uri=settings.MONGODB_URI,
                         db_name=settings.MONGODB_DB
@@ -55,15 +60,51 @@ class StorageFactory:
 
                 elif storage_type == 'csv':
                     csv_dir = settings.EXPORT_DIR / 'csv'
-                    storage_impls.append(CSVExporter(output_dir=csv_dir))
+                    csv_dir.mkdir(parents=True, exist_ok=True)
+                    exporter = CSVExporter(output_dir=csv_dir)
+                    # Wrap CSV exporter in a ResultsStorage adapter
+                    storage_impls.append(CSVStorageAdapter(exporter))
                     logger.info("Created CSV storage implementation")
 
                 else:
-                    logger.warning(
-                        "Unknown storage type: {}".format(storage_type))
+                    logger.warning(f"Unknown storage type: {storage_type}")
 
             except Exception as e:
-                logger.error("Failed to create {} storage: {}".format(
-                    storage_type, str(e)))
+                logger.error(
+                    f"Failed to create {storage_type} storage: {str(e)}")
 
         return storage_impls
+
+
+class CSVStorageAdapter(ResultsStorage):
+    """Adapter to make CSVExporter conform to ResultsStorage protocol."""
+
+    def __init__(self, exporter: CSVExporter):
+        """Initialize adapter with CSV exporter.
+
+        Args:
+            exporter: CSV exporter instance
+        """
+        self.exporter = exporter
+
+    def save_results(self, analyzed_issues: list[ContractAnalysisDTO], metadata: AnalysisMetadataDTO) -> None:
+        """Save results using CSV exporter.
+
+        Args:
+            analyzed_issues: List of analysis results
+            metadata: Analysis metadata
+        """
+        results = AnalysisResultsDTO(
+            metadata=metadata, analyzed_issues=analyzed_issues)
+        self.exporter.export_results(results)
+
+    def load_results(self, file_path: str) -> AnalysisResultsDTO:
+        """Load results from CSV is not supported.
+
+        Args:
+            file_path: Path to results file
+
+        Raises:
+            NotImplementedError: CSV loading is not supported
+        """
+        raise NotImplementedError("Loading results from CSV is not supported")

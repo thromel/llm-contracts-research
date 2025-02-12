@@ -11,7 +11,11 @@ from src.analysis.core.dto import (
     ContractAnalysisDTO,
     AnalysisMetadataDTO,
     AnalysisResultsDTO,
-    GithubIssueDTO
+    GithubIssueDTO,
+    CommentAnalysisDTO,
+    ErrorPropagationDTO,
+    NewContractDTO,
+    PatternFrequencyDTO
 )
 from src.analysis.core.storage.mongodb.schemas import (
     GithubIssue,
@@ -183,13 +187,15 @@ class MongoDBRepository(ResultsStorage):
         return GithubIssue(
             number=analysis.issue_number,
             title=analysis.issue_title,
-            body="",  # Add actual body if available
-            state="unknown",  # Add actual state if available
-            created_at=datetime.now().isoformat(),  # Add actual timestamp if available
+            body="",  # We don't store the full body to save space
+            state="unknown",  # State is not critical for analysis
+            created_at=analysis.analysis_timestamp or datetime.now().isoformat(),
             url=analysis.issue_url,
-            labels=[],  # Add actual labels if available
+            labels=[],  # Labels are not critical for analysis
+            first_comments=[],  # Comments are analyzed but not stored to save space
             repository_name=analysis.repository_name,
-            repository_owner=analysis.repository_owner
+            repository_owner=analysis.repository_owner,
+            html_url=analysis.issue_url
         ).save()
 
     def _create_comment_analysis(self, analysis: CommentAnalysisDTO) -> CommentAnalysis:
@@ -201,6 +207,8 @@ class MongoDBRepository(ResultsStorage):
         Returns:
             Comment analysis document
         """
+        if not analysis:
+            return None
         return CommentAnalysis(
             supporting_evidence=analysis.supporting_evidence,
             frequency=analysis.frequency,
@@ -217,6 +225,8 @@ class MongoDBRepository(ResultsStorage):
         Returns:
             Error propagation document
         """
+        if not propagation:
+            return None
         return ErrorPropagation(
             affected_stages=propagation.affected_stages,
             propagation_path=propagation.propagation_path
@@ -231,6 +241,8 @@ class MongoDBRepository(ResultsStorage):
         Returns:
             New contract document
         """
+        if not contract or not contract.pattern_frequency:
+            return None
         return NewContract(
             name=contract.name,
             description=contract.description,
@@ -289,13 +301,29 @@ class MongoDBRepository(ResultsStorage):
             resolution_status=analysis.resolution_status,
             resolution_details=analysis.resolution_details,
             contract_category=analysis.contract_category,
-            comment_analysis=self._to_comment_analysis_dto(
-                analysis.comment_analysis),
-            error_propagation=self._to_error_propagation_dto(
-                analysis.error_propagation),
+            comment_analysis=CommentAnalysisDTO(
+                supporting_evidence=analysis.comment_analysis.supporting_evidence if analysis.comment_analysis else [],
+                frequency=analysis.comment_analysis.frequency if analysis.comment_analysis else "",
+                workarounds=analysis.comment_analysis.workarounds if analysis.comment_analysis else [],
+                impact=analysis.comment_analysis.impact if analysis.comment_analysis else ""
+            ),
+            error_propagation=ErrorPropagationDTO(
+                affected_stages=analysis.error_propagation.affected_stages if analysis.error_propagation else [],
+                propagation_path=analysis.error_propagation.propagation_path if analysis.error_propagation else ""
+            ),
             suggested_new_contracts=[
-                self._to_new_contract_dto(contract)
-                for contract in analysis.suggested_new_contracts
+                NewContractDTO(
+                    name=contract.name,
+                    description=contract.description,
+                    rationale=contract.rationale,
+                    examples=contract.examples,
+                    parent_category=contract.parent_category,
+                    pattern_frequency=PatternFrequencyDTO(
+                        observed_count=contract.pattern_frequency.observed_count,
+                        confidence=contract.pattern_frequency.confidence,
+                        supporting_evidence=contract.pattern_frequency.supporting_evidence
+                    )
+                ) for contract in analysis.suggested_new_contracts if contract
             ],
             issue_url=analysis.issue_url,
             issue_number=analysis.issue_number,
