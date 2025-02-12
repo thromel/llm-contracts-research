@@ -15,6 +15,7 @@ from src.analysis.core.processors.cleaner import MarkdownResponseCleaner
 from src.analysis.core.processors.validator import ContractAnalysisValidator
 from src.analysis.core.processors.checkpoint import CheckpointHandler
 from src.analysis.core.dto import ContractAnalysisDTO, AnalysisResultsDTO
+from src.analysis.core.storage.factory import StorageFactory
 
 # Import analyzer classes
 from . import ContractAnalyzer, AnalysisOrchestrator, DefaultProgressTracker
@@ -29,7 +30,6 @@ class GitHubIssuesAnalyzer:
         self,
         llm_client: LLMClient,
         github_token: str,
-        storage: Optional[List[IResultWriter]] = None,
         checkpoint_handler: Optional[ICheckpointManager] = None,
         progress_tracker: Optional[IProgressTracker] = None
     ):
@@ -38,17 +38,11 @@ class GitHubIssuesAnalyzer:
         Args:
             llm_client: LLM client for analysis
             github_token: GitHub API token
-            storage: Optional list of storage implementations
             checkpoint_handler: Optional checkpoint handler
             progress_tracker: Optional progress tracker
         """
         # Create core components
         self.github_client = GitHubAPIClient(github_token)
-
-        # Get storage implementations from factory if none provided
-        if storage is None:
-            from src.analysis.core.storage.factory import StorageFactory
-            storage = StorageFactory.create_storage()
 
         # Create analyzer
         self.contract_analyzer = ContractAnalyzer(
@@ -56,6 +50,9 @@ class GitHubIssuesAnalyzer:
             response_cleaner=MarkdownResponseCleaner(),
             response_validator=ContractAnalysisValidator()
         )
+
+        # Initialize storage
+        storage = StorageFactory.create_storage()
 
         # Create orchestrator
         self.orchestrator = AnalysisOrchestrator(

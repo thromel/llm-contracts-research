@@ -1,14 +1,24 @@
 # GitHub Issues Contract Violation Analyzer
 
-A tool for analyzing GitHub issues to identify and categorize API contract violations.
+A tool for analyzing GitHub issues to identify and categorize API contract violations using state-of-the-art language models.
 
 ## Features
 
-- Analyze GitHub issues for potential API contract violations
-- Support for both direct GitHub API fetching and CSV file input
-- Automatic checkpointing for long-running analyses
-- Graceful shutdown handling
-- Detailed analysis results in both CSV and JSON formats
+- **Advanced Contract Analysis**: Leverages LLMs to analyze GitHub issues for potential API contract violations
+- **Multiple Storage Options**: 
+  - JSON storage for detailed analysis results
+  - CSV export functionality for data analysis
+  - MongoDB integration for scalable data storage
+- **Robust Data Processing**:
+  - Support for both direct GitHub API fetching and CSV file input
+  - Automatic checkpointing for long-running analyses
+  - Intermediate results saving
+  - Graceful shutdown handling
+- **Modular Architecture**:
+  - Pluggable storage backends
+  - Extensible analyzer framework
+  - Configurable LLM clients
+- **Progress Tracking**: Real-time progress monitoring with customizable trackers
 
 ## Installation
 
@@ -25,45 +35,94 @@ pip install -r requirements.txt
 
 3. Create a `.env` file with your configuration:
 ```env
+# API Keys
 GITHUB_TOKEN=your_github_token
 OPENAI_API_KEY=your_openai_key
+
+# OpenAI Settings
 OPENAI_MODEL=your_model_name
 OPENAI_BASE_URL=your_api_base_url
+OPENAI_TEMPERATURE=0.7
+OPENAI_MAX_TOKENS=2000
+OPENAI_TOP_P=1.0
+OPENAI_FREQUENCY_PENALTY=0.0
+OPENAI_PRESENCE_PENALTY=0.0
+
+# MongoDB Settings (Optional)
+MONGODB_URI=your_mongodb_uri
+MONGODB_DB=your_database_name
+MONGODB_ENABLED=true
 
 # Analysis Settings
 BATCH_SIZE=50
 MAX_COMMENTS_PER_ISSUE=10
 DEFAULT_LOOKBACK_DAYS=1000
+SAVE_INTERMEDIATE=true
+JSON_EXPORT=true
+CSV_EXPORT=true
+```
+
+## Project Structure
+
+```
+src/
+├── analysis/
+│   ├── core/
+│   │   ├── analyzers/
+│   │   │   ├── contract_analyzer.py    # Core contract analysis logic
+│   │   │   ├── github.py              # GitHub-specific analysis
+│   │   │   └── orchestrator.py        # Analysis orchestration
+│   │   ├── clients/
+│   │   │   ├── github.py              # GitHub API client
+│   │   │   └── openai.py             # OpenAI API client
+│   │   ├── processors/
+│   │   │   ├── cleaner.py            # Response cleaning
+│   │   │   ├── validator.py          # Analysis validation
+│   │   │   └── checkpoint.py         # Checkpoint management
+│   │   ├── storage/
+│   │   │   ├── json_storage.py       # JSON storage implementation
+│   │   │   ├── csv_storage.py        # CSV storage implementation
+│   │   │   └── mongodb/              # MongoDB integration
+│   │   └── dto/                      # Data transfer objects
+│   └── main.py                       # Main entry point
+├── config/
+│   └── settings.py                   # Configuration settings
+└── utils/
+    └── logger.py                     # Logging utilities
 ```
 
 ## Usage
 
-### Analyzing Issues from GitHub
+### Basic Usage
 
-To analyze issues directly from a GitHub repository:
-
+1. Analyzing issues from a GitHub repository:
 ```bash
 python -m src.analysis.main --repo owner/repo --issues 100
 ```
 
-### Analyzing Issues from CSV
-
-To analyze issues from a previously saved CSV file:
-
+2. Analyzing issues from a CSV file:
 ```bash
 python -m src.analysis.main --input-csv path/to/issues.csv
 ```
 
-### Additional Options
+### Advanced Options
 
 - `--resume`: Resume from the last checkpoint if available
 - `--checkpoint-interval N`: Create checkpoints every N issues (default: 5)
 
+### Storage Configuration
+
+The analyzer supports multiple storage backends that can be configured in your `.env` file:
+
+- **JSON Storage**: Enable with `JSON_EXPORT=true`
+- **CSV Storage**: Enable with `CSV_EXPORT=true`
+- **MongoDB Storage**: Enable with `MONGODB_ENABLED=true` and configure connection settings
+
 ### Examples
 
-1. Analyze 50 issues from the OpenAI Python client repository:
+1. Analyze 50 issues with custom checkpoint interval:
 ```bash
-python -m src.analysis.main --repo openai/openai-python --issues 50
+python -m src.analysis.main --repo openai/openai-python --issues 50 --checkpoint-interval 10
 ```
 
 2. Resume a previously interrupted analysis:
@@ -76,29 +135,46 @@ python -m src.analysis.main --repo openai/openai-python --issues 50 --resume
 python -m src.analysis.main --input-csv data/raw/github_issues.csv
 ```
 
-## Project Structure
-
-```
-src/
-├── analysis/
-│   │   ├── __init__.py
-│   │   ├── analyzer.py      # Core analysis functionality
-│   │   ├── checkpoint.py    # Checkpoint management
-│   │   └── data_loader.py   # Data loading utilities
-│   └── main.py             # Main entry point
-├── config/
-│   └── settings.py         # Configuration settings
-└── utils/
-    └── logger.py          # Logging utilities
-```
-
-## Output
+## Output Files
 
 The analyzer generates several output files in the `data/analyzed` directory:
 
-- `github_issues_analysis_TIMESTAMP_raw.csv`: Raw analysis data
-- `github_issues_analysis_TIMESTAMP_final.csv`: Final analysis results
-- `analysis_checkpoint.json`: Checkpoint file (temporary)
+- **JSON Output**: 
+  - `github_issues_analysis_TIMESTAMP_raw.json`: Raw analysis data
+  - `github_issues_analysis_TIMESTAMP_final.json`: Final analysis results
+  
+- **CSV Output**:
+  - `github_issues_analysis_TIMESTAMP_final.csv`: Tabular format of analysis results
+  
+- **Checkpoints**:
+  - `analysis_checkpoint.json`: Temporary checkpoint file
+  - `intermediate/`: Directory containing intermediate analysis results
+
+## Architecture
+
+### Core Components
+
+1. **Analyzers**:
+   - `ContractAnalyzer`: Core analysis logic for contract violations
+   - `GitHubIssuesAnalyzer`: GitHub-specific implementation
+   - `AnalysisOrchestrator`: Coordinates the analysis process
+
+2. **Storage**:
+   - Modular storage system with support for multiple backends
+   - Factory pattern for storage creation
+   - Adapter pattern for consistent interface
+
+3. **Processors**:
+   - Response cleaning and validation
+   - Checkpoint management
+   - Progress tracking
+
+### Design Patterns
+
+- **Factory Pattern**: Used for storage backend creation
+- **Strategy Pattern**: Used for different analysis strategies
+- **Adapter Pattern**: Used for storage implementations
+- **Observer Pattern**: Used for progress tracking
 
 ## Contributing
 
@@ -107,6 +183,13 @@ The analyzer generates several output files in the `data/analyzed` directory:
 3. Make your changes
 4. Run tests
 5. Submit a pull request
+
+### Development Guidelines
+
+- Follow PEP 8 style guide
+- Add type hints to all functions
+- Write unit tests for new features
+- Update documentation for significant changes
 
 ## License
 
