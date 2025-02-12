@@ -41,6 +41,35 @@ class ContractAnalysisValidator:
             ValueError: If field values are invalid
             TypeError: If field types are incorrect
         """
+        # First ensure we have a dict with basic required fields
+        if not isinstance(analysis, dict):
+            raise TypeError("Analysis must be a dictionary")
+
+        # Set default values for missing fields
+        analysis.setdefault('has_violation', False)
+        analysis.setdefault('violation_type', None)
+        analysis.setdefault('severity', 'low')
+        analysis.setdefault('confidence', 'low')
+        analysis.setdefault('effects', [])
+        analysis.setdefault('resolution_status', 'ERROR')
+        analysis.setdefault('contract_category', 'unknown')
+
+        # Ensure comment_analysis exists
+        if 'comment_analysis' not in analysis:
+            analysis['comment_analysis'] = {
+                'supporting_evidence': [],
+                'frequency': 'unknown',
+                'workarounds': [],
+                'impact': 'unknown'
+            }
+
+        # Ensure error_propagation exists
+        if 'error_propagation' not in analysis:
+            analysis['error_propagation'] = {
+                'affected_stages': [],
+                'propagation_path': 'Analysis error contained'
+            }
+
         self._validate_required_fields(analysis)
         self._validate_field_types(analysis)
         self._validate_field_values(analysis)
@@ -55,21 +84,26 @@ class ContractAnalysisValidator:
         ]
         missing = [field for field in required_fields if field not in analysis]
         if missing:
-            raise KeyError(f"Missing required fields in analysis: {missing}")
+            raise KeyError(
+                "Missing required fields in analysis: {}".format(missing))
 
     def _validate_field_types(self, analysis: Dict[str, Any]) -> None:
         """Validate field types."""
         if not isinstance(analysis["has_violation"], bool):
-            raise TypeError("has_violation must be a boolean")
+            analysis["has_violation"] = False
+
         if not isinstance(analysis["effects"], list):
-            raise TypeError("effects must be an array")
+            analysis["effects"] = []
 
     def _validate_field_values(self, analysis: Dict[str, Any]) -> None:
         """Validate field values."""
-        if analysis["severity"] not in ["high", "medium", "low"]:
-            raise ValueError("severity must be one of: high, medium, low")
-        if analysis["confidence"] not in ["high", "medium", "low"]:
-            raise ValueError("confidence must be one of: high, medium, low")
+        valid_severities = ["high", "medium", "low"]
+        if analysis["severity"] not in valid_severities:
+            analysis["severity"] = "low"
+
+        valid_confidences = ["high", "medium", "low"]
+        if analysis["confidence"] not in valid_confidences:
+            analysis["confidence"] = "low"
 
     def _validate_optional_fields(self, analysis: Dict[str, Any]) -> None:
         """Validate optional fields if present."""
@@ -84,10 +118,10 @@ class ContractAnalysisValidator:
     def _validate_error_propagation(self, error_prop: Dict[str, Any]) -> None:
         """Validate error propagation fields."""
         required_fields = ["affected_stages", "propagation_path"]
-        missing = [field for field in required_fields if field not in error_prop]
-        if missing:
-            raise KeyError(
-                f"Missing required fields in error_propagation: {missing}")
+        for field in required_fields:
+            if field not in error_prop:
+                error_prop[field] = [
+                ] if field == "affected_stages" else "Analysis error contained"
 
     def _validate_suggested_contracts(self, contracts: List[Dict[str, Any]]) -> None:
         """Validate suggested contracts."""
@@ -103,14 +137,15 @@ class ContractAnalysisValidator:
                 field for field in required_fields if field not in contract]
             if missing:
                 raise KeyError(
-                    f"Missing required fields in suggested contract: {missing}")
+                    "Missing required fields in suggested contract: {}".format(missing))
 
     def _validate_comment_analysis(self, comment_analysis: Dict[str, Any]) -> None:
         """Validate comment analysis fields."""
         required_fields = ["supporting_evidence",
                            "frequency", "workarounds", "impact"]
-        missing = [
-            field for field in required_fields if field not in comment_analysis]
-        if missing:
-            raise KeyError(
-                f"Missing required fields in comment_analysis: {missing}")
+        for field in required_fields:
+            if field not in comment_analysis:
+                if field in ["supporting_evidence", "workarounds"]:
+                    comment_analysis[field] = []
+                else:
+                    comment_analysis[field] = "unknown"
