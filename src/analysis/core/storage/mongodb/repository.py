@@ -92,38 +92,54 @@ class MongoDBRepository(ResultsStorage):
             # Save analyzed issues
             analysis_docs = []
             for issue in analyzed_issues:
-                # Create GitHub issue document
-                github_issue = self._create_github_issue(issue)
+                try:
+                    # Create GitHub issue document
+                    github_issue = self._create_github_issue(issue)
 
-                # Create contract analysis document
-                analysis = ContractAnalysis(
-                    has_violation=issue.has_violation,
-                    violation_type=issue.violation_type,
-                    severity=issue.severity,
-                    description=issue.description,
-                    confidence=issue.confidence,
-                    root_cause=issue.root_cause,
-                    effects=issue.effects,
-                    resolution_status=issue.resolution_status,
-                    resolution_details=issue.resolution_details,
-                    contract_category=issue.contract_category,
-                    comment_analysis=self._create_comment_analysis(
-                        issue.comment_analysis),
-                    error_propagation=self._create_error_propagation(
-                        issue.error_propagation),
-                    suggested_new_contracts=[
+                    # Create comment analysis
+                    comment_analysis = self._create_comment_analysis(
+                        issue.comment_analysis)
+
+                    # Create error propagation
+                    error_propagation = self._create_error_propagation(
+                        issue.error_propagation)
+
+                    # Create suggested contracts
+                    suggested_contracts = [
                         self._create_new_contract(contract)
                         for contract in issue.suggested_new_contracts
-                    ],
-                    issue=github_issue,
-                    issue_url=issue.issue_url,
-                    issue_number=issue.issue_number,
-                    issue_title=issue.issue_title,
-                    repository_name=issue.repository_name,
-                    repository_owner=issue.repository_owner,
-                    analysis_timestamp=issue.analysis_timestamp
-                ).save()
-                analysis_docs.append(analysis)
+                        if contract
+                    ]
+
+                    # Create contract analysis document
+                    analysis = ContractAnalysis(
+                        has_violation=issue.has_violation,
+                        violation_type=issue.violation_type,
+                        severity=issue.severity,
+                        description=issue.description,
+                        confidence=issue.confidence,
+                        root_cause=issue.root_cause,
+                        effects=issue.effects,
+                        resolution_status=issue.resolution_status,
+                        resolution_details=issue.resolution_details,
+                        contract_category=issue.contract_category,
+                        comment_analysis=comment_analysis,
+                        error_propagation=error_propagation,
+                        suggested_new_contracts=suggested_contracts,
+                        issue=github_issue,
+                        issue_url=issue.issue_url,
+                        issue_number=issue.issue_number,
+                        issue_title=issue.issue_title,
+                        repository_name=issue.repository_name,
+                        repository_owner=issue.repository_owner,
+                        analysis_timestamp=issue.analysis_timestamp
+                    ).save()
+                    analysis_docs.append(analysis)
+
+                except Exception as e:
+                    logger.error(
+                        f"Failed to save analysis for issue {issue.issue_number}: {str(e)}")
+                    continue
 
             # Save final results document
             AnalysisResults(
@@ -131,11 +147,10 @@ class MongoDBRepository(ResultsStorage):
                 analyzed_issues=analysis_docs
             ).save()
 
-            logger.info("Saved analysis results to MongoDB")
+            logger.info(f"Saved {len(analysis_docs)} analyses to MongoDB")
 
         except Exception as e:
-            logger.error(
-                "Failed to save results to MongoDB: {}".format(str(e)))
+            logger.error(f"Failed to save results to MongoDB: {str(e)}")
             raise
 
     def load_results(self, batch_id: str) -> Optional[AnalysisResultsDTO]:

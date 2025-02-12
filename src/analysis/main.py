@@ -5,7 +5,7 @@ import signal
 from pathlib import Path
 from datetime import datetime
 
-from src.analysis.core.analyzer import GitHubIssuesAnalyzer
+from src.analysis.core.analyzers import GitHubIssuesAnalyzer
 from src.analysis.core.processors.checkpoint import CheckpointHandler
 from src.analysis.core.data_loader import CSVDataLoader, DataLoadError
 from src.analysis.core.storage.json_storage import JSONResultsStorage
@@ -123,23 +123,6 @@ class AnalysisOrchestrator:
                         current_index += 1
                         pbar.update(1)
 
-                        # Save intermediate results after each issue
-                        intermediate_metadata = AnalysisMetadataDTO(
-                            repository=repo_name,
-                            analysis_timestamp=datetime.now().isoformat(),
-                            num_issues=current_index
-                        )
-                        intermediate_results = AnalysisResultsDTO(
-                            metadata=intermediate_metadata,
-                            analyzed_issues=analyzed_issues
-                        )
-                        self.analyzer.contract_analyzer.save_results(
-                            analyzed_issues=analyzed_issues,
-                            metadata=intermediate_metadata
-                        )
-                        logger.info(
-                            "Saved intermediate results after {} issues".format(current_index))
-
                         # Create checkpoint at specified intervals
                         if current_index % checkpoint_interval == 0:
                             self.checkpoint_mgr.save_checkpoint(
@@ -169,11 +152,6 @@ class AnalysisOrchestrator:
                     results = AnalysisResultsDTO(
                         metadata=metadata,
                         analyzed_issues=analyzed_issues
-                    )
-                    # Save using contract analyzer
-                    self.analyzer.contract_analyzer.save_results(
-                        analyzed_issues=analyzed_issues,
-                        metadata=metadata
                     )
                     # Clear checkpoint since we completed successfully
                     self.checkpoint_mgr.clear_checkpoint()
