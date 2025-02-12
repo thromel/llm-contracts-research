@@ -8,7 +8,7 @@ from datetime import datetime
 from src.analysis.core.analyzers import GitHubIssuesAnalyzer
 from src.analysis.core.processors.checkpoint import CheckpointHandler
 from src.analysis.core.data_loader import CSVDataLoader, DataLoadError
-from src.analysis.core.storage.json_storage import JSONResultsStorage
+from src.analysis.core.storage.factory import StorageFactory
 from src.analysis.core.clients.openai import OpenAIClient
 from src.analysis.core.dto import AnalysisMetadataDTO, AnalysisResultsDTO
 from src.config import settings
@@ -31,6 +31,8 @@ class AnalysisOrchestrator:
         self.analyzer = analyzer
         self.checkpoint_mgr = checkpoint_mgr
         self.is_shutting_down = False
+        # Initialize storage
+        self.storage = StorageFactory.create_storage()
 
     def setup_signal_handlers(self):
         """Set up signal handlers for graceful shutdown."""
@@ -123,6 +125,25 @@ class AnalysisOrchestrator:
                         current_index += 1
                         pbar.update(1)
 
+                        # Handle intermediate saves if enabled
+                        if settings.SAVE_INTERMEDIATE:
+                            intermediate_metadata = AnalysisMetadataDTO(
+                                repository=repo_name,
+                                analysis_timestamp=datetime.now().isoformat(),
+                                num_issues=current_index
+                            )
+                            intermediate_storage = StorageFactory.create_storage(
+                                storage_types=['json'],
+                                is_intermediate=True
+                            )
+                            for storage in intermediate_storage:
+                                storage.save_results(
+                                    analyzed_issues=analyzed_issues[:current_index],
+                                    metadata=intermediate_metadata
+                                )
+                            logger.info(
+                                f"Saved intermediate results after {current_index} issues")
+
                         # Create checkpoint at specified intervals
                         if current_index % checkpoint_interval == 0:
                             self.checkpoint_mgr.save_checkpoint(
@@ -153,8 +174,24 @@ class AnalysisOrchestrator:
                         metadata=metadata,
                         analyzed_issues=analyzed_issues
                     )
+
+                    # Save final results using all configured storage types
+                    try:
+                        for storage in self.storage:
+                            storage.save_results(
+                                analyzed_issues=analyzed_issues,
+                                metadata=metadata
+                            )
+                            logger.info(
+                                f"Saved final results using {storage.__class__.__name__}")
+                    except Exception as e:
+                        logger.error(f"Error saving final results: {str(e)}")
+                        raise
+
                     # Clear checkpoint since we completed successfully
                     self.checkpoint_mgr.clear_checkpoint()
+
+                    return results
 
         except Exception as exc:
             logger.error("Error during analysis: {}".format(str(exc)))
@@ -193,8 +230,6 @@ def main():
         parser.error("--issues is required when using --repo")
 
     # Initialize components
-    output_dir = Path(settings.DATA_DIR) / 'analyzed'
-    storage = JSONResultsStorage(output_dir=output_dir)
     checkpoint_mgr = CheckpointHandler()
 
     # Initialize OpenAI client
@@ -217,20 +252,27 @@ def main():
     analyzer = GitHubIssuesAnalyzer(
         llm_client=llm_client,
         github_token=settings.GITHUB_TOKEN,
-        storage=storage,
         checkpoint_handler=checkpoint_mgr
     )
     orchestrator = AnalysisOrchestrator(analyzer, checkpoint_mgr)
     orchestrator.setup_signal_handlers()
 
     try:
-        orchestrator.run_analysis(
+        results = orchestrator.run_analysis(
             repo_name=args.repo,
             num_issues=args.issues,
             checkpoint_interval=args.checkpoint_interval,
             resume=args.resume,
             input_csv=args.input_csv
         )
+        print(
+            f"Analysis completed successfully. Results saved for repository: {results.metadata.repository}")
+        if settings.JSON_EXPORT:
+            print(f"JSON results saved to: {settings.EXPORT_DIR}/json/")
+        if settings.CSV_EXPORT:
+            print(f"CSV results saved to: {settings.EXPORT_DIR}/csv/")
+        if settings.MONGODB_ENABLED:
+            print("Results also saved to MongoDB")
     except Exception as exc:
         logger.error("Analysis failed: {}".format(str(exc)))
         exit(1)
