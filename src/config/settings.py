@@ -16,6 +16,7 @@ CONTEXT_DIR = BASE_DIR / 'context'
 DATA_DIR.mkdir(exist_ok=True)
 (DATA_DIR / 'raw').mkdir(exist_ok=True)
 (DATA_DIR / 'analyzed').mkdir(exist_ok=True)
+(DATA_DIR / 'exports').mkdir(exist_ok=True)
 CONTEXT_DIR.mkdir(exist_ok=True)
 
 # API settings
@@ -51,8 +52,18 @@ CSV_EXPORT = bool(os.getenv('CSV_EXPORT', 'true').lower() == 'true')
 JSON_EXPORT = bool(os.getenv('JSON_EXPORT', 'true').lower() == 'true')
 SAVE_INTERMEDIATE = bool(
     os.getenv('SAVE_INTERMEDIATE', 'true').lower() == 'true')
+EXPORT_DIR = DATA_DIR / 'exports'
 
-# New settings from the code block
+# MongoDB settings
+MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017')
+MONGODB_DB = os.getenv('MONGODB_DB', 'llm_contracts_analysis')
+MONGODB_ENABLED = bool(os.getenv('MONGODB_ENABLED', 'true').lower() == 'true')
+
+# Analysis version and metadata
+ANALYSIS_VERSION = '1.0.0'
+ANALYSIS_MODEL = OPENAI_MODEL
+
+# Checkpoint settings
 CHECKPOINT_INTERVAL = 5  # Number of issues to process before creating a checkpoint
 MAX_RETRIES = 3  # Maximum number of retries for API calls
 RETRY_DELAY = 1  # Delay in seconds between retries
@@ -76,3 +87,6 @@ PIPELINE_STAGES = [
 DATA_DIR.mkdir(exist_ok=True)
 (DATA_DIR / 'analysis').mkdir(exist_ok=True)
 (DATA_DIR / 'checkpoints').mkdir(exist_ok=True)
+EXPORT_DIR.mkdir(exist_ok=True)
+(EXPORT_DIR / 'csv').mkdir(exist_ok=True)
+(EXPORT_DIR / 'json').mkdir(exist_ok=True)
