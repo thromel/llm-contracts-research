@@ -75,15 +75,17 @@ class GitHubAPIClient:
         try:
             repo = self.client.get_repo(repo_name)
             return {
-                'name': repo.name,
-                'full_name': repo.full_name,
-                'description': repo.description,
-                'stars': repo.stargazers_count,
-                'forks': repo.forks_count,
-                'open_issues': repo.open_issues_count,
-                'created_at': repo.created_at.isoformat(),
-                'updated_at': repo.updated_at.isoformat(),
-                'language': repo.language
+                'name': repo.name or "unknown",
+                'full_name': repo.full_name or "unknown",
+                'html_url': repo.html_url or (f"https://github.com/{repo.full_name}" if repo.full_name else "unknown"),
+                'owner': {"login": repo.owner.login if (repo.owner and repo.owner.login) else "unknown"},
+                'description': repo.description or "",
+                'stargazers_count': repo.stargazers_count if repo.stargazers_count is not None else 0,
+                'forks_count': repo.forks_count if repo.forks_count is not None else 0,
+                'open_issues': repo.open_issues_count if repo.open_issues_count is not None else 0,
+                'created_at': repo.created_at.isoformat() if repo.created_at else "",
+                'updated_at': repo.updated_at.isoformat() if repo.updated_at else "",
+                'language': repo.language or "unknown"
             }
         except Exception as e:
             logger.error(f"Error fetching repo info: {e}")

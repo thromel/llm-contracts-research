@@ -40,7 +40,7 @@ GITHUB_RETRY_DELAY = 5  # seconds
 
 # Analysis settings
 BATCH_SIZE = int(os.getenv('BATCH_SIZE', '10'))
-MAX_COMMENTS_PER_ISSUE = 10  # Maximum number of comments to fetch per issue
+MAX_COMMENTS_PER_ISSUE = 10
 DEFAULT_LOOKBACK_DAYS = int(os.getenv('DEFAULT_LOOKBACK_DAYS', '180'))
 
 # Logging settings
@@ -50,8 +50,7 @@ LOG_FILE = DATA_DIR / 'app.log'
 # Export settings
 CSV_EXPORT = bool(os.getenv('CSV_EXPORT', 'true').lower() == 'true')
 JSON_EXPORT = bool(os.getenv('JSON_EXPORT', 'true').lower() == 'true')
-SAVE_INTERMEDIATE = bool(
-    os.getenv('SAVE_INTERMEDIATE', 'false').lower() == 'true')
+SAVE_INTERMEDIATE = True
 EXPORT_DIR = DATA_DIR / 'exports'
 
 # Create export directories
@@ -67,8 +66,9 @@ MONGODB_DB = os.getenv('MONGODB_DB', 'llm_contracts_analysis')
 MONGODB_ENABLED = bool(os.getenv('MONGODB_ENABLED', 'false').lower() == 'true')
 
 # Analysis version and metadata
-ANALYSIS_VERSION = '1.0.0'
-ANALYSIS_MODEL = OPENAI_MODEL
+ANALYSIS_VERSION = "1.0.0"
+ANALYSIS_MODEL = "violation-detection-v1"
+ANALYSIS_BATCH_ID = "batch_001"
 
 # Checkpoint settings
 CHECKPOINT_INTERVAL = 5  # Number of issues to process before creating a checkpoint
