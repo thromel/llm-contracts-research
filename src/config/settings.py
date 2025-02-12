@@ -51,13 +51,20 @@ LOG_FILE = DATA_DIR / 'app.log'
 CSV_EXPORT = bool(os.getenv('CSV_EXPORT', 'true').lower() == 'true')
 JSON_EXPORT = bool(os.getenv('JSON_EXPORT', 'true').lower() == 'true')
 SAVE_INTERMEDIATE = bool(
-    os.getenv('SAVE_INTERMEDIATE', 'true').lower() == 'true')
+    os.getenv('SAVE_INTERMEDIATE', 'false').lower() == 'true')
 EXPORT_DIR = DATA_DIR / 'exports'
+
+# Create export directories
+EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+(EXPORT_DIR / 'json').mkdir(parents=True, exist_ok=True)
+(EXPORT_DIR / 'csv').mkdir(parents=True, exist_ok=True)
+if SAVE_INTERMEDIATE:
+    (EXPORT_DIR / 'intermediate').mkdir(parents=True, exist_ok=True)
 
 # MongoDB settings
 MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017')
 MONGODB_DB = os.getenv('MONGODB_DB', 'llm_contracts_analysis')
-MONGODB_ENABLED = bool(os.getenv('MONGODB_ENABLED', 'true').lower() == 'true')
+MONGODB_ENABLED = bool(os.getenv('MONGODB_ENABLED', 'false').lower() == 'true')
 
 # Analysis version and metadata
 ANALYSIS_VERSION = '1.0.0'

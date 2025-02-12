@@ -1,12 +1,12 @@
 """Core analysis module."""
 
-from src.analysis.core.analyzer import GitHubIssuesAnalyzer, ContractAnalyzer
+from src.analysis.core.analyzers import GitHubIssuesAnalyzer, ContractAnalyzer
 from src.analysis.core.clients.openai import OpenAIClient
 from src.analysis.core.processors.cleaner import MarkdownResponseCleaner
 from src.analysis.core.processors.validator import ContractAnalysisValidator
 from src.analysis.core.storage.json_storage import JSONResultsStorage
-from src.analysis.core.checkpoint import (
-    CheckpointManager,
+from src.analysis.core.processors.checkpoint import (
+    CheckpointHandler,
     CheckpointError,
     CheckpointIOError
 )
@@ -27,7 +27,7 @@ __all__ = [
     # Storage
     'JSONResultsStorage',
     # Checkpoint handling
-    'CheckpointManager',
+    'CheckpointHandler',
     'CheckpointError',
     'CheckpointIOError',
     # Data loading
