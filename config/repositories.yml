@@ -1,8 +1,4 @@
 # List of GitHub repositories to fetch issues from
 repositories:
-  - ethereum/solidity
-  - OpenZeppelin/openzeppelin-contracts
-  - ConsenSys/smart-contract-best-practices
-  - crytic/slither
-  - trailofbits/manticore
+  - openai/openai-python
   # Add more repositories as needed 

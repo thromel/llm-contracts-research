@@ -3,12 +3,12 @@ import aiohttp
 import backoff
 import logging
 from datetime import datetime
-from typing import Optional, AsyncGenerator, List
+from typing import Optional, AsyncGenerator, List, Dict
 from tqdm.asyncio import tqdm
-from .config import config
-from .db.base import DatabaseAdapter
-from .dto.github import RepositoryDTO, IssueDTO
-from analysis.core.checkpoint import CheckpointManager
+from core.config import config
+from core.db.base import DatabaseAdapter
+from core.dto.github import RepositoryDTO, IssueDTO
+from core.analysis.core.checkpoint import CheckpointManager
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,39 @@ class GitHubFetcher:
 
             response.raise_for_status()
             return await response.json()
+
+    async def fetch_issue_comments(self, issue_url: str, issue_number: int) -> List[Dict]:
+        """Fetch all comments for an issue."""
+        comments = []
+        page = 1
+
+        while True:
+            params = {
+                'per_page': config.github.per_page,
+                'page': page,
+            }
+
+            comments_url = f"{issue_url}/comments"
+            page_comments = await self._make_request(comments_url, params)
+
+            if not page_comments:
+                break
+
+            for comment in page_comments:
+                comments.append({
+                    'id': comment['id'],
+                    'user': {
+                        'login': comment['user']['login'],
+                        'id': comment['user']['id']
+                    },
+                    'body': comment['body'],
+                    'created_at': datetime.fromisoformat(comment['created_at'].rstrip('Z')),
+                    'updated_at': datetime.fromisoformat(comment['updated_at'].rstrip('Z'))
+                })
+
+            page += 1
+
+        return comments
 
     async def fetch_repository_issues(
         self,
@@ -117,6 +150,9 @@ class GitHubFetcher:
                 break
 
             for issue in issues:
+                # Fetch comments for the issue
+                comments = await self.fetch_issue_comments(issue['url'], issue['number'])
+
                 # Transform issue data to DTO
                 issue_dto = IssueDTO(
                     github_issue_id=issue['id'],
@@ -129,6 +165,7 @@ class GitHubFetcher:
                         assignee['login']: assignee['id']
                         for assignee in issue['assignees']
                     },
+                    comments=comments,
                     created_at=datetime.fromisoformat(
                         issue['created_at'].rstrip('Z')),
                     updated_at=datetime.fromisoformat(

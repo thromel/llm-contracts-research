@@ -10,7 +10,7 @@ from tqdm.asyncio import tqdm
 from core.config import config
 from core.db.mongo_adapter import MongoAdapter
 from core.github_fetcher import GitHubFetcher
-from analysis.core.checkpoint import CheckpointManager
+from core.analysis.core.checkpoint import CheckpointManager
 
 # Configure logging
 logging.basicConfig(
@@ -43,6 +43,10 @@ def parse_args():
                         help='Number of issues to process in each batch')
     parser.add_argument('--include-closed',
                         action='store_true', help='Include closed issues')
+    parser.add_argument('--no-comments',
+                        action='store_true', help='Skip fetching comments')
+    parser.add_argument('--max-comments', type=int,
+                        help='Maximum number of comments to fetch per issue')
 
     args = parser.parse_args()
 
@@ -65,6 +69,10 @@ def parse_args():
         config.batch_size = args.batch_size
     if args.include_closed:
         config.include_closed = True
+    if args.no_comments:
+        config.include_comments = False
+    if args.max_comments is not None:
+        config.max_comments_per_issue = args.max_comments
 
     return args
 

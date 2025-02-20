@@ -52,6 +52,7 @@ class IssueDTO(BaseDTO):
     id: Optional[str] = None
     labels: List[str] = field(default_factory=list)
     assignees: Dict[str, int] = field(default_factory=dict)
+    comments: List[Dict[str, any]] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
     closed_at: Optional[datetime] = None
@@ -67,6 +68,7 @@ class IssueDTO(BaseDTO):
             id=str(data.get('_id', data.get('id'))),
             labels=data.get('labels', []),
             assignees=data.get('assignees', {}),
+            comments=data.get('comments', []),
             created_at=data.get('created_at', datetime.utcnow()),
             updated_at=data.get('updated_at', datetime.utcnow()),
             closed_at=data.get('closed_at')
@@ -81,6 +83,7 @@ class IssueDTO(BaseDTO):
             'status': self.status,
             'labels': self.labels,
             'assignees': self.assignees,
+            'comments': self.comments,
             'created_at': self.created_at,
             'updated_at': self.updated_at,
             'closed_at': self.closed_at

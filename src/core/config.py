@@ -70,6 +70,10 @@ class AppConfig:
     since_days: Optional[int] = int(os.getenv('SINCE_DAYS', '0')) or None
     include_closed: bool = os.getenv(
         'INCLUDE_CLOSED', 'true').lower() == 'true'
+    include_comments: bool = os.getenv(
+        'INCLUDE_COMMENTS', 'true').lower() == 'true'
+    max_comments_per_issue: Optional[int] = int(
+        os.getenv('MAX_COMMENTS_PER_ISSUE', '0')) or None
 
     # Export settings
     export_format: List[str] = field(
