@@ -1,47 +1,64 @@
 """Progress tracking implementations."""
 from typing import Optional
-from tqdm import tqdm
+import sys
+from datetime import datetime
 
 from .interfaces import ProgressTracker
 
 
 class TqdmProgressTracker(ProgressTracker):
-    """Progress tracker implementation using tqdm."""
+    """Progress tracker implementation using simple print statements."""
 
     def __init__(self):
         """Initialize the progress tracker."""
-        self._progress_bar: Optional[tqdm] = None
+        self._count = 0
+        self._total = None
+        self._description = ""
+        self._start_time = None
 
-    def start_operation(self, total: int, description: str) -> None:
+    def start_operation(self, total: Optional[int], description: str) -> None:
         """Start tracking an operation.
 
         Args:
-            total: Total number of items to process
+            total: Total number of items to process (None for unknown)
             description: Description of the operation
         """
-        if self._progress_bar:
-            self._progress_bar.close()
+        self._count = 0
+        self._total = total
+        self._description = description
+        self._start_time = datetime.now()
+        self._print_progress()
 
-        self._progress_bar = tqdm(
-            total=total,
-            desc=description,
-            unit="issues",
-            bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
-            ncols=100,
-            leave=False
-        )
-
-    def update(self, amount: int = 1) -> None:
+    def update(self, amount: int = 1, description: Optional[str] = None) -> None:
         """Update progress.
 
         Args:
             amount: Amount to increment progress by
+            description: Optional new description
         """
-        if self._progress_bar:
-            self._progress_bar.update(amount)
+        self._count += amount
+        if description:
+            self._description = description
+        self._print_progress()
+
+    def _print_progress(self) -> None:
+        """Print the current progress."""
+        if self._total:
+            percentage = (self._count / self._total) * 100
+            message = f"\r{self._description} - {self._count}/{self._total} ({percentage:.1f}%)"
+        else:
+            message = f"\r{self._description} - {self._count} issues processed"
+
+        # Calculate elapsed time
+        if self._start_time:
+            elapsed = datetime.now() - self._start_time
+            message += f" - {elapsed.seconds}s elapsed"
+
+        sys.stdout.write(message)
+        sys.stdout.flush()
 
     def complete(self) -> None:
         """Complete the operation."""
-        if self._progress_bar:
-            self._progress_bar.close()
-            self._progress_bar = None
+        if self._count > 0:  # Only print final newline if we showed progress
+            sys.stdout.write("\n")
+            sys.stdout.flush()

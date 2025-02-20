@@ -2,13 +2,15 @@
 import asyncio
 import argparse
 import logging
-from datetime import datetime, timedelta
+import os
+from datetime import datetime, timezone, timedelta
 
 from core.config import AppConfig, load_config
 from core.repositories import MongoDBRepository, RepositoryFactory
 from core.github_fetcher import GitHubFetcher
 from core.clients.github_api_client import GitHubAPIClient, GitHubConfig
 from core.progress import TqdmProgressTracker
+from core.checkpoint_manager import CheckpointManager
 
 # Configure logging to file instead of stdout
 logging.basicConfig(
@@ -47,20 +49,24 @@ async def main(config_file: str = None):
         )
         api_client = GitHubAPIClient(github_config)
 
-        # Initialize progress tracker
+        # Initialize progress tracker and checkpoint manager
         progress_tracker = TqdmProgressTracker()
+        checkpoint_dir = os.getenv('CHECKPOINT_DIR', 'checkpoints')
+        checkpoint_manager = CheckpointManager(checkpoint_dir) if os.getenv(
+            'CHECKPOINT_ENABLED', 'true').lower() == 'true' else None
 
         # Calculate since date if specified
         since_date = None
         if config.since_days:
-            since_date = datetime.now(datetime.UTC) - \
+            since_date = datetime.now(timezone.utc) - \
                 timedelta(days=config.since_days)
 
         # Create fetcher
         fetcher = GitHubFetcher(
             api_client=api_client,
             repository=repository,
-            progress_tracker=progress_tracker
+            progress_tracker=progress_tracker,
+            checkpoint_manager=checkpoint_manager
         )
 
         # Fetch issues for each repository
@@ -70,13 +76,7 @@ async def main(config_file: str = None):
                     owner, repo = repo_spec.split('/')
                     logger.debug(f"Starting to fetch issues for {repo_spec}")
 
-                    # Start progress tracking for this repository
-                    progress_tracker.start_operation(
-                        total=config.max_issues_per_repo or 2000,
-                        description=f"Fetching {repo_spec}"
-                    )
-
-                    async for issue in fetcher.fetch_repository_issues(
+                    async for _ in fetcher.fetch_repository_issues(
                         owner=owner,
                         repo=repo,
                         since=since_date,

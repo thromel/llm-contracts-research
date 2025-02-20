@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+import argparse
+from pdfminer.high_level import extract_text
+
+
+def pdf_to_text(pdf_path: str) -> str:
+    """
+    Extract text from a PDF file using pdfminer.six.
+
+    Parameters:
+        pdf_path (str): The path to the PDF file.
+
+    Returns:
+        str: The extracted text.
+    """
+    return extract_text(pdf_path)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Convert a PDF file to text for LLM processing."
+    )
+    parser.add_argument("pdf_path", help="Path to the input PDF file.")
+    parser.add_argument(
+        "-o", "--output", help="Path to the output text file. If omitted, prints to stdout."
+    )
+    args = parser.parse_args()
+
+    try:
+        text = pdf_to_text(args.pdf_path)
+    except Exception as e:
+        print(f"Error extracting text from '{args.pdf_path}': {e}")
+        return
+
+    if args.output:
+        try:
+            with open(args.output, "w", encoding="utf-8") as f:
+                f.write(text)
+            print(f"Text successfully written to '{args.output}'.")
+        except Exception as e:
+            print(f"Error writing to '{args.output}': {e}")
+    else:
+        print(text)
+
+
+if __name__ == "__main__":
+    main()

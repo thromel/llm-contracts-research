@@ -56,13 +56,23 @@ class ProgressTracker(ABC):
     """Interface for tracking progress."""
 
     @abstractmethod
-    def start_operation(self, total: int, description: str) -> None:
-        """Start tracking an operation."""
+    def start_operation(self, total: Optional[int], description: str) -> None:
+        """Start tracking an operation.
+
+        Args:
+            total: Total number of items to process (None for unknown)
+            description: Description of the operation
+        """
         pass
 
     @abstractmethod
-    def update(self, amount: int = 1) -> None:
-        """Update progress."""
+    def update(self, amount: int = 1, description: Optional[str] = None) -> None:
+        """Update progress.
+
+        Args:
+            amount: Amount to increment progress by
+            description: Optional new description
+        """
         pass
 
     @abstractmethod
