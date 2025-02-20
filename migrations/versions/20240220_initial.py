@@ -33,9 +33,10 @@ def upgrade():
     op.create_table(
         'issues',
         sa.Column('id', sa.Integer, primary_key=True),
-        sa.Column('github_issue_id', sa.Integer, unique=True, nullable=False),
+        sa.Column('github_issue_id', sa.Integer, nullable=False),
         sa.Column('repository_id', sa.Integer, sa.ForeignKey(
             'repositories.id'), nullable=False),
+        sa.Column('number', sa.Integer, nullable=False),  # GitHub issue number
         sa.Column('title', sa.String(500), nullable=False),
         sa.Column('body', sa.Text),
         sa.Column('status', sa.String(50), nullable=False),
@@ -44,6 +45,22 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
         sa.Column('closed_at', sa.DateTime(timezone=True)),
+    )
+
+    # Add composite unique index for github_issue_id and repository_id
+    op.create_index(
+        'ix_issues_github_issue_repo_unique',
+        'issues',
+        ['github_issue_id', 'repository_id'],
+        unique=True
+    )
+
+    # Add index for issue number and repository_id
+    op.create_index(
+        'ix_issues_number_repo_unique',
+        'issues',
+        ['number', 'repository_id'],
+        unique=True
     )
 
     # Create analysis table

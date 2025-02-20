@@ -1,13 +1,13 @@
-"""Checkpoint management for analysis processes."""
-
+"""Checkpoint manager implementation."""
 import json
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Protocol
+from typing import Dict, List, Optional, Any, Protocol
 
-from src.utils.logger import setup_logger
+import logging
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class CheckpointData(Protocol):
@@ -30,79 +30,68 @@ class CheckpointIOError(CheckpointError):
 
 
 class CheckpointManager:
-    """Manages checkpoints for analysis processes."""
+    """Manages checkpoints for analysis progress."""
 
-    def __init__(self, output_dir: Path):
-        """Initialize the checkpoint manager.
+    def __init__(self, checkpoint_dir: str):
+        """Initialize checkpoint manager.
 
         Args:
-            output_dir: Directory where checkpoints will be stored
+            checkpoint_dir: Directory to store checkpoint files
         """
-        self.output_dir = output_dir
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.checkpoint_file = self.output_dir / 'analysis_checkpoint.json'
+        self.checkpoint_dir = Path(checkpoint_dir)
+        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        self.checkpoint_file = self.checkpoint_dir / "checkpoint.json"
 
     def save_checkpoint(
         self,
-        analyzed_issues: List[Dict],
+        analyzed_issues: List[Any],
         current_index: int,
-        total_issues: List[Dict],
+        total_issues: List[Any],
         repo_name: str
     ) -> None:
-        """Save the current analysis state to a checkpoint file.
+        """Save checkpoint data.
 
         Args:
-            analyzed_issues: List of analyzed issue data
-            current_index: Current position in analysis
-            total_issues: Complete list of issues to analyze
-            repo_name: Name of the repository being analyzed
-
-        Raises:
-            CheckpointIOError: If saving checkpoint fails
+            analyzed_issues: List of analyzed issues
+            current_index: Current processing index
+            total_issues: Total list of issues
+            repo_name: Repository name
         """
-        checkpoint_data = {
-            'timestamp': datetime.now().isoformat(),
-            'analyzed_issues': analyzed_issues,
-            'current_index': current_index,
-            'total_issues': total_issues,
-            'repo_name': repo_name
-        }
-
-        temp_checkpoint = self.checkpoint_file.with_suffix('.tmp')
         try:
-            with open(temp_checkpoint, 'w', encoding='utf-8') as file:
-                json.dump(checkpoint_data, file, indent=2, ensure_ascii=False)
-            temp_checkpoint.replace(self.checkpoint_file)
-            logger.info("Checkpoint saved at index {}".format(current_index))
-        except Exception as exc:
-            error_msg = "Error saving checkpoint: {}".format(str(exc))
-            logger.error(error_msg)
-            if temp_checkpoint.exists():
-                temp_checkpoint.unlink()
-            raise CheckpointIOError(error_msg) from exc
+            checkpoint_data = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "current_index": current_index,
+                "total_issues": len(total_issues),
+                "analyzed_issues": len(analyzed_issues),
+                "repository": repo_name
+            }
 
-    def load_checkpoint(self) -> Optional[Dict]:
-        """Load the latest checkpoint if it exists.
+            with open(self.checkpoint_file, "w") as f:
+                json.dump(checkpoint_data, f, indent=2)
+
+            logger.info(f"Saved checkpoint at index {current_index}")
+
+        except Exception as e:
+            logger.error(f"Error saving checkpoint: {str(e)}")
+
+    def load_checkpoint(self) -> Optional[Dict[str, Any]]:
+        """Load checkpoint data.
 
         Returns:
-            Optional[Dict]: Checkpoint data if exists, None otherwise
-
-        Raises:
-            CheckpointIOError: If loading checkpoint fails
+            Checkpoint data if exists, None otherwise
         """
-        if not self.checkpoint_file.exists():
+        try:
+            if self.checkpoint_file.exists():
+                with open(self.checkpoint_file, "r") as f:
+                    checkpoint_data = json.load(f)
+                logger.info(
+                    f"Loaded checkpoint at index {checkpoint_data['current_index']}")
+                return checkpoint_data
             return None
 
-        try:
-            with open(self.checkpoint_file, 'r', encoding='utf-8') as file:
-                checkpoint_data = json.load(file)
-            logger.info("Loaded checkpoint from index {}".format(
-                checkpoint_data['current_index']))
-            return checkpoint_data
-        except Exception as exc:
-            error_msg = "Error loading checkpoint: {}".format(str(exc))
-            logger.error(error_msg)
-            raise CheckpointIOError(error_msg) from exc
+        except Exception as e:
+            logger.error(f"Error loading checkpoint: {str(e)}")
+            return None
 
     def clear_checkpoint(self) -> None:
         """Clear the existing checkpoint file.

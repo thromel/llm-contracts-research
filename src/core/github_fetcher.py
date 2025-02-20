@@ -1,92 +1,109 @@
-import asyncio
-import aiohttp
-import backoff
-import logging
+"""GitHub issues fetcher implementation."""
 from datetime import datetime
-from typing import Optional, AsyncGenerator, List, Dict
-from tqdm.asyncio import tqdm
-from core.config import config
-from core.db.base import DatabaseAdapter
-from core.dto.github import RepositoryDTO, IssueDTO
-from core.analysis.core.checkpoint import CheckpointManager
+from typing import Optional, AsyncGenerator, Dict, Any
+import logging
+
+from .interfaces import IssuesFetcher, IssueRepository, ProgressTracker, IssueData
+from .clients.github_api_client import GitHubAPIClient, GitHubConfig
 
 logger = logging.getLogger(__name__)
 
 
-class GitHubFetcher:
-    def __init__(self, db_adapter: DatabaseAdapter):
-        self.db = db_adapter
-        self.session: Optional[aiohttp.ClientSession] = None
-        self.headers = {
-            'Accept': 'application/vnd.github.v3+json',
-            'Authorization': f'token {config.github.token}',
-        }
+class GitHubFetcher(IssuesFetcher):
+    """Fetches issues from GitHub repositories."""
 
-    async def __aenter__(self):
-        self.session = aiohttp.ClientSession(headers=self.headers)
-        return self
+    def __init__(
+        self,
+        api_client: GitHubAPIClient,
+        repository: IssueRepository,
+        progress_tracker: Optional[ProgressTracker] = None,
+    ):
+        """Initialize the GitHub fetcher.
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.session:
-            await self.session.close()
+        Args:
+            api_client: Client for making GitHub API requests
+            repository: Repository for storing issues
+            progress_tracker: Optional progress tracker
+        """
+        self._api_client = api_client
+        self._repository = repository
+        self._progress_tracker = progress_tracker
 
-    @backoff.on_exception(
-        backoff.expo,
-        (aiohttp.ClientError, asyncio.TimeoutError),
-        max_tries=config.github.max_retries,
-        max_time=300
-    )
-    async def _make_request(self, url: str, params: dict = None) -> dict:
-        """Make a GitHub API request with exponential backoff retry."""
-        if not self.session:
-            raise RuntimeError(
-                "Session not initialized. Use 'async with' context manager.")
+    async def _fetch_issue_comments(self, issue_url: str) -> list[Dict[str, Any]]:
+        """Fetch comments for an issue.
 
-        async with self.session.get(url, params=params) as response:
-            if response.status == 403:
-                # Rate limit exceeded
-                reset_time = int(response.headers.get('X-RateLimit-Reset', 0))
-                wait_time = max(0, reset_time - datetime.now().timestamp())
-                logger.warning(
-                    f"Rate limit exceeded. Waiting {wait_time} seconds.")
-                await asyncio.sleep(wait_time)
-                return await self._make_request(url, params)
+        Args:
+            issue_url: The issue's URL
 
-            response.raise_for_status()
-            return await response.json()
-
-    async def fetch_issue_comments(self, issue_url: str, issue_number: int) -> List[Dict]:
-        """Fetch all comments for an issue."""
+        Returns:
+            List of comment data
+        """
         comments = []
         page = 1
 
         while True:
-            params = {
-                'per_page': config.github.per_page,
-                'page': page,
-            }
+            params = {'page': page, 'per_page': 100}
+            response = await self._api_client.get(
+                self._api_client.build_comments_url(issue_url),
+                params
+            )
 
-            comments_url = f"{issue_url}/comments"
-            page_comments = await self._make_request(comments_url, params)
-
+            page_comments = response['data']
             if not page_comments:
                 break
 
-            for comment in page_comments:
-                comments.append({
-                    'id': comment['id'],
-                    'user': {
-                        'login': comment['user']['login'],
-                        'id': comment['user']['id']
-                    },
-                    'body': comment['body'],
-                    'created_at': datetime.fromisoformat(comment['created_at'].rstrip('Z')),
-                    'updated_at': datetime.fromisoformat(comment['updated_at'].rstrip('Z'))
-                })
+            comments.extend([{
+                'id': comment['id'],
+                'user': {
+                    'login': comment['user']['login'],
+                    'id': comment['user']['id']
+                },
+                'body': comment['body'],
+                'created_at': datetime.fromisoformat(comment['created_at'].rstrip('Z')),
+                'updated_at': datetime.fromisoformat(comment['updated_at'].rstrip('Z'))
+            } for comment in page_comments])
 
             page += 1
 
         return comments
+
+    async def _process_issue(self, issue_data: Dict[str, Any], repository_id: Optional[str] = None) -> IssueData:
+        """Convert raw issue data to IssueData object.
+
+        Args:
+            issue_data: Raw issue data from GitHub API
+            repository_id: Optional repository ID
+
+        Returns:
+            Processed IssueData object
+        """
+        # Fetch comments for the issue
+        comments = await self._fetch_issue_comments(issue_data['url'])
+
+        return IssueData(
+            github_issue_id=issue_data['id'],
+            repository_id=repository_id,
+            number=issue_data['number'],
+            title=issue_data['title'],
+            body=issue_data['body'] or '',
+            state=issue_data['state'],
+            created_at=datetime.fromisoformat(
+                issue_data['created_at'].rstrip('Z')),
+            updated_at=datetime.fromisoformat(
+                issue_data['updated_at'].rstrip('Z')),
+            closed_at=(
+                datetime.fromisoformat(issue_data['closed_at'].rstrip('Z'))
+                if issue_data['closed_at']
+                else None
+            ),
+            labels=[label['name'] for label in issue_data['labels']],
+            assignees={
+                assignee['login']: assignee['id']
+                for assignee in issue_data['assignees']
+            },
+            comments=comments,
+            url=issue_data['url']
+        )
 
     async def fetch_repository_issues(
         self,
@@ -94,164 +111,86 @@ class GitHubFetcher:
         repo: str,
         since: Optional[datetime] = None,
         max_issues: Optional[int] = None,
-        include_closed: bool = True,
-        progress_bar: Optional[tqdm] = None
-    ) -> AsyncGenerator[IssueDTO, None]:
-        """Fetch all issues for a repository with pagination and checkpointing."""
-        repo_url = f"{config.github.api_url}/repos/{owner}/{repo}"
+    ) -> AsyncGenerator[IssueData, None]:
+        """Fetch all issues for a repository.
 
-        # First, ensure repository exists in database
-        repo_data = await self._make_request(repo_url)
-        repo_dto = RepositoryDTO(
-            github_repo_id=repo_data['id'],
-            owner=owner,
-            name=repo,
-            full_name=f"{owner}/{repo}",
-            url=repo_url,
-            created_at=datetime.fromisoformat(
-                repo_data['created_at'].rstrip('Z')),
-            updated_at=datetime.fromisoformat(
-                repo_data['updated_at'].rstrip('Z'))
-        )
-        repo_id = await self.db.create_repository(repo_dto)
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            since: Optional timestamp to fetch issues from
+            max_issues: Optional maximum number of issues to fetch
 
-        # Create progress bar for issues if enabled
+        Yields:
+            IssueData objects for each issue
+        """
+        # First get repository info
+        try:
+            repo_response = await self._api_client.get(
+                self._api_client.build_repo_url(owner, repo)
+            )
+            repo_data = repo_response['data']
+            repository_id = str(repo_data['id'])
+        except Exception as e:
+            logger.error(
+                f"Error fetching repository info for {owner}/{repo}: {str(e)}")
+            return
+
         issue_count = 0
-        issues_pbar = None
-        if progress_bar is not None:
-            # Get total issue count
-            total_issues = repo_data.get('open_issues_count', 0)
-            if include_closed:
-                closed_issues = await self._make_request(f"{repo_url}/issues", {'state': 'closed', 'per_page': 1})
-                total_issues += len(closed_issues)
-            if max_issues:
-                total_issues = min(total_issues, max_issues)
-            issues_pbar = tqdm(
-                total=total_issues, desc=f"Issues for {owner}/{repo}", unit="issue", leave=False)
-
-        # Fetch issues with pagination
         page = 1
+
         while True:
+            if max_issues and issue_count >= max_issues:
+                logger.debug(f"Reached max issues limit: {max_issues}")
+                break
+
             params = {
-                'state': 'all' if include_closed else 'open',
-                'per_page': config.github.per_page,
+                'state': 'all',
+                'per_page': 100,
                 'page': page,
-                'sort': 'updated',
-                'direction': 'asc',
+                'sort': 'created',
+                'direction': 'asc'
             }
 
             if since:
                 params['since'] = since.isoformat()
 
-            issues_url = f"{repo_url}/issues"
-            issues = await self._make_request(issues_url, params)
-
-            if not issues:
-                break
-
-            for issue in issues:
-                # Fetch comments for the issue
-                comments = await self.fetch_issue_comments(issue['url'], issue['number'])
-
-                # Transform issue data to DTO
-                issue_dto = IssueDTO(
-                    github_issue_id=issue['id'],
-                    repository_id=repo_id,
-                    title=issue['title'],
-                    body=issue['body'] or '',
-                    status=issue['state'],
-                    labels=[label['name'] for label in issue['labels']],
-                    assignees={
-                        assignee['login']: assignee['id']
-                        for assignee in issue['assignees']
-                    },
-                    comments=comments,
-                    created_at=datetime.fromisoformat(
-                        issue['created_at'].rstrip('Z')),
-                    updated_at=datetime.fromisoformat(
-                        issue['updated_at'].rstrip('Z')),
-                    closed_at=(
-                        datetime.fromisoformat(issue['closed_at'].rstrip('Z'))
-                        if issue['closed_at']
-                        else None
-                    )
+            try:
+                response = await self._api_client.get(
+                    self._api_client.build_issues_url(owner, repo),
+                    params
                 )
 
-                # Store in database and yield
-                await self.db.create_issue(issue_dto)
-                yield issue_dto
+                issues = response['data']
+                if not issues:
+                    break
 
-                # Update progress
-                issue_count += 1
-                if issues_pbar:
-                    issues_pbar.update(1)
+                logger.debug(
+                    f"Processing page {page} with {len(issues)} issues")
 
-                # Check if we've reached the maximum issues
-                if max_issues and issue_count >= max_issues:
-                    if issues_pbar:
-                        issues_pbar.close()
-                    return
+                for issue in issues:
+                    if max_issues and issue_count >= max_issues:
+                        break
 
-            page += 1
+                    try:
+                        issue_data = await self._process_issue(issue, repository_id)
+                        await self._repository.save_issue(issue_data)
 
-        if issues_pbar:
-            issues_pbar.close()
+                        if self._progress_tracker:
+                            self._progress_tracker.update()
 
-    async def fetch_repositories(
-        self,
-        repo_list: List[str],
-        progress_bar: Optional[tqdm] = None,
-        checkpoint_manager: Optional[CheckpointManager] = None,
-        since_date: Optional[datetime] = None,
-        max_issues: Optional[int] = None,
-        include_closed: bool = True
-    ) -> None:
-        """Fetch issues from multiple repositories with concurrency control."""
-        sem = asyncio.Semaphore(config.max_concurrent_requests)
+                        issue_count += 1
+                        yield issue_data
 
-        # Load checkpoint if available
-        start_index = 0
-        if checkpoint_manager:
-            checkpoint_data = checkpoint_manager.load_checkpoint()
-            if checkpoint_data:
-                start_index = checkpoint_data['current_index']
+                    except Exception as e:
+                        logger.error(
+                            f"Error processing issue #{issue.get('number', 'unknown')}: {str(e)}")
+                        continue
 
-        async def fetch_with_semaphore(repo_spec: str, index: int) -> None:
-            async with sem:
-                try:
-                    owner, repo = repo_spec.split('/')
-                    # Get last updated timestamp for checkpoint
-                    repo_dto = await self.db.get_repository_by_full_name(f"{owner}/{repo}")
-                    if repo_dto:
-                        last_updated = await self.db.get_last_issue_timestamp(repo_dto.id)
-                        since = max(
-                            last_updated, since_date) if since_date else last_updated
-                    else:
-                        since = since_date
+                page += 1
 
-                    logger.info(f"Fetching issues for {repo_spec}")
-                    issues_processed = 0
-                    async for issue in self.fetch_repository_issues(
-                        owner, repo, since, max_issues, include_closed, progress_bar
-                    ):
-                        issues_processed += 1
-                        if checkpoint_manager and issues_processed % config.checkpoint_interval == 0:
-                            checkpoint_manager.save_checkpoint(
-                                analyzed_issues=[],  # TODO: Implement if needed
-                                current_index=index,
-                                total_issues=[],  # TODO: Implement if needed
-                                repo_name=repo_spec
-                            )
+            except Exception as e:
+                logger.error(f"Error fetching page {page}: {str(e)}")
+                break
 
-                    if progress_bar:
-                        progress_bar.update(1)
-
-                except Exception as e:
-                    logger.error(f"Error fetching {repo_spec}: {str(e)}")
-                    raise
-
-        tasks = [
-            fetch_with_semaphore(repo, i)
-            for i, repo in enumerate(repo_list[start_index:], start=start_index)
-        ]
-        await asyncio.gather(*tasks)
+        logger.debug(
+            f"Completed fetching {issue_count} issues for {owner}/{repo}")

@@ -49,6 +49,7 @@ class IssueDTO(BaseDTO):
     title: str
     body: str
     status: str
+    number: int  # GitHub issue number
     id: Optional[str] = None
     labels: List[str] = field(default_factory=list)
     assignees: Dict[str, int] = field(default_factory=dict)
@@ -65,6 +66,7 @@ class IssueDTO(BaseDTO):
             title=data['title'],
             body=data['body'],
             status=data['status'],
+            number=data['number'],  # Add number field
             id=str(data.get('_id', data.get('id'))),
             labels=data.get('labels', []),
             assignees=data.get('assignees', {}),
@@ -81,6 +83,7 @@ class IssueDTO(BaseDTO):
             'title': self.title,
             'body': self.body,
             'status': self.status,
+            'number': self.number,  # Add number field
             'labels': self.labels,
             'assignees': self.assignees,
             'comments': self.comments,
