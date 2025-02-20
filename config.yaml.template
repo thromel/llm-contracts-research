@@ -1,0 +1,22 @@
+# Repository list
+repositories:
+  - "owner/repo1"
+  - "owner/repo2"
+
+# GitHub settings
+github:
+  api_url: "https://api.github.com"
+  token: "your_github_token_here"  # Replace with your token
+  per_page: 100
+  max_retries: 3
+
+# Fetch settings
+settings:
+  max_issues_per_repo: 2000  # Set to 0 for no limit
+  since_days: 365  # Set to 0 for all issues
+  include_comments: true
+  max_comments_per_issue: 100
+  batch_size: 50
+  max_concurrent_requests: 5
+  checkpoint_enabled: true
+  checkpoint_dir: "checkpoints" 
