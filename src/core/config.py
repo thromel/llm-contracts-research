@@ -50,7 +50,10 @@ class AppConfig:
     github: GitHubConfig = field(default_factory=GitHubConfig)
 
     # Repository list
-    repositories: List[str] = field(default_factory=list)
+    repositories: List[str] = field(default_factory=lambda: [
+        repo.strip() for repo in os.getenv('REPOSITORIES', '').split(',')
+        if repo.strip()
+    ])
 
     # Logging and progress
     log_level: str = os.getenv('LOG_LEVEL', 'INFO')
@@ -150,6 +153,14 @@ def load_config(config_path: Optional[str] = None) -> AppConfig:
                         config.checkpoint_dir = settings['checkpoint_dir']
                     if 'max_concurrent_requests' in settings:
                         config.max_concurrent_requests = settings['max_concurrent_requests']
+
+    # Validate required settings
+    if not config.repositories:
+        raise ValueError(
+            "No repositories configured. Set REPOSITORIES environment variable or use config file.")
+    if not config.github.token:
+        raise ValueError(
+            "GitHub token not configured. Set GITHUB_TOKEN environment variable or use config file.")
 
     return config
 
