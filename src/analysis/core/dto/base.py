@@ -125,3 +125,40 @@ class AnalysisResultsDTO:
     """DTO for complete analysis results."""
     metadata: AnalysisMetadataDTO
     analyzed_issues: List[ContractAnalysisDTO]
+
+
+@dataclass
+class IssueAnalysisDTO:
+    """Data transfer object for a single issue analysis."""
+    issue_id: str
+    issue_number: int
+    issue_title: str
+    issue_url: str
+    has_violation: bool
+    violation_type: Optional[str] = None
+    severity: Optional[str] = None  # high, medium, low
+    confidence: Optional[str] = None  # high, medium, low
+    description: Optional[str] = None
+    resolution_status: Optional[str] = None
+    resolution_details: Optional[str] = None
+    resolution_time: Optional[float] = None  # in hours
+    analysis_timestamp: str = field(
+        default_factory=lambda: datetime.now().isoformat())
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "issue_id": self.issue_id,
+            "issue_number": self.issue_number,
+            "issue_title": self.issue_title,
+            "issue_url": self.issue_url,
+            "has_violation": self.has_violation,
+            "violation_type": self.violation_type,
+            "severity": self.severity,
+            "confidence": self.confidence,
+            "description": self.description,
+            "resolution_status": self.resolution_status,
+            "resolution_details": self.resolution_details,
+            "resolution_time": self.resolution_time,
+            "analysis_timestamp": self.analysis_timestamp
+        }

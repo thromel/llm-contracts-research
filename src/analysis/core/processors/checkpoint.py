@@ -1,129 +1,115 @@
-"""Checkpoint handling for analysis process."""
-
+"""Checkpoint handler for analysis process."""
+import os
 import json
 import logging
+from typing import Dict, Any, List, Optional
 from datetime import datetime
-from pathlib import Path
-from typing import List, Dict, Any
 
-from src.config import settings
-from src.analysis.core.dto import ContractAnalysisDTO, AnalysisMetadataDTO
+from src.analysis.core.dto import AnalysisMetadataDTO
 
 logger = logging.getLogger(__name__)
 
 
-class CheckpointError(Exception):
-    """Base class for checkpoint errors."""
-    pass
-
-
-class CheckpointIOError(CheckpointError):
-    """Error during checkpoint I/O operations."""
-    pass
-
-
 class CheckpointHandler:
-    """Handles checkpointing during analysis."""
+    """Manages checkpoints for analysis process."""
 
-    def __init__(self, checkpoint_dir: Path = None):
+    def __init__(self, checkpoint_dir: str = "analysis_checkpoints"):
         """Initialize checkpoint handler.
 
         Args:
-            checkpoint_dir: Directory for checkpoint files
+            checkpoint_dir: Directory to store checkpoints
         """
-        self.checkpoint_dir = checkpoint_dir or Path(
-            settings.DATA_DIR) / 'checkpoints'
-        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        self.checkpoint_dir = checkpoint_dir
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        self.checkpoint_file = os.path.join(
+            checkpoint_dir, "analysis_checkpoint.json")
+        logger.info(
+            f"Initialized checkpoint handler with file: {self.checkpoint_file}")
 
-    def save_checkpoint(self, analyzed_issues: List[ContractAnalysisDTO], metadata: AnalysisMetadataDTO) -> None:
-        """Save analysis checkpoint.
+    def save_checkpoint(self, analyzed_issues: List[Dict[str, Any]], metadata: AnalysisMetadataDTO) -> None:
+        """Save checkpoint state.
 
         Args:
             analyzed_issues: List of analyzed issues
             metadata: Analysis metadata
-
-        Raises:
-            CheckpointIOError: If checkpoint cannot be saved
         """
         try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            checkpoint_file = self.checkpoint_dir / \
-                f"checkpoint_{timestamp}.json"
-
-            # Convert DTOs to dictionaries for JSON serialization
+            # Create checkpoint data
             checkpoint_data = {
-                "metadata": metadata.__dict__,
-                "analyzed_issues": [self._dto_to_dict(issue) for issue in analyzed_issues]
+                "timestamp": datetime.now().isoformat(),
+                "repo_name": metadata.repository,
+                "analyzed_issues": analyzed_issues,
+                "current_index": len(analyzed_issues),
+                "total_issues": metadata.num_issues
             }
 
-            with open(checkpoint_file, 'w') as f:
-                json.dump(checkpoint_data, f, indent=2)
+            # Ensure directory exists
+            os.makedirs(self.checkpoint_dir, exist_ok=True)
 
-            logger.info(f"Saved checkpoint to {checkpoint_file}")
+            # Create temp file for atomic write
+            temp_file = f"{self.checkpoint_file}.tmp"
+
+            # Write to temp file and then rename
+            with open(temp_file, "w", encoding="utf-8") as f:
+                json.dump(checkpoint_data, f, default=self._json_serializer)
+
+            # Atomic rename
+            os.replace(temp_file, self.checkpoint_file)
+
+            logger.info(
+                f"Saved checkpoint with {len(analyzed_issues)} analyzed issues")
 
         except Exception as e:
-            logger.error(f"Error saving checkpoint: {e}")
-            raise CheckpointIOError(f"Failed to save checkpoint: {str(e)}")
+            logger.error(f"Error saving checkpoint: {str(e)}")
+            # Clean up temp file if it exists
+            if os.path.exists(f"{self.checkpoint_file}.tmp"):
+                try:
+                    os.remove(f"{self.checkpoint_file}.tmp")
+                except Exception:
+                    pass
 
-    def load_checkpoint(self) -> Dict[str, Any]:
-        """Load latest checkpoint if it exists.
+    def load_checkpoint(self) -> Optional[Dict[str, Any]]:
+        """Load checkpoint state.
 
         Returns:
             Checkpoint data or None if no checkpoint exists
-
-        Raises:
-            CheckpointIOError: If checkpoint cannot be loaded
         """
+        if not os.path.exists(self.checkpoint_file):
+            logger.info("No checkpoint found")
+            return None
+
         try:
-            checkpoints = list(self.checkpoint_dir.glob("checkpoint_*.json"))
-            if not checkpoints:
-                return None
-
-            # Get most recent checkpoint
-            latest_checkpoint = max(
-                checkpoints, key=lambda p: p.stat().st_mtime)
-
-            with open(latest_checkpoint, 'r') as f:
+            with open(self.checkpoint_file, "r", encoding="utf-8") as f:
                 checkpoint_data = json.load(f)
-                logger.info(f"Loaded checkpoint from {latest_checkpoint}")
-                return checkpoint_data
+
+            logger.info(
+                f"Loaded checkpoint with {checkpoint_data.get('current_index', 0)} analyzed issues")
+            return checkpoint_data
 
         except Exception as e:
-            logger.error(f"Error loading checkpoint: {e}")
-            raise CheckpointIOError(f"Failed to load checkpoint: {str(e)}")
+            logger.error(f"Error loading checkpoint: {str(e)}")
+            return None
 
     def clear_checkpoint(self) -> None:
-        """Clear all checkpoints.
+        """Clear checkpoint state."""
+        if os.path.exists(self.checkpoint_file):
+            try:
+                os.remove(self.checkpoint_file)
+                logger.info("Checkpoint cleared")
+            except Exception as e:
+                logger.error(f"Error clearing checkpoint: {str(e)}")
 
-        Raises:
-            CheckpointIOError: If checkpoints cannot be cleared
-        """
-        try:
-            for checkpoint in self.checkpoint_dir.glob("checkpoint_*.json"):
-                checkpoint.unlink()
-            logger.info("Cleared all checkpoints")
-
-        except Exception as e:
-            logger.error(f"Error clearing checkpoints: {e}")
-            raise CheckpointIOError(f"Failed to clear checkpoints: {str(e)}")
-
-    def _dto_to_dict(self, dto: Any) -> Dict[str, Any]:
-        """Convert a DTO to a dictionary, handling nested DTOs.
+    def _json_serializer(self, obj: Any) -> Any:
+        """Custom JSON serializer for objects not serializable by default json code.
 
         Args:
-            dto: Any DTO object
+            obj: Object to serialize
 
         Returns:
-            Dictionary representation of the DTO
+            Serialized object
         """
-        if hasattr(dto, '__dict__'):
-            result = {}
-            for key, value in dto.__dict__.items():
-                if isinstance(value, list):
-                    result[key] = [self._dto_to_dict(item) for item in value]
-                elif hasattr(value, '__dict__'):
-                    result[key] = self._dto_to_dict(value)
-                else:
-                    result[key] = value
-            return result
-        return dto
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if hasattr(obj, "to_dict"):
+            return obj.to_dict()
+        raise TypeError(f"Type {type(obj)} not serializable")

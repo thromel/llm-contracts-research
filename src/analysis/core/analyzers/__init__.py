@@ -8,7 +8,7 @@ from src.analysis.core.analyzers.contract_analyzer import ContractAnalyzer
 from src.analysis.core.analyzers.orchestrator import AnalysisOrchestrator
 
 # Finally, import the main analyzer that depends on all others
-from src.analysis.core.analyzers.github import GitHubIssuesAnalyzer
+from .github_analyzer import GitHubIssuesAnalyzer
 
 __all__ = [
     'ContractAnalyzer',

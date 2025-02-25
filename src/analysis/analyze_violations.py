@@ -2,10 +2,11 @@
 
 import pandas as pd
 import argparse
+import os
 from pathlib import Path
 from typing import Dict, Any
 import json
-from src.config import settings
+from src.core.config import load_config  # Updated import
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -145,15 +146,23 @@ def main():
                         help='Path to the CSV file to analyze')
     parser.add_argument('--latest', action='store_true',
                         help='Analyze the most recent analysis file in the data directory')
+    parser.add_argument('--config', type=str,
+                        help='Path to YAML config file (optional)')
     args = parser.parse_args()
 
     try:
+        # Load configuration
+        config = load_config(args.config)
+
+        # Determine export dir from environment or config
+        data_dir = os.getenv('DATA_DIR', 'data')
+
         # Determine which file to analyze
         if args.file:
             csv_path = args.file
         elif args.latest:
             # Find the most recent final analysis file
-            data_dir = Path(settings.DATA_DIR) / 'analyzed'
+            data_dir = Path(data_dir) / 'analyzed'
             analysis_files = list(data_dir.glob(
                 'github_issues_analysis_*_final_*.csv'))
             if not analysis_files:
@@ -170,7 +179,7 @@ def main():
         analysis_results = analyze_violations(csv_path)
 
         # Save and display results
-        output_dir = Path(settings.DATA_DIR) / 'analysis'
+        output_dir = Path(data_dir) / 'analysis'
         output_dir.mkdir(exist_ok=True)
         save_analysis(analysis_results, output_dir, csv_path)
 

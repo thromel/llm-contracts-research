@@ -9,7 +9,8 @@ from src.analysis.core.dto.base import (
     ErrorPropagationDTO,
     ContractAnalysisDTO,
     AnalysisMetadataDTO,
-    AnalysisResultsDTO
+    AnalysisResultsDTO,
+    IssueAnalysisDTO
 )
 from src.analysis.core.dto.converters import (
     dict_to_comment_dto,
@@ -34,6 +35,7 @@ __all__ = [
     'ContractAnalysisDTO',
     'AnalysisMetadataDTO',
     'AnalysisResultsDTO',
+    'IssueAnalysisDTO',
     # Converters
     'dict_to_comment_dto',
     'dict_to_github_issue_dto',

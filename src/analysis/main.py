@@ -2,16 +2,18 @@
 
 import argparse
 import signal
+import asyncio
 from pathlib import Path
 from datetime import datetime
+import os
 
 from src.analysis.core.analyzers import GitHubIssuesAnalyzer
 from src.analysis.core.processors.checkpoint import CheckpointHandler
-from src.analysis.core.data_loader import CSVDataLoader, DataLoadError
+from src.analysis.core.data_loader import CSVDataLoader, MongoDBDataLoader, DataLoadError
 from src.analysis.core.storage.factory import StorageFactory
 from src.analysis.core.clients.openai import OpenAIClient
 from src.analysis.core.dto import AnalysisMetadataDTO, AnalysisResultsDTO
-from src.config import settings
+from src.core.config import load_config
 from src.utils.logger import setup_logger
 from tqdm import tqdm
 
@@ -49,9 +51,9 @@ class AnalysisOrchestrator:
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
 
-    def run_analysis(self, repo_name: str = None, num_issues: int = None,
-                     checkpoint_interval: int = 5, resume: bool = False,
-                     input_csv: Path = None):
+    async def run_analysis(self, repo_name: str = None, num_issues: int = None,
+                           checkpoint_interval: int = 5, resume: bool = False,
+                           input_csv: Path = None, use_mongodb: bool = False):
         """Run the analysis process.
 
         Args:
@@ -60,8 +62,12 @@ class AnalysisOrchestrator:
             checkpoint_interval: Interval between checkpoints
             resume: Whether to resume from checkpoint
             input_csv: Optional path to input CSV file
+            use_mongodb: Whether to use MongoDB as data source
         """
         try:
+            # Load configuration
+            config = load_config()
+
             # Check for existing checkpoint if resume is requested
             checkpoint_data = None
             if resume:
@@ -89,13 +95,38 @@ class AnalysisOrchestrator:
                         logger.error(
                             "Failed to load CSV file: {}".format(str(exc)))
                         raise
+                elif use_mongodb:
+                    if not repo_name:
+                        raise ValueError(
+                            "Repository name is required when using MongoDB")
+
+                    # Initialize and connect to MongoDB
+                    logger.info(
+                        f"Loading issues from MongoDB for repository: {repo_name}")
+                    mongodb_uri = os.getenv('MONGODB_URI')
+                    mongodb_db = os.getenv('MONGODB_DB')
+
+                    if not mongodb_uri or not mongodb_db:
+                        raise ValueError(
+                            "MongoDB URI and DB name must be set in environment variables")
+
+                    mongo_loader = MongoDBDataLoader(mongodb_uri, mongodb_db)
+                    await mongo_loader.connect()
+
+                    try:
+                        issues = await mongo_loader.load_repository_issues(repo_name, num_issues)
+                        logger.info(
+                            f"Loaded {len(issues)} issues from MongoDB")
+                    finally:
+                        await mongo_loader.disconnect()
                 else:
                     if not repo_name or not num_issues:
                         raise ValueError(
-                            "Either input_csv or both repo_name and num_issues must be provided")
+                            "Either input_csv, use_mongodb, or both repo_name and num_issues must be provided")
                     issues = self.analyzer.github_client.fetch_issues(
                         repo_name=repo_name, num_issues=num_issues)
                     logger.info("Fetched {} issues".format(len(issues)))
+
                 analyzed_issues = []
                 current_index = 0
 
@@ -112,12 +143,17 @@ class AnalysisOrchestrator:
                 while current_index < len(issues) and not self.is_shutting_down:
                     try:
                         issue = issues[current_index]
+
                         # Access DTO attributes directly
+                        comments_text = ""
+                        if hasattr(issue, 'first_comments') and issue.first_comments:
+                            comments_text = ', '.join(
+                                comment.body for comment in issue.first_comments if comment.body)
+
                         analysis = self.analyzer.analyze_issue(
                             title=issue.title,
                             body=issue.body,
-                            comments=', '.join(
-                                comment.body for comment in issue.first_comments)
+                            comments=comments_text
                         )
                         analyzed_issues.append(analysis)
 
@@ -126,7 +162,7 @@ class AnalysisOrchestrator:
                         pbar.update(1)
 
                         # Handle intermediate saves if enabled
-                        if settings.SAVE_INTERMEDIATE:
+                        if os.getenv('SAVE_INTERMEDIATE', 'false').lower() == 'true':
                             intermediate_metadata = AnalysisMetadataDTO(
                                 repository=repo_name,
                                 analysis_timestamp=datetime.now().isoformat(),
@@ -204,8 +240,8 @@ class AnalysisOrchestrator:
             raise
 
 
-def main():
-    """Main entry point for the analysis script."""
+async def main_async():
+    """Async main entry point for the analysis script."""
     parser = argparse.ArgumentParser(
         description='Analyze GitHub issues for contract violations.')
 
@@ -218,64 +254,83 @@ def main():
 
     # Other arguments
     parser.add_argument('--issues', type=int,
-                        help='Number of issues to analyze (required with --repo)')
+                        help='Number of issues to analyze (optional with --repo)')
     parser.add_argument('--resume', action='store_true',
                         help='Resume from the latest checkpoint if it exists')
     parser.add_argument('--checkpoint-interval', type=int, default=5,
                         help='Number of issues to process before creating a checkpoint')
+    parser.add_argument('--config', type=str,
+                        help='Path to YAML config file (optional)')
+    parser.add_argument('--use-mongodb', action='store_true',
+                        help='Use MongoDB as data source instead of fetching from GitHub')
     args = parser.parse_args()
 
     # Validate arguments
-    if args.repo and not args.issues:
-        parser.error("--issues is required when using --repo")
-
-    # Initialize components
-    checkpoint_mgr = CheckpointHandler()
-
-    # Initialize OpenAI client
-    openai_settings = {
-        'api_key': settings.OPENAI_API_KEY,
-        'model': settings.OPENAI_MODEL,
-        'max_retries': settings.MAX_RETRIES,
-        'timeout': 30.0,
-        'temperature': settings.OPENAI_TEMPERATURE,
-        'max_tokens': settings.OPENAI_MAX_TOKENS,
-        'top_p': settings.OPENAI_TOP_P,
-        'frequency_penalty': settings.OPENAI_FREQUENCY_PENALTY,
-        'presence_penalty': settings.OPENAI_PRESENCE_PENALTY
-    }
-    if hasattr(settings, 'OPENAI_BASE_URL'):
-        openai_settings['base_url'] = settings.OPENAI_BASE_URL
-    llm_client = OpenAIClient(**openai_settings)
-
-    # Create and run orchestrator
-    analyzer = GitHubIssuesAnalyzer(
-        llm_client=llm_client,
-        github_token=settings.GITHUB_TOKEN,
-        checkpoint_handler=checkpoint_mgr
-    )
-    orchestrator = AnalysisOrchestrator(analyzer, checkpoint_mgr)
-    orchestrator.setup_signal_handlers()
+    if args.repo and not args.use_mongodb and not args.issues:
+        parser.error(
+            "--issues is required when using --repo without --use-mongodb")
 
     try:
-        results = orchestrator.run_analysis(
+        # Load configuration
+        config = load_config(args.config)
+
+        # Initialize checkpoint manager
+        checkpoint_mgr = CheckpointHandler()
+
+        # Initialize OpenAI client with settings from config
+        openai_settings = {
+            'api_key': os.getenv('OPENAI_API_KEY'),
+            'model': os.getenv('OPENAI_MODEL', 'gpt-4'),
+            'max_retries': config.github.max_retries,
+            'timeout': 30.0,
+            'temperature': float(os.getenv('OPENAI_TEMPERATURE', '0.7')),
+            'max_tokens': int(os.getenv('OPENAI_MAX_TOKENS', '2000')),
+            'top_p': float(os.getenv('OPENAI_TOP_P', '1.0')),
+            'frequency_penalty': float(os.getenv('OPENAI_FREQUENCY_PENALTY', '0.0')),
+            'presence_penalty': float(os.getenv('OPENAI_PRESENCE_PENALTY', '0.0'))
+        }
+        api_base = os.getenv('OPENAI_BASE_URL')
+        if api_base:
+            openai_settings['base_url'] = api_base
+
+        llm_client = OpenAIClient(**openai_settings)
+
+        # Create and run orchestrator
+        analyzer = GitHubIssuesAnalyzer(
+            llm_client=llm_client,
+            github_token=config.github.token,
+            checkpoint_handler=checkpoint_mgr
+        )
+        orchestrator = AnalysisOrchestrator(analyzer, checkpoint_mgr)
+        orchestrator.setup_signal_handlers()
+
+        results = await orchestrator.run_analysis(
             repo_name=args.repo,
             num_issues=args.issues,
             checkpoint_interval=args.checkpoint_interval,
             resume=args.resume,
-            input_csv=args.input_csv
+            input_csv=args.input_csv,
+            use_mongodb=args.use_mongodb
         )
+
         print(
             f"Analysis completed successfully. Results saved for repository: {results.metadata.repository}")
-        if settings.JSON_EXPORT:
-            print(f"JSON results saved to: {settings.EXPORT_DIR}/json/")
-        if settings.CSV_EXPORT:
-            print(f"CSV results saved to: {settings.EXPORT_DIR}/csv/")
-        if settings.MONGODB_ENABLED:
+        print(
+            f"JSON results saved to: {os.getenv('EXPORT_DIR', 'exports')}/json/")
+        if os.getenv('CSV_EXPORT', 'true').lower() == 'true':
+            print(
+                f"CSV results saved to: {os.getenv('EXPORT_DIR', 'exports')}/csv/")
+        if os.getenv('MONGODB_ENABLED', 'true').lower() == 'true':
             print("Results also saved to MongoDB")
+
     except Exception as exc:
         logger.error("Analysis failed: {}".format(str(exc)))
         exit(1)
+
+
+def main():
+    """Main entry point for the analysis script."""
+    asyncio.run(main_async())
 
 
 if __name__ == '__main__':
