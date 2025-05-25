@@ -5,11 +5,11 @@ import logging
 from typing import Optional
 from datetime import datetime
 
-from src.analysis.core.prompts import get_system_prompt, get_user_prompt
-from src.analysis.core.clients.base import LLMClient
-from src.analysis.core.interfaces import IAnalyzer, IResponseCleaner, IResponseValidator
-from src.analysis.core.dto import ContractAnalysisDTO, dict_to_contract_analysis_dto
-from src.config import settings
+from ..prompts import get_system_prompt, get_user_prompt
+from ..clients.base import LLMClient
+from ..interfaces import IAnalyzer, IResponseCleaner, IResponseValidator
+from ..dto import ContractAnalysisDTO, dict_to_contract_analysis_dto
+from config import settings
 
 logger = logging.getLogger(__name__)
 

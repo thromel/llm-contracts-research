@@ -1,15 +1,17 @@
 """Main application entry point."""
 import asyncio
+import os
 from datetime import datetime, timedelta
 from tqdm import tqdm
 
 from core.config import AppConfig
 from core.repositories import RepositoryFactory
 from core.github_fetcher import GitHubFetcher
+from core.clients.github_api_client import GitHubAPIClient, GitHubConfig
 from analysis.core.analyzers import GitHubIssuesAnalyzer
-from analysis.core.clients import LLMClient
+from analysis.core.clients import OpenAIClient
 from analysis.core.checkpoint import CheckpointManager
-from analysis.core.progress import ConsoleProgressTracker
+from core.progress import TqdmProgressTracker
 
 config = AppConfig()
 
@@ -22,12 +24,24 @@ async def main():
         await repository.connect()
 
         # Initialize components
-        llm_client = LLMClient(config.llm.api_key)
+        llm_client = OpenAIClient(api_key=os.getenv('OPENAI_API_KEY'))
         checkpoint_manager = CheckpointManager(config.checkpoint_dir)
-        progress_tracker = ConsoleProgressTracker()
+        progress_tracker = TqdmProgressTracker()
+        github_config = GitHubConfig(
+            api_url=config.github.api_url,
+            token=config.github.token,
+            max_retries=config.github.max_retries,
+            per_page=config.github.per_page
+        )
+        github_api_client = GitHubAPIClient(github_config)
 
         # Create fetcher and analyzer
-        fetcher = GitHubFetcher(repository)
+        fetcher = GitHubFetcher(
+            api_client=github_api_client,
+            repository=repository,
+            progress_tracker=progress_tracker,
+            checkpoint_manager=checkpoint_manager
+        )
         analyzer = GitHubIssuesAnalyzer.create(
             llm_client=llm_client,
             github_token=config.github.token,

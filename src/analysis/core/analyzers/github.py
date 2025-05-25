@@ -3,19 +3,19 @@
 import logging
 from typing import List, Optional
 
-from src.analysis.core.interfaces import (
+from ..interfaces import (
     IAnalyzer,
     IResultWriter,
     ICheckpointManager,
     IProgressTracker
 )
-from src.analysis.core.clients.base import LLMClient
-from src.analysis.core.clients.github import GitHubAPIClient
-from src.analysis.core.processors.cleaner import MarkdownResponseCleaner
-from src.analysis.core.processors.validator import ContractAnalysisValidator
-from src.analysis.core.processors.checkpoint import CheckpointHandler
-from src.analysis.core.dto import ContractAnalysisDTO, AnalysisResultsDTO
-from src.analysis.core.storage.factory import StorageFactory
+from ..clients.base import LLMClient
+from ..clients.github import GitHubAPIClient
+from ..processors.cleaner import MarkdownResponseCleaner
+from ..processors.validator import ContractAnalysisValidator
+from ..processors.checkpoint import CheckpointHandler
+from ..dto import ContractAnalysisDTO, AnalysisResultsDTO
+from ..storage.factory import StorageFactory
 from core.repositories import BaseRepository, RepositoryFactory
 from core.config import AppConfig
 

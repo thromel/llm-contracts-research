@@ -1,7 +1,7 @@
 """Progress tracking implementation."""
 
 import logging
-from src.analysis.core.interfaces import IProgressTracker
+from ..interfaces import IProgressTracker
 
 logger = logging.getLogger(__name__)
 

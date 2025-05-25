@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any
 
-from src.analysis.core.dto import (
+from ..dto import (
     ContractAnalysisDTO,
     AnalysisMetadataDTO,
     AnalysisResultsDTO,

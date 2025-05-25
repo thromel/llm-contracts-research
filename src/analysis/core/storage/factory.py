@@ -3,11 +3,11 @@
 import logging
 from typing import List, Optional, Type
 
-from src.analysis.core.interfaces import IResultWriter, IStorageFactory
-from src.analysis.core.storage.json_storage import JSONResultsStorage
-from src.analysis.core.storage.mongodb.repository import MongoDBRepository
-from src.analysis.core.storage.csv_storage import CSVExporter, CSVStorageAdapter
-from src.config import settings
+from ..interfaces import IResultWriter, IStorageFactory
+from .json_storage import JSONResultsStorage
+from .mongodb.repository import MongoDBRepository
+from .csv_storage import CSVExporter, CSVStorageAdapter
+from config import settings
 
 logger = logging.getLogger(__name__)
 

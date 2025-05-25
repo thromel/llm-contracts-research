@@ -5,7 +5,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from src.analysis.core.dto import AnalysisMetadataDTO
+from ..dto import AnalysisMetadataDTO
 
 logger = logging.getLogger(__name__)
 

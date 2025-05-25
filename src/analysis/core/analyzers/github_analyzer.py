@@ -4,10 +4,10 @@ import logging
 import json
 from datetime import datetime
 
-from src.analysis.core.clients.openai import OpenAIClient
-from src.analysis.core.clients.github import GitHubAPIClient
-from src.analysis.core.processors.checkpoint import CheckpointHandler
-from src.analysis.core.dto import IssueAnalysisDTO
+from ..clients.openai import OpenAIClient
+from ..clients.github import GitHubAPIClient
+from ..processors.checkpoint import CheckpointHandler
+from ..dto import IssueAnalysisDTO
 
 logger = logging.getLogger(__name__)
 
@@ -63,22 +63,22 @@ Please analyze and provide the following information in JSON format:
 
 Example response format:
 ```json
-{
-            "has_violation": true,
+{{
+  "has_violation": true,
   "violation_type": "breaking change",
   "severity": "high",
   "confidence": "medium",
   "description": "The API removed the X parameter without warning",
   "resolution_status": "fixed",
   "resolution_details": "The team restored backward compatibility in version Y"
-}
+}}
 ```
 
 Or if no violation:
 ```json
-{
-            "has_violation": false
-}
+{{
+  "has_violation": false
+}}
 ```
 
 Respond ONLY with valid JSON.

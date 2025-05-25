@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Generic, TypeVar
 from datetime import datetime
 
-from src.analysis.core.dto import (
+from .dto import (
     ContractAnalysisDTO,
     AnalysisMetadataDTO,
     AnalysisResultsDTO

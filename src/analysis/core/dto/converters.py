@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Dict, Any, List
 
-from src.analysis.core.dto.base import (
+from .base import (
     CommentDTO,
     GithubIssueDTO,
     PatternFrequencyDTO,

@@ -4,16 +4,16 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-from src.config import settings
-from src.analysis.core.interfaces import (
+from config import settings
+from ..interfaces import (
     IAnalyzer,
     IResultWriter,
     IAnalysisOrchestrator,
     IProgressTracker,
     ICheckpointManager
 )
-from src.analysis.core.clients.github import GitHubAPIClient
-from src.analysis.core.dto import (
+from ..clients.github import GitHubAPIClient
+from ..dto import (
     ContractAnalysisDTO,
     AnalysisMetadataDTO,
     AnalysisResultsDTO
@@ -213,7 +213,7 @@ class AnalysisOrchestrator(IAnalysisOrchestrator):
             return
 
         try:
-            from src.analysis.core.storage.factory import StorageFactory
+            from ..storage.factory import StorageFactory
             intermediate_metadata = self._create_intermediate_metadata(
                 metadata, current_index + 1)
             intermediate_storage = StorageFactory.create_storage(

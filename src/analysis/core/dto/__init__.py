@@ -1,6 +1,6 @@
 """Data Transfer Objects for the analysis module."""
 
-from src.analysis.core.dto.base import (
+from .base import (
     CommentDTO,
     GithubIssueDTO,
     PatternFrequencyDTO,
@@ -12,7 +12,7 @@ from src.analysis.core.dto.base import (
     AnalysisResultsDTO,
     IssueAnalysisDTO
 )
-from src.analysis.core.dto.converters import (
+from .converters import (
     dict_to_comment_dto,
     dict_to_github_issue_dto,
     dict_to_pattern_frequency_dto,

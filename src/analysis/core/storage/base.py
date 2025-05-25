@@ -1,7 +1,7 @@
 """Base protocol for results storage."""
 
 from typing import Protocol
-from src.analysis.core.dto import ContractAnalysisDTO, AnalysisMetadataDTO, AnalysisResultsDTO
+from ..dto import ContractAnalysisDTO, AnalysisMetadataDTO, AnalysisResultsDTO
 
 
 class ResultsStorage(Protocol):

@@ -7,8 +7,8 @@ from datetime import datetime
 from github import Github
 from tqdm import tqdm
 
-from src.config import settings
-from src.analysis.core.dto import GithubIssueDTO, CommentDTO
+from config import settings
+from ..dto import GithubIssueDTO, CommentDTO
 
 logger = logging.getLogger(__name__)
 
