@@ -62,3 +62,20 @@ class TqdmProgressTracker(ProgressTracker):
         if self._count > 0:  # Only print final newline if we showed progress
             sys.stdout.write("\n")
             sys.stdout.flush()
+
+    def start_analysis(self, total_issues: int, repository_name: str) -> None:
+        """Start analysis tracking.
+
+        Args:
+            total_issues: Total number of issues to analyze
+            repository_name: Name of the repository being analyzed
+        """
+        self.start_operation(total_issues, f"Analyzing {repository_name}")
+
+    def update_progress(self, amount: int = 1) -> None:
+        """Update analysis progress.
+
+        Args:
+            amount: Amount to increment progress by
+        """
+        self.update(amount)

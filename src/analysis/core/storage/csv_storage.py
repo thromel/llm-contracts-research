@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 from datetime import datetime
 
-from src.analysis.core.interfaces import IResultWriter
-from src.analysis.core.dto import AnalysisMetadataDTO, ContractAnalysisDTO
+from ..interfaces import IResultWriter
+from ..dto import AnalysisMetadataDTO, ContractAnalysisDTO
 
 logger = logging.getLogger(__name__)
 

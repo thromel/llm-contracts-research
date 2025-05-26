@@ -10,7 +10,7 @@ from core.github_fetcher import GitHubFetcher
 from core.clients.github_api_client import GitHubAPIClient, GitHubConfig
 from analysis.core.analyzers import GitHubIssuesAnalyzer
 from analysis.core.clients import OpenAIClient
-from analysis.core.checkpoint import CheckpointManager
+from core.checkpoint_manager import CheckpointManager
 from core.progress import TqdmProgressTracker
 
 config = AppConfig()
@@ -35,51 +35,74 @@ async def main():
         )
         github_api_client = GitHubAPIClient(github_config)
 
-        # Create fetcher and analyzer
-        fetcher = GitHubFetcher(
-            api_client=github_api_client,
-            repository=repository,
-            progress_tracker=progress_tracker,
-            checkpoint_manager=checkpoint_manager
-        )
-        analyzer = GitHubIssuesAnalyzer.create(
-            llm_client=llm_client,
-            github_token=config.github.token,
-            checkpoint_handler=checkpoint_manager,
-            progress_tracker=progress_tracker
-        )
-
         # Calculate since date if specified
         since_date = None
         if config.since_days:
             since_date = datetime.utcnow() - timedelta(days=config.since_days)
 
-        # Create progress bar for repositories
-        with tqdm(total=len(config.repositories), desc="Repositories", unit="repo") as pbar:
-            # Fetch issues
-            await fetcher.fetch_repositories(
-                repo_list=config.repositories,
-                progress_bar=pbar,
-                checkpoint_manager=checkpoint_manager,
-                since_date=since_date,
-                max_issues=config.max_issues_per_repo,
-                include_closed=config.include_closed
+        # Use GitHub API client in async context
+        async with github_api_client:
+            # Create fetcher and analyzer
+            fetcher = GitHubFetcher(
+                api_client=github_api_client,
+                repository=repository,
+                progress_tracker=progress_tracker,
+                checkpoint_manager=checkpoint_manager
+            )
+            analyzer = GitHubIssuesAnalyzer.create(
+                llm_client=llm_client,
+                github_token=config.github.token,
+                checkpoint_handler=checkpoint_manager,
+                progress_tracker=progress_tracker
             )
 
-        # Analyze repositories
-        for repo in config.repositories:
-            try:
-                results = await analyzer.analyze_repository(
-                    repo_name=repo,
-                    num_issues=config.max_issues_per_repo or 100,
-                    checkpoint_interval=config.checkpoint_interval
-                )
-                print(f"\nAnalysis completed for {repo}:")
-                print(f"Total issues: {results.total_issues}")
-                print(f"Analyzed issues: {results.completed_issues}")
-            except Exception as e:
-                print(f"\nError analyzing {repo}: {str(e)}")
-                continue
+            # Create progress bar for repositories
+            with tqdm(total=len(config.repositories), desc="Repositories", unit="repo") as pbar:
+                # Fetch issues for each repository
+                for repo in config.repositories:
+                    try:
+                        # Parse repository format (owner/repo)
+                        if '/' not in repo:
+                            print(
+                                f"Invalid repository format: {repo}. Expected 'owner/repo'")
+                            continue
+
+                        owner, repo_name = repo.split('/', 1)
+
+                        # Fetch issues for this repository
+                        issue_count = 0
+                        async for issue in fetcher.fetch_repository_issues(
+                            owner=owner,
+                            repo=repo_name,
+                            since=since_date,
+                            max_issues=config.max_issues_per_repo
+                        ):
+                            issue_count += 1
+                            # Store issue in repository
+                            await repository.save_issue(issue)
+
+                        print(f"Fetched {issue_count} issues from {repo}")
+                        pbar.update(1)
+
+                    except Exception as e:
+                        print(f"Error fetching issues from {repo}: {str(e)}")
+                        pbar.update(1)
+                        continue
+
+            # Analyze repositories
+            for repo in config.repositories:
+                try:
+                    results = await analyzer.analyze_repository(
+                        repo_name=repo,
+                        num_issues=config.max_issues_per_repo or 100,
+                        checkpoint_interval=config.checkpoint_interval
+                    )
+                    print(f"\nAnalysis completed for {repo}:")
+                    print(f"Total issues: {results.total_issues}")
+                    print(f"Analyzed issues: {results.completed_issues}")
+                except Exception as e:
+                    print(f"\nError analyzing {repo}: {str(e)}")
+                    continue
 
     except Exception as e:
         print(f"Application error: {str(e)}")

@@ -6,8 +6,8 @@ from datetime import datetime
 
 from mongoengine import connect, disconnect
 
-from src.analysis.core.storage.base import ResultsStorage
-from src.analysis.core.dto import (
+from ..base import ResultsStorage
+from ...dto import (
     ContractAnalysisDTO,
     AnalysisMetadataDTO,
     AnalysisResultsDTO,
@@ -17,7 +17,7 @@ from src.analysis.core.dto import (
     NewContractDTO,
     PatternFrequencyDTO
 )
-from src.analysis.core.storage.mongodb.schemas import (
+from .schemas import (
     GithubIssue,
     ContractAnalysis,
     AnalysisMetadata,

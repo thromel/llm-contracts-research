@@ -1,6 +1,7 @@
 """GitHub issues analyzer implementation."""
 
 import logging
+from datetime import datetime
 from typing import List, Optional
 
 from ..interfaces import (
@@ -121,13 +122,26 @@ class GitHubIssuesAnalyzer:
                         f"Error analyzing issue {issue.number}: {str(e)}")
                     continue
 
+            # Create metadata
+            from ..dto import AnalysisMetadataDTO
+            metadata = AnalysisMetadataDTO(
+                repository=repo_name,
+                analysis_timestamp=datetime.now().isoformat(),
+                num_issues=len(analyzed_issues),
+                repository_name=repo_name.split('/')[-1],
+                repository_owner=repo_name.split(
+                    '/')[0] if '/' in repo_name else None
+            )
+
             # Create final results
             results = AnalysisResultsDTO(
-                repository=repo,
-                analyzed_issues=analyzed_issues,
-                total_issues=len(issues),
-                completed_issues=len(analyzed_issues)
+                metadata=metadata,
+                analyzed_issues=analyzed_issues
             )
+
+            # Add summary attributes for backward compatibility
+            results.total_issues = len(issues)
+            results.completed_issues = len(analyzed_issues)
 
             return results
 
