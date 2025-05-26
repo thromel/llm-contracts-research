@@ -104,10 +104,6 @@ async def main():
                             name=repo_name,
                             owner=owner,
                             full_name=repo_full_name,
-                            description=repo_info.get('description', ''),
-                            stars=repo_info.get('stargazers_count', 0),
-                            forks=repo_info.get('forks_count', 0),
-                            language=repo_info.get('language', ''),
                             url=repo_info['html_url'],
                             created_at=datetime.fromisoformat(
                                 repo_info['created_at'].rstrip('Z')),
@@ -183,10 +179,18 @@ async def main():
                     # Save analysis results to storage backends
                     for storage_backend in storage:
                         try:
-                            await storage_backend.save_results(
-                                analyzed_issues=results.analyzed_issues,
-                                metadata=results.metadata
-                            )
+                            # Check if save_results is async or sync
+                            if hasattr(storage_backend.save_results, '__call__'):
+                                if asyncio.iscoroutinefunction(storage_backend.save_results):
+                                    await storage_backend.save_results(
+                                        analyzed_issues=results.analyzed_issues,
+                                        metadata=results.metadata
+                                    )
+                                else:
+                                    storage_backend.save_results(
+                                        analyzed_issues=results.analyzed_issues,
+                                        metadata=results.metadata
+                                    )
                         except Exception as e:
                             print(
                                 f"⚠️  Failed to save to {storage_backend.__class__.__name__}: {str(e)}")
@@ -194,8 +198,12 @@ async def main():
                     print(f"✅ Analysis completed for {repo_full_name}:")
                     print(f"   📈 Total issues: {results.total_issues}")
                     print(f"   ✅ Analyzed issues: {results.completed_issues}")
-                    print(
-                        f"   🎯 Success rate: {(results.completed_issues/results.total_issues*100):.1f}%")
+                    # Avoid division by zero
+                    if results.total_issues > 0:
+                        print(
+                            f"   🎯 Success rate: {(results.completed_issues/results.total_issues*100):.1f}%")
+                    else:
+                        print(f"   🎯 Success rate: N/A (no issues to analyze)")
 
                 except Exception as e:
                     print(f"❌ Error analyzing {repo_full_name}: {str(e)}")

@@ -65,7 +65,8 @@ class IssueDTO(BaseDTO):
             repository_id=data['repository_id'],
             title=data['title'],
             body=data['body'],
-            status=data['status'],
+            # Handle both status and state
+            status=data.get('status', data.get('state', 'unknown')),
             number=data['number'],  # Add number field
             id=str(data.get('_id', data.get('id'))),
             labels=data.get('labels', []),
