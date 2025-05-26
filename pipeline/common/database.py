@@ -45,6 +45,8 @@ class MongoDBManager:
         self.collections = {
             'raw_posts': 'raw_posts',
             'filtered_posts': 'filtered_posts',
+            'llm_screening_results': 'llm_screening_results',
+            'agentic_screening_results': 'agentic_screening_results',
             'labelled_posts': 'labelled_posts',
             'labelling_sessions': 'labelling_sessions',
             'reliability_metrics': 'reliability_metrics',
@@ -103,6 +105,33 @@ class MongoDBManager:
         await self.db[self.collections['filtered_posts']].create_index([
             ('passed_keyword_filter', 1),
             ('filter_confidence', -1)
+        ])
+
+        await self.db[self.collections['filtered_posts']].create_index([
+            ('llm_screened', 1)
+        ])
+
+        # LLM screening results indexes
+        await self.db[self.collections['llm_screening_results']].create_index([
+            ('filtered_post_id', 1)
+        ])
+
+        await self.db[self.collections['llm_screening_results']].create_index([
+            ('decision', 1),
+            ('confidence', -1)
+        ])
+
+        await self.db[self.collections['llm_screening_results']].create_index([
+            ('created_at', -1)
+        ])
+
+        # Agentic screening results indexes
+        await self.db[self.collections['agentic_screening_results']].create_index([
+            ('filtered_post_id', 1)
+        ])
+
+        await self.db[self.collections['agentic_screening_results']].create_index([
+            ('timestamp', -1)
         ])
 
         # Labelled posts indexes
@@ -274,6 +303,42 @@ class MongoDBManager:
                 return str(existing['_id'])
             else:
                 raise
+
+    async def save_screening_result(self, screening_result_dict: Dict[str, Any]) -> str:
+        """Save LLM screening result."""
+        result = await self.insert_one(self.collections['llm_screening_results'], screening_result_dict)
+
+        # Mark the filtered post as screened
+        await self.update_one(
+            self.collections['filtered_posts'],
+            {'_id': screening_result_dict['filtered_post_id']},
+            {'$set': {'llm_screened': True}}
+        )
+
+        return str(result.inserted_id)
+
+    async def get_posts_for_screening(
+        self,
+        batch_size: int = 50,
+        screening_type: str = "llm_screening"
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """Get filtered posts that need LLM screening."""
+
+        # Get posts that passed keyword filter but haven't been LLM screened
+        query = {
+            'passed_keyword_filter': True,
+            'llm_screened': {'$ne': True}
+        }
+
+        count = 0
+        async for filtered_post in self.find_many(
+            self.collections['filtered_posts'],
+            query,
+            limit=batch_size,
+            sort=[('filter_confidence', -1)]
+        ):
+            yield filtered_post
+            count += 1
 
     async def get_posts_for_labelling(
         self,

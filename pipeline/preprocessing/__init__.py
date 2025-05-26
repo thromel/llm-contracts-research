@@ -6,9 +6,9 @@ high recall for LLM contract violations.
 """
 
 from .keyword_filter import KeywordPreFilter
-from .text_processor import TextProcessor
+# from .text_processor import TextProcessor
 
 __all__ = [
     'KeywordPreFilter',
-    'TextProcessor'
+    # 'TextProcessor'
 ]

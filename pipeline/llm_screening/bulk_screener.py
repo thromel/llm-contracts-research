@@ -121,7 +121,7 @@ Examples of N (not contract-related):
 
         # Get posts that passed keyword filter but haven't been LLM screened
         posts_to_screen = []
-        async for filtered_post in self.db.get_posts_for_labelling("bulk_screening", batch_size):
+        async for filtered_post in self.db.get_posts_for_screening(batch_size, "bulk_screening"):
             posts_to_screen.append(filtered_post)
 
         logger.info(f"Starting bulk screening of {len(posts_to_screen)} posts")
@@ -324,13 +324,29 @@ Examples of N (not contract-related):
         filtered_post: Dict[str, Any],
         screening_result: LLMScreeningResult
     ) -> None:
-        """Save screening result to database.
+        """Save screening result to database."""
 
-        This is a placeholder - the actual saving will be handled
-        by the screening orchestrator to avoid circular dependencies.
-        """
-        # This method will be called by the orchestrator
-        pass
+        screening_doc = {
+            'filtered_post_id': str(filtered_post['_id']),
+            'decision': screening_result.decision,
+            'confidence': screening_result.confidence,
+            'rationale': screening_result.rationale,
+            'model_used': screening_result.model_used,
+            'screening_type': 'bulk',
+            'created_at': datetime.utcnow()
+        }
+
+        result_id = await self.db.save_screening_result(screening_doc)
+
+        # Log provenance
+        await self.provenance.log_transformation(
+            source_id=str(filtered_post['_id']),
+            source_collection='filtered_posts',
+            target_id=result_id,
+            target_collection='llm_screening_results',
+            transformation_type='bulk_screening',
+            metadata={'confidence': screening_result.confidence}
+        )
 
     async def get_screening_statistics(self) -> Dict[str, Any]:
         """Get bulk screening statistics."""

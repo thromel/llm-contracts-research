@@ -772,7 +772,7 @@ class AgenticScreeningOrchestrator:
 
         # Get posts for screening
         posts_to_screen = []
-        async for filtered_post in self.db.get_posts_for_labelling("agentic_screening", batch_size):
+        async for filtered_post in self.db.get_posts_for_screening(batch_size, "agentic_screening"):
             posts_to_screen.append(filtered_post)
 
         logger.info(
