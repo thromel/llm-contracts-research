@@ -334,11 +334,12 @@ Matched Keywords: {filtered_post.get('matched_keywords', [])}
 Filter Confidence: {filtered_post.get('filter_confidence', 0.0)}
 """
 
-        # Create prompt for initial screening (no previous analysis)
+        # Create prompt for comprehensive screening (primary screener mode)
         prompt = self.prompts.get_borderline_screening_prompt().format(
             title=title,
-            content=content[:4000],  # Larger context for GPT-4
-            previous_analysis="No previous analysis - initial screening" + metadata_context
+            # Larger context for comprehensive analysis
+            content=content[:6000],
+            previous_analysis="Primary screening analysis - comprehensive evaluation" + metadata_context
         )
 
         # Make API call

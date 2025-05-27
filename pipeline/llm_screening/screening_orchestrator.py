@@ -273,18 +273,19 @@ class ScreeningOrchestrator:
                 logger.info(
                     f"Borderline screening: {borderline_results.get('processed', 0)} posts processed")
 
-        # Fallback: Use borderline screener for direct screening if no bulk screener
+        # Primary screening: Use advanced GPT-4 screener for comprehensive analysis
         elif self.borderline_screener:
             logger.info(
-                "📊 No bulk screener available, using borderline screener for direct screening...")
-            direct_results = await self.borderline_screener.screen_all_unscreened_posts(
+                "📊 Running comprehensive GPT-4 screening with comment analysis...")
+            comprehensive_results = await self.borderline_screener.screen_all_unscreened_posts(
                 batch_size=self.config.traditional_screening.borderline_batch_size
             )
-            results['direct_screening'] = direct_results
-            results['total_processed'] += direct_results.get('processed', 0)
+            results['comprehensive_screening'] = comprehensive_results
+            results['total_processed'] += comprehensive_results.get(
+                'processed', 0)
 
             logger.info(
-                f"Direct screening: {direct_results.get('processed', 0)} posts processed")
+                f"Comprehensive screening: {comprehensive_results.get('processed', 0)} posts processed")
 
         return results
 
