@@ -11,6 +11,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 from enum import Enum
+import logging
 
 
 class ScreeningMode(Enum):
@@ -205,7 +206,7 @@ class PipelineConfig:
 
         # Database configuration
         config.database.connection_string = os.getenv(
-            'MONGODB_CONNECTION_STRING',
+            'MONGODB_URI',
             'mongodb://localhost:27017/'
         )
         config.database.database_name = os.getenv(
@@ -235,8 +236,12 @@ class PipelineConfig:
     def _setup_llm_configs_from_env(self):
         """Setup LLM configurations from environment variables."""
 
+        logger = logging.getLogger(__name__)
+        logger.info("🔧 Setting up LLM configurations from environment...")
+
         # Traditional screening LLMs
         if os.getenv('DEEPSEEK_API_KEY'):
+            logger.info("✅ Setting up DeepSeek for traditional screening")
             self.traditional_screening.bulk_screener_llm = LLMConfig(
                 provider=LLMProvider.DEEPSEEK,
                 model_name=os.getenv('DEEPSEEK_MODEL', 'deepseek-reasoner'),
@@ -248,6 +253,7 @@ class PipelineConfig:
             )
 
         if os.getenv('OPENAI_API_KEY'):
+            logger.info("✅ Setting up OpenAI for traditional screening")
             self.traditional_screening.borderline_screener_llm = LLMConfig(
                 provider=LLMProvider.OPENAI,
                 model_name=os.getenv('OPENAI_MODEL', 'gpt-4-1106-preview'),
@@ -259,7 +265,13 @@ class PipelineConfig:
         # Agentic screening LLMs (can use different models for different agents)
         base_llm_config = None
 
+        logger.info(
+            f"🔍 Checking agentic provider: {os.getenv('AGENTIC_PROVIDER', 'openai')}")
+        logger.info(
+            f"🔑 OpenAI API key present: {bool(os.getenv('OPENAI_API_KEY'))}")
+
         if os.getenv('AGENTIC_PROVIDER', 'openai').lower() == 'openai' and os.getenv('OPENAI_API_KEY'):
+            logger.info("✅ Setting up OpenAI for agentic screening")
             base_llm_config = LLMConfig(
                 provider=LLMProvider.OPENAI,
                 model_name=os.getenv('AGENTIC_MODEL', 'gpt-4-1106-preview'),
@@ -267,7 +279,10 @@ class PipelineConfig:
                 temperature=float(os.getenv('AGENTIC_TEMPERATURE', '0.1')),
                 max_tokens=int(os.getenv('AGENTIC_MAX_TOKENS', '2000'))
             )
+            logger.info(
+                f"📋 Agentic config: {base_llm_config.model_name} with API key: {base_llm_config.api_key[:10]}...")
         elif os.getenv('AGENTIC_PROVIDER', '').lower() == 'anthropic' and os.getenv('ANTHROPIC_API_KEY'):
+            logger.info("✅ Setting up Anthropic for agentic screening")
             base_llm_config = LLMConfig(
                 provider=LLMProvider.ANTHROPIC,
                 model_name=os.getenv(
@@ -279,6 +294,8 @@ class PipelineConfig:
                 max_tokens=int(os.getenv('AGENTIC_MAX_TOKENS', '2000'))
             )
         elif os.getenv('DEEPSEEK_API_KEY'):
+            logger.info(
+                "✅ Setting up DeepSeek for agentic screening (fallback)")
             # Fallback to DeepSeek for agentic
             base_llm_config = LLMConfig(
                 provider=LLMProvider.DEEPSEEK,
@@ -292,10 +309,14 @@ class PipelineConfig:
 
         # Set up agentic agents (using same config for all agents, can be customized)
         if base_llm_config:
+            logger.info("✅ Setting up all agentic agents with base config")
             self.agentic_screening.contract_detector_llm = base_llm_config
             self.agentic_screening.technical_analyst_llm = base_llm_config
             self.agentic_screening.relevance_judge_llm = base_llm_config
             self.agentic_screening.decision_synthesizer_llm = base_llm_config
+        else:
+            logger.warning(
+                "❌ No valid LLM configuration found for agentic screening")
 
     def get_active_llm_configs(self) -> Dict[str, LLMConfig]:
         """Get LLM configurations for the active screening mode."""

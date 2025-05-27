@@ -57,40 +57,75 @@ class BulkScreener:
             'Content-Type': 'application/json'
         }
 
-        # Screening prompt template
-        self.screening_prompt = """You are analyzing a post from GitHub or Stack Overflow to determine if it contains explicit or implicit API usage contract violations related to Large Language Models (LLMs).
+        # Enhanced screening prompt template based on LLM contracts research
+        self.screening_prompt = """You are an expert analyst identifying LLM API contract violations for research purposes. Based on extensive analysis of 600+ real-world contract violations, you know that LLM APIs have specific "contracts" - conditions and usage protocols that developers must follow.
 
-API contracts include:
-- Parameter constraints (max_tokens, temperature, top_p ranges)
-- Rate limiting and quota requirements  
-- Input format specifications (JSON schema, function calling)
-- Context length limitations
-- Authentication and authorization requirements
-- Error handling expectations
-- Response format contracts
+CORE LLM API CONTRACT CATEGORIES (from research):
 
-Your task: Does this post contain an explicit or implicit API-usage contract violation or discussion?
+1. PARAMETER CONSTRAINTS:
+   - max_tokens: Must be within model limits (e.g., GPT-4: ≤8192)
+   - temperature: Must be 0.0-2.0 
+   - top_p: Must be 0.0-1.0
+   - Invalid combinations (e.g., temperature + top_p simultaneously)
 
-Post Title: {title}
+2. RATE LIMITING VIOLATIONS:
+   - HTTP 429 "Too Many Requests" errors
+   - RPM (requests per minute) exceeded
+   - TPM (tokens per minute) exceeded
+   - Quota/billing limit violations
 
-Post Content: {content}
+3. CONTENT POLICY VIOLATIONS:
+   - "Content flagged as potentially violating usage policy"
+   - Safety filter rejections
+   - Moderation API blocks
+   - Inappropriate content filtering
+
+4. INPUT/OUTPUT FORMAT CONTRACTS:
+   - JSON schema validation failures for function calling
+   - Required message format violations (role, content structure)
+   - Response format not matching requested schema
+   - Tool/function calling format errors
+
+5. CONTEXT LENGTH VIOLATIONS:
+   - "Context length exceeded" errors
+   - Token count > model maximum (4K, 8K, 32K, 128K)
+   - Conversation history too long
+   - Prompt truncation issues
+
+6. AUTHENTICATION/AUTHORIZATION:
+   - Invalid API keys (HTTP 401)
+   - Expired tokens
+   - Insufficient permissions (HTTP 403)
+   - Billing/payment issues
+
+POST TO ANALYZE:
+Title: {title}
+
+Content: {content}
+
+TASK: Determine if this post contains LLM API contract violations or discussions.
+
+POSITIVE INDICATORS (Y):
+- Specific error messages with status codes (400, 401, 403, 429, 500)
+- Parameter validation failures with exact limits mentioned
+- API rate limiting or quota errors
+- Content policy/safety filter rejections
+- JSON parsing failures in LLM responses
+- Context length/token limit exceeded errors
+- Function calling or tool use problems
+- Authentication/billing issues with LLM APIs
+
+NEGATIVE INDICATORS (N):
+- Generic programming questions unrelated to LLM APIs
+- Installation/setup issues not involving API calls
+- Conceptual discussions without specific API usage
+- Model quality/accuracy complaints (not contract violations)
+- General Python/JavaScript errors unrelated to LLM APIs
 
 Respond with exactly this format:
 DECISION: [Y/N]
-CONFIDENCE: [0.0-1.0]
-RATIONALE: [One sentence explanation]
-
-Examples of Y (contract-related):
-- "max_tokens must be between 1 and 4096 but I'm getting an error"
-- "Rate limit exceeded with 429 status code" 
-- "JSON schema validation failed for function calling"
-- "Context length exceeded the model's limit"
-
-Examples of N (not contract-related):
-- General programming questions unrelated to LLM APIs
-- Installation or environment setup issues
-- Conceptual discussions without specific API constraints
-- Generic error messages without API context"""
+CONFIDENCE: [0.0-1.0]  
+RATIONALE: [Specific contract type and evidence, e.g., "Rate limiting violation with 429 error" or "Context length exceeded GPT-4 8K limit"]"""
 
     async def screen_batch(
         self,

@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple, Any
 from enum import Enum
+import uuid
 
 
 class Platform(Enum):
@@ -75,7 +76,7 @@ class RawPost:
     url: str = ""
     title: str = ""
     body_md: str = ""  # Markdown content
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now())
     updated_at: Optional[datetime] = None
     score: int = 0
     answer_score: Optional[int] = None  # For SO answers
@@ -92,13 +93,22 @@ class RawPost:
     view_count: int = 0
 
     # Provenance
-    acquisition_timestamp: datetime = field(default_factory=datetime.utcnow)
+    acquisition_timestamp: datetime = field(
+        default_factory=lambda: datetime.now())
     acquisition_version: str = "1.0.0"
+
+    def __post_init__(self):
+        """Generate unique ID if not provided."""
+        if self._id is None:
+            # Generate a unique ID based on platform and source_id
+            if self.source_id:
+                self._id = f"{self.platform.value}_{self.source_id}"
+            else:
+                self._id = f"{self.platform.value}_{uuid.uuid4().hex[:8]}"
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for MongoDB storage."""
-        return {
-            '_id': self._id,
+        data = {
             'platform': self.platform.value,
             'source_id': self.source_id,
             'url': self.url,
@@ -118,6 +128,12 @@ class RawPost:
             'acquisition_timestamp': self.acquisition_timestamp,
             'acquisition_version': self.acquisition_version
         }
+
+        # Only include _id if it's not None
+        if self._id is not None:
+            data['_id'] = self._id
+
+        return data
 
 
 @dataclass

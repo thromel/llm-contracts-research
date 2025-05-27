@@ -48,29 +48,40 @@ class KeywordPreFilter:
         self.db = db_manager
         self.provenance = ProvenanceTracker(db_manager)
 
-        # LLM Contract Keywords
+        # LLM Contract Keywords - focused on contract violations from research
         self.llm_contract_keywords = {
-            # Core API parameters
+            # Core API parameters (from contract violations)
             'max_tokens', 'temperature', 'top_p', 'frequency_penalty',
             'presence_penalty', 'stop', 'stream', 'logprobs', 'logit_bias',
-            'n', 'best_of', 'echo', 'suffix', 'context_length',
+            'n', 'best_of', 'echo', 'suffix', 'context_length', 'context_limit',
 
-            # JSON and schema
+            # JSON and schema violations (major category in research)
             'json_schema', 'response_format', 'function_calling', 'tools',
-            'schema', 'structured_output', 'json_mode',
+            'schema', 'structured_output', 'json_mode', 'parse_error',
+            'json_parse', 'malformed_json', 'invalid_json', 'schema_validation',
 
-            # Rate limiting and quotas
+            # Rate limiting and quotas (frequent violations)
             'rate_limit', 'quota', 'rpm', 'tpm', 'requests_per_minute',
-            'tokens_per_minute', 'usage_quota', 'billing',
+            'tokens_per_minute', 'usage_quota', 'billing', 'rate_exceeded',
+            'quota_exceeded', 'rate_limit_error', 'too_many_requests',
 
-            # Error codes and patterns
+            # Error codes and patterns (API contract violations)
             'invalid_request', 'model_not_found', 'insufficient_quota',
             'context_length_exceeded', 'rate_limit_exceeded', 'timeout',
-            'authentication_error', 'permission_denied',
+            'authentication_error', 'permission_denied', 'bad_request',
+            'unauthorized', 'forbidden', 'server_error', 'service_unavailable',
 
-            # Model specifications
+            # Content policy violations (new category from research)
+            'content_policy', 'usage_policy', 'content_filter', 'safety_filter',
+            'policy_violation', 'flagged_content', 'moderation', 'content_moderation',
+
+            # Token limit violations (very common)
+            'token_limit', 'token_exceeded', 'context_overflow', 'input_too_long',
+            'prompt_too_long', 'message_too_long', 'conversation_too_long',
+
+            # Model-specific issues
             'model_name', 'model_id', 'engine', 'deployment_id',
-            'fine_tuning', 'custom_model', 'base_model'
+            'fine_tuning', 'custom_model', 'base_model', 'model_error'
         }
 
         # ML-style root-cause cues from Khairunnesa et al.
@@ -104,24 +115,43 @@ class KeywordPreFilter:
             'debug', 'traceback', 'stack_trace'
         }
 
-        # Contract violation patterns (regex)
+        # Contract violation patterns (regex) - enhanced for LLM contracts
         self.contract_patterns = [
-            # Parameter validation patterns
-            r'(?i)(max_tokens|temperature|top_p)\s*(must|should|cannot|error|invalid)',
-            r'(?i)(rate.?limit|quota).*(exceeded|error|reached|hit)',
-            r'(?i)(context.?length|token.?limit).*(exceeded|too.?long|error)',
-            r'(?i)(json|schema).*(invalid|error|malformed|wrong)',
-            r'(?i)(api.?key|token).*(invalid|expired|missing|error)',
+            # Parameter validation patterns (core contract violations)
+            r'(?i)(max_tokens|temperature|top_p)\s*(must|should|cannot|error|invalid|exceeds?|limit)',
+            r'(?i)(rate.?limit|quota).*(exceeded|error|reached|hit|violation|denied)',
+            r'(?i)(context.?length|token.?limit).*(exceeded|too.?long|error|overflow|maximum)',
+            r'(?i)(json|schema).*(invalid|error|malformed|wrong|parse|failed|validation)',
+            r'(?i)(api.?key|token).*(invalid|expired|missing|error|unauthorized|forbidden)',
 
-            # Error code patterns
-            r'(?i)(400|401|403|429|500|502|503|504)\s*(error|status)',
+            # Content policy patterns (new from research)
+            r'(?i)(content|usage).?policy.*(violation|violated|flagged|denied|rejected)',
+            r'(?i)(safety|moderation).*(filter|blocked|flagged|violation)',
+            r'(?i)(prompt|input|content).*(filtered|blocked|inappropriate|violation)',
+
+            # Token/context limit patterns (very common)
+            r'(?i)(context|token|input).*(limit|maximum|exceeded|overflow|too.?long)',
+            r'(?i)(conversation|history).*(too.?long|exceeded|truncated)',
+            r'(?i)maximum.?context.?length.*(exceeded|reached)',
+
+            # Error code patterns (HTTP status codes)
+            r'(?i)(400|401|403|429|500|502|503|504)\s*(error|status|code)',
             r'(?i)error.?code\s*:?\s*\d+',
-            r'(?i)(BadRequest|Unauthorized|RateLimit|ServerError)',
+            r'(?i)(BadRequest|Unauthorized|RateLimit|ServerError|InvalidRequest)',
 
-            # Contract-specific error messages
-            r'(?i)(parameter|argument).*(required|missing|invalid)',
-            r'(?i)(must|should|cannot).*(be|provide|specify|exceed)',
-            r'(?i)(expected|requires?).*(but|got|received|found)'
+            # Contract-specific error messages (precise language)
+            r'(?i)(parameter|argument).*(required|missing|invalid|out.?of.?range)',
+            r'(?i)(must|should|cannot).*(be|provide|specify|exceed|contain)',
+            r'(?i)(expected|requires?).*(but|got|received|found|instead)',
+
+            # Output format violations (common in LLM usage)
+            r'(?i)(output|response).*(format|schema|structure).*(invalid|wrong|unexpected)',
+            r'(?i)(failed|unable).*(parse|decode|extract).*(json|xml|yaml)',
+            r'(?i)(model|llm).*(did.?not|failed.?to).*(follow|generate|produce)',
+
+            # Function calling violations (tool use contracts)
+            r'(?i)(function|tool).*(call|calling).*(error|failed|invalid|unknown)',
+            r'(?i)(tool|function).*(not.?found|unavailable|missing|undefined)'
         ]
 
         # Compile regex patterns for efficiency
@@ -272,13 +302,14 @@ class KeywordPreFilter:
             contract_matches
         )
 
-        # Decision logic: pass if high confidence OR has LLM keywords + error indicators
+        # More restrictive decision logic: require stronger signals for LLM contracts
         passed = (
-            confidence >= 0.3 or  # Base confidence threshold
-            # LLM + errors
-            (len(matched_llm_keywords) > 0 and len(matched_error_keywords) > 0) or
-            len(contract_matches) > 0 or  # Contract patterns found
-            len(tag_matches) > 0  # Relevant tags
+            confidence >= 0.5 or  # Higher confidence threshold
+            # Require both LLM keywords AND error indicators (stronger signal)
+            (len(matched_llm_keywords) >= 2 and len(matched_error_keywords) >= 1) or
+            len(contract_matches) >= 2 or  # Multiple contract patterns
+            # High-quality tag combinations
+            (len(tag_matches) >= 2 and len(matched_llm_keywords) >= 1)
         )
 
         # Filter metadata

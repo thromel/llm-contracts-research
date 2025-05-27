@@ -162,9 +162,54 @@ class MongoDBManager:
 
     # Generic CRUD operations
     async def insert_one(self, collection: str, document: Dict[str, Any]) -> Any:
-        """Insert a single document."""
-        result = await self.db[collection].insert_one(document)
-        return result
+        """Insert a single document with intelligent upsert handling."""
+        try:
+            result = await self.db[collection].insert_one(document)
+            return result
+        except DuplicateKeyError as e:
+            # Handle different collections with different unique constraints
+            if collection == 'filtered_posts' and 'raw_post_id' in document:
+                # For filtered_posts, the unique constraint is on raw_post_id
+                # Remove _id to avoid immutable field error during replace
+                replacement_doc = {k: v for k,
+                                   v in document.items() if k != '_id'}
+                result = await self.db[collection].replace_one(
+                    {'raw_post_id': document['raw_post_id']},
+                    replacement_doc,
+                    upsert=True
+                )
+                return result
+            elif collection == 'raw_posts' and 'platform' in document and 'source_id' in document:
+                # For raw_posts, the unique constraint is on (platform, source_id)
+                # Remove _id to avoid immutable field error during replace
+                replacement_doc = {k: v for k,
+                                   v in document.items() if k != '_id'}
+                result = await self.db[collection].replace_one(
+                    {
+                        'platform': document['platform'],
+                        'source_id': document['source_id']
+                    },
+                    replacement_doc,
+                    upsert=True
+                )
+                return result
+            elif '_id' in document:
+                # General case: try to replace by _id
+                # Remove _id to avoid immutable field error during replace
+                replacement_doc = {k: v for k,
+                                   v in document.items() if k != '_id'}
+                result = await self.db[collection].replace_one(
+                    {'_id': document['_id']},
+                    replacement_doc,
+                    upsert=True
+                )
+                return result
+            else:
+                # Last resort: remove _id and let MongoDB generate a new one
+                document_copy = document.copy()
+                document_copy.pop('_id', None)
+                result = await self.db[collection].insert_one(document_copy)
+                return result
 
     async def insert_many(self, collection: str, documents: List[Dict[str, Any]]) -> Any:
         """Insert multiple documents."""

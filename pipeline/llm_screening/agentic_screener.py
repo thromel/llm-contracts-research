@@ -16,6 +16,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 import json
 from dataclasses import dataclass, asdict
+import os
 
 # LangChain imports
 from langchain.agents import AgentType, initialize_agent, Tool
@@ -41,22 +42,26 @@ class ContractViolationAnalysis(BaseModel):
     has_violation: bool = Field(
         description="Whether a contract violation is present")
     violation_type: Optional[str] = Field(
-        description="Type of contract violation")
+        default=None, description="Type of contract violation")
     confidence: float = Field(description="Confidence score 0.0-1.0")
-    evidence: List[str] = Field(description="Evidence supporting the analysis")
+    evidence: List[str] = Field(
+        default_factory=list, description="Evidence supporting the analysis")
     violation_severity: str = Field(
-        description="Severity: low, medium, high, critical")
+        default="unknown", description="Severity: low, medium, high, critical")
 
 
 class TechnicalErrorAnalysis(BaseModel):
     """Structured analysis of technical errors."""
     is_technical_error: bool = Field(
         description="Whether technical error is present")
-    error_category: Optional[str] = Field(description="Category of error")
-    root_cause: Optional[str] = Field(description="Likely root cause")
+    error_category: Optional[str] = Field(
+        default=None, description="Category of error")
+    root_cause: Optional[str] = Field(
+        default=None, description="Likely root cause")
     api_related: bool = Field(description="Whether error is API-related")
     confidence: float = Field(description="Confidence score 0.0-1.0")
-    error_patterns: List[str] = Field(description="Identified error patterns")
+    error_patterns: List[str] = Field(
+        default_factory=list, description="Identified error patterns")
 
 
 class ContextRelevanceAnalysis(BaseModel):
@@ -64,9 +69,9 @@ class ContextRelevanceAnalysis(BaseModel):
     is_llm_related: bool = Field(description="Whether content is LLM-related")
     relevance_score: float = Field(description="Relevance score 0.0-1.0")
     llm_indicators: List[str] = Field(
-        description="LLM-related indicators found")
+        default_factory=list, description="LLM-related indicators found")
     context_quality: str = Field(
-        description="Quality: poor, fair, good, excellent")
+        default="unknown", description="Quality: poor, fair, good, excellent")
     requires_expert_review: bool = Field(
         description="Whether expert review is needed")
 
@@ -77,9 +82,10 @@ class FinalDecision(BaseModel):
     confidence: float = Field(description="Overall confidence 0.0-1.0")
     rationale: str = Field(description="Decision rationale")
     contract_types_identified: List[str] = Field(
-        description="Contract types found")
+        default_factory=list, description="Contract types found")
     recommended_action: str = Field(description="Recommended next action")
-    quality_flags: List[str] = Field(description="Quality flags or concerns")
+    quality_flags: List[str] = Field(
+        default_factory=list, description="Quality flags or concerns")
 
 
 @dataclass
@@ -95,11 +101,19 @@ class AgentResult:
 class CustomLLM(LLM):
     """Custom LLM wrapper for different API providers."""
 
-    def __init__(self, api_key: str, model_name: str, base_url: str = None):
-        super().__init__()
-        self.api_key = api_key
-        self.model_name = model_name
-        self.base_url = base_url
+    # Declare fields for Pydantic v2
+    api_key: str = Field(description="API key for the LLM provider")
+    model_name: str = Field(description="Name of the model to use")
+    base_url: Optional[str] = Field(
+        default=None, description="Base URL for the API")
+
+    def __init__(self, api_key: str, model_name: str, base_url: str = None, **kwargs):
+        super().__init__(
+            api_key=api_key,
+            model_name=model_name,
+            base_url=base_url,
+            **kwargs
+        )
 
     @property
     def _llm_type(self) -> str:
@@ -112,29 +126,161 @@ class CustomLLM(LLM):
         run_manager: Optional[CallbackManagerForLLMRun] = None,
         **kwargs: Any,
     ) -> str:
-        # Implementation would depend on your preferred API
-        # This is a placeholder for the actual API call
-        return self._make_api_call(prompt, **kwargs)
+        """Make API call to the LLM provider."""
+        try:
+            return self._make_api_call(prompt, **kwargs)
+        except Exception as e:
+            logger.error(f"LLM API call failed: {str(e)}")
+            # Return a fallback response
+            return self._get_fallback_response(prompt)
 
     def _make_api_call(self, prompt: str, **kwargs) -> str:
-        """Make actual API call - implement based on your provider."""
-        # Placeholder implementation
-        import httpx
+        """Make actual API call based on the provider."""
+        # Check if this is OpenAI
+        if 'gpt' in self.model_name.lower() or 'openai' in str(self.base_url).lower():
+            return self._make_openai_call(prompt, **kwargs)
+        # Check if this is DeepSeek
+        elif 'deepseek' in self.model_name.lower() or 'deepseek' in str(self.base_url).lower():
+            return self._make_deepseek_call(prompt, **kwargs)
+        else:
+            # Generic implementation
+            return self._make_generic_call(prompt, **kwargs)
 
-        headers = {
-            'Authorization': f'Bearer {self.api_key}',
-            'Content-Type': 'application/json'
-        }
+    def _make_openai_call(self, prompt: str, **kwargs) -> str:
+        """Make OpenAI API call."""
+        try:
+            # Import OpenAI here to avoid import errors
+            try:
+                from openai import OpenAI
+            except ImportError:
+                logger.error("OpenAI library not properly installed")
+                return self._get_fallback_response(prompt)
 
-        payload = {
-            "model": self.model_name,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": kwargs.get("temperature", 0.1),
-            "max_tokens": kwargs.get("max_tokens", 1000)
-        }
+            # Set up the client
+            client = OpenAI(api_key=self.api_key)
 
-        # Return mock response for now - replace with actual API call
-        return "Mock response - implement actual API call"
+            response = client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=kwargs.get("temperature", 0.1),
+                max_tokens=kwargs.get("max_tokens", 2000),
+                timeout=30
+            )
+
+            return response.choices[0].message.content
+
+        except Exception as e:
+            logger.error(f"OpenAI API call failed: {str(e)}")
+            return self._get_fallback_response(prompt)
+
+    def _make_deepseek_call(self, prompt: str, **kwargs) -> str:
+        """Make DeepSeek API call."""
+        try:
+            import httpx
+
+            headers = {
+                'Authorization': f'Bearer {self.api_key}',
+                'Content-Type': 'application/json'
+            }
+
+            payload = {
+                "model": self.model_name,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": kwargs.get("temperature", 0.1),
+                "max_tokens": kwargs.get("max_tokens", 2000)
+            }
+
+            with httpx.Client(timeout=30) as client:
+                response = client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers=headers,
+                    json=payload
+                )
+                response.raise_for_status()
+
+                result = response.json()
+                return result['choices'][0]['message']['content']
+
+        except Exception as e:
+            logger.error(f"DeepSeek API call failed: {str(e)}")
+            return self._get_fallback_response(prompt)
+
+    def _make_generic_call(self, prompt: str, **kwargs) -> str:
+        """Make generic API call."""
+        try:
+            import httpx
+
+            headers = {
+                'Authorization': f'Bearer {self.api_key}',
+                'Content-Type': 'application/json'
+            }
+
+            payload = {
+                "model": self.model_name,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": kwargs.get("temperature", 0.1),
+                "max_tokens": kwargs.get("max_tokens", 2000)
+            }
+
+            with httpx.Client(timeout=30) as client:
+                response = client.post(
+                    f"{self.base_url}/v1/chat/completions",
+                    headers=headers,
+                    json=payload
+                )
+                response.raise_for_status()
+
+                result = response.json()
+                return result['choices'][0]['message']['content']
+
+        except Exception as e:
+            logger.error(f"Generic API call failed: {str(e)}")
+            return self._get_fallback_response(prompt)
+
+    def _get_fallback_response(self, prompt: str, agent_type: str = None) -> str:
+        """Generate a fallback response when API calls fail."""
+        # If agent type is explicitly provided, use it
+        if agent_type == "contract_violation":
+            return '''{"has_violation": false, "violation_type": null, "confidence": 0.3, "evidence": ["API unavailable - fallback analysis"], "violation_severity": "low"}'''
+        elif agent_type == "technical_error":
+            return '''{"is_technical_error": false, "error_category": null, "root_cause": null, "api_related": false, "confidence": 0.3, "error_patterns": ["API unavailable - fallback analysis"]}'''
+        elif agent_type == "context_relevance":
+            return '''{"is_llm_related": true, "relevance_score": 0.5, "llm_indicators": ["potential LLM content"], "context_quality": "fair", "requires_expert_review": true}'''
+        elif agent_type == "final_decision":
+            return '''{"decision": "Borderline", "confidence": 0.3, "rationale": "API unavailable - requires manual review", "contract_types_identified": [], "recommended_action": "manual_review", "quality_flags": ["api_fallback"]}'''
+
+        # Fallback to prompt-based detection
+        prompt_lower = prompt.lower()
+
+        # Look for context relevance indicators first (most specific)
+        if ("context relevance" in prompt_lower or
+            "llm_related" in prompt_lower or
+            "relevance_score" in prompt_lower or
+            "llm_indicators" in prompt_lower or
+                "requires_expert_review" in prompt_lower):
+            return '''{"is_llm_related": true, "relevance_score": 0.5, "llm_indicators": ["potential LLM content"], "context_quality": "fair", "requires_expert_review": true}'''
+
+        # Contract violation detection
+        elif ("contract violation" in prompt_lower or
+              "has_violation" in prompt_lower or
+              "violation_type" in prompt_lower):
+            return '''{"has_violation": false, "violation_type": null, "confidence": 0.3, "evidence": ["API unavailable - fallback analysis"], "violation_severity": "low"}'''
+
+        # Technical error detection
+        elif ("technical error" in prompt_lower or
+              "is_technical_error" in prompt_lower or
+              "error_category" in prompt_lower):
+            return '''{"is_technical_error": false, "error_category": null, "root_cause": null, "api_related": false, "confidence": 0.3, "error_patterns": ["API unavailable - fallback analysis"]}'''
+
+        # Final decision detection
+        elif ("final decision" in prompt_lower or
+              "decision" in prompt_lower or
+              "rationale" in prompt_lower):
+            return '''{"decision": "Borderline", "confidence": 0.3, "rationale": "API unavailable - requires manual review", "contract_types_identified": [], "recommended_action": "manual_review", "quality_flags": ["api_fallback"]}'''
+
+        else:
+            # Default to context relevance if unclear
+            return '''{"is_llm_related": true, "relevance_score": 0.5, "llm_indicators": ["potential LLM content"], "context_quality": "fair", "requires_expert_review": true}'''
 
 
 class ContractViolationDetectorAgent:
@@ -200,16 +346,42 @@ VIOLATION INDICATORS:
 - Context length error messages
 - Authentication failures
 - Schema validation errors
+- Performance degradation due to parameter issues
+- Unexpected API behavior or responses
+- Function calling errors or format issues
+- Streaming response problems
+- Token or context window issues
 
 ANALYZE THE FOLLOWING aspects:
-1. Identify specific contract violations
-2. Assess violation severity
-3. Provide evidence from the text
-4. Rate confidence in your analysis
+1. Identify specific contract violations (be sensitive to subtle violations)
+2. Assess violation severity (consider user impact)
+3. Provide evidence from the text (look for error patterns)
+4. Rate confidence in your analysis (be generous with possibilities)
 
-Return structured analysis as JSON matching the ContractViolationAnalysis schema.
+GUIDELINES:
+- If there are clear API errors or unexpected behavior, lean towards identifying violations
+- Performance issues often indicate parameter or usage violations
+- Function calling problems are usually contract violations
+- Be sensitive to user frustration indicating API contract issues
 
-Format your response as valid JSON only."""
+You MUST respond with a valid JSON object using these EXACT field names:
+{
+  "has_violation": true/false,
+  "violation_type": "string or null",
+  "confidence": 0.0-1.0,
+  "evidence": ["array", "of", "strings"],
+  "violation_severity": "low/medium/high/critical/unknown"
+}
+
+EXAMPLES OF COMMON VIOLATIONS TO LOOK FOR:
+- "performance degradation" -> parameter_constraint (temperature, top_p, model usage)
+- "function calling" errors -> input_format_violation (tool/function schema issues)
+- "streaming" problems -> response_format_violation (streaming response handling)
+- "chunking_strategy" issues -> parameter_constraint (vector store parameters)
+- "httpx client performance" -> rate_limiting or connection issues
+- Error codes like 400, 401, 403, 429, 500 -> various violation types
+
+Do not include any other text or explanation outside the JSON object."""
 
     async def analyze(self, post_content: str, title: str = "") -> ContractViolationAnalysis:
         """Analyze content for contract violations."""
@@ -217,12 +389,42 @@ Format your response as valid JSON only."""
 
         try:
             result = await self.chain.arun(input_text=input_text)
-            return self.parser.parse(result)
+
+            # Try to parse JSON response
+            try:
+                import json
+
+                # Check if result is already parsed
+                if isinstance(result, ContractViolationAnalysis):
+                    return result
+                elif isinstance(result, dict):
+                    return ContractViolationAnalysis(**result)
+                elif isinstance(result, str):
+                    # Clean up the result string
+                    result = result.strip()
+                    if not result.startswith('{'):
+                        # Try to extract JSON from the response
+                        start = result.find('{')
+                        end = result.rfind('}') + 1
+                        if start != -1 and end != 0:
+                            result = result[start:end]
+
+                    parsed_result = json.loads(result)
+                    return ContractViolationAnalysis(**parsed_result)
+                else:
+                    # Try the original parser as fallback
+                    return self.parser.parse(str(result))
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(
+                    f"Failed to parse JSON response: {e}. Raw response: {str(result)[:200]}...")
+                # Try the original parser as fallback
+                return self.parser.parse(str(result))
         except Exception as e:
             logger.error(f"Contract violation analysis failed: {str(e)}")
             # Return fallback analysis
             return ContractViolationAnalysis(
                 has_violation=False,
+                violation_type=None,
                 confidence=0.0,
                 evidence=[],
                 violation_severity="unknown"
@@ -309,7 +511,17 @@ TECHNICAL INDICATORS:
 - Configuration snippets
 - Code examples with issues
 
-Analyze the technical aspects and provide structured output as JSON."""
+You MUST respond with a valid JSON object using these EXACT field names:
+{
+  "is_technical_error": true/false,
+  "error_category": "string or null",
+  "root_cause": "string or null", 
+  "api_related": true/false,
+  "confidence": 0.0-1.0,
+  "error_patterns": ["array", "of", "strings"]
+}
+
+Do not include any other text or explanation outside the JSON object."""
 
     async def analyze(self, post_content: str, title: str = "") -> TechnicalErrorAnalysis:
         """Analyze content for technical errors."""
@@ -317,11 +529,42 @@ Analyze the technical aspects and provide structured output as JSON."""
 
         try:
             result = await self.chain.arun(input_text=input_text)
-            return self.parser.parse(result)
+
+            # Try to parse JSON response
+            try:
+                import json
+
+                # Check if result is already parsed
+                if isinstance(result, TechnicalErrorAnalysis):
+                    return result
+                elif isinstance(result, dict):
+                    return TechnicalErrorAnalysis(**result)
+                elif isinstance(result, str):
+                    # Clean up the result string
+                    result = result.strip()
+                    if not result.startswith('{'):
+                        # Try to extract JSON from the response
+                        start = result.find('{')
+                        end = result.rfind('}') + 1
+                        if start != -1 and end != 0:
+                            result = result[start:end]
+
+                    parsed_result = json.loads(result)
+                    return TechnicalErrorAnalysis(**parsed_result)
+                else:
+                    # Try the original parser as fallback
+                    return self.parser.parse(str(result))
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(
+                    f"Failed to parse JSON response: {e}. Raw response: {str(result)[:200]}...")
+                # Try the original parser as fallback
+                return self.parser.parse(str(result))
         except Exception as e:
             logger.error(f"Technical error analysis failed: {str(e)}")
             return TechnicalErrorAnalysis(
                 is_technical_error=False,
+                error_category=None,
+                root_cause=None,
                 api_related=False,
                 confidence=0.0,
                 error_patterns=[]
@@ -398,23 +641,70 @@ QUALITY ASSESSMENT CRITERIA:
    - Unclear error causation
    - Conflicting information
 
-Evaluate content relevance and quality for LLM contract research."""
+You MUST respond with a valid JSON object using these EXACT field names:
+{
+  "is_llm_related": true/false,
+  "relevance_score": 0.0-1.0,
+  "llm_indicators": ["array", "of", "strings"],
+  "context_quality": "poor/fair/good/excellent/unknown",
+  "requires_expert_review": true/false
+}
+
+Do not include any other text or explanation outside the JSON object."""
 
     async def analyze(self, post_content: str, title: str = "", metadata: Dict = None) -> ContextRelevanceAnalysis:
         """Analyze content relevance and quality."""
-        meta_info = f"Metadata: {json.dumps(metadata)}" if metadata else ""
+        # Handle metadata serialization safely
+        meta_info = ""
+        if metadata:
+            try:
+                import json
+                meta_info = f"Metadata: {json.dumps(metadata, default=str)}"
+            except Exception as e:
+                logger.warning(f"Failed to serialize metadata: {e}")
+                meta_info = "Metadata: unavailable"
+
         input_text = f"Title: {title}\n\nContent: {post_content}\n\n{meta_info}"
 
         try:
             result = await self.chain.arun(input_text=input_text)
-            return self.parser.parse(result)
+
+            # Try to parse JSON response
+            try:
+                import json
+
+                # Check if result is already parsed
+                if isinstance(result, ContextRelevanceAnalysis):
+                    return result
+                elif isinstance(result, dict):
+                    return ContextRelevanceAnalysis(**result)
+                elif isinstance(result, str):
+                    # Clean up the result string
+                    result = result.strip()
+                    if not result.startswith('{'):
+                        # Try to extract JSON from the response
+                        start = result.find('{')
+                        end = result.rfind('}') + 1
+                        if start != -1 and end != 0:
+                            result = result[start:end]
+
+                    parsed_result = json.loads(result)
+                    return ContextRelevanceAnalysis(**parsed_result)
+                else:
+                    # Try the original parser as fallback
+                    return self.parser.parse(str(result))
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(
+                    f"Failed to parse JSON response: {e}. Raw response: {str(result)[:200]}...")
+                # Try the original parser as fallback
+                return self.parser.parse(str(result))
         except Exception as e:
             logger.error(f"Context relevance analysis failed: {str(e)}")
             return ContextRelevanceAnalysis(
                 is_llm_related=False,
                 relevance_score=0.0,
                 llm_indicators=[],
-                context_quality="poor",
+                context_quality="unknown",
                 requires_expert_review=False
             )
 
@@ -443,20 +733,26 @@ POSITIVE (Y) - Include in research dataset:
 3. High-quality discussions of API limitations
 4. Novel contract violation patterns
 5. Well-documented integration issues
+6. Performance issues related to API parameters
+7. Function calling or tool use problems
+8. Streaming or response format issues
+9. Rate limiting or quota-related discussions
+10. Parameter validation problems
 
 NEGATIVE (N) - Exclude from research dataset:
-1. No LLM API relevance
-2. Generic programming questions
-3. Installation/environment issues unrelated to APIs
-4. Conceptual discussions without practical API usage
-5. Off-topic content
+1. No LLM API relevance whatsoever
+2. Pure installation/environment setup (not API-related)
+3. General programming questions unrelated to LLM APIs
+4. Documentation requests or basic tutorials
+5. Off-topic content with no API connection
 
 BORDERLINE - Requires expert review:
-1. Ambiguous contract violation evidence
+1. Potential contract violations needing validation
 2. Complex multi-factor issues
-3. Novel integration patterns needing validation
+3. Novel integration patterns
 4. Contradictory analysis results
 5. Low confidence from multiple agents
+6. Unclear API relationship but possible relevance
 
 CONFIDENCE CALCULATION:
 - Weight agent confidences by reliability
@@ -471,7 +767,17 @@ SYNTHESIS RULES:
 4. Quality gates prevent noise inclusion
 5. Novel patterns may warrant borderline classification
 
-Provide final structured decision with clear rationale."""
+You MUST respond with a valid JSON object using these EXACT field names:
+{
+  "decision": "Y/N/Borderline",
+  "confidence": 0.0-1.0,
+  "rationale": "string explanation",
+  "contract_types_identified": ["array", "of", "strings"],
+  "recommended_action": "string",
+  "quality_flags": ["array", "of", "strings"]
+}
+
+Do not include any other text or explanation outside the JSON object."""
 
     async def synthesize(
         self,
@@ -482,35 +788,72 @@ Provide final structured decision with clear rationale."""
     ) -> FinalDecision:
         """Synthesize all analyses into final decision."""
 
+        # Convert analyses to dictionaries for better serialization
+        contract_data = contract_analysis.model_dump() if hasattr(
+            contract_analysis, 'model_dump') else contract_analysis.__dict__
+        technical_data = technical_analysis.model_dump() if hasattr(
+            technical_analysis, 'model_dump') else technical_analysis.__dict__
+        relevance_data = relevance_analysis.model_dump() if hasattr(
+            relevance_analysis, 'model_dump') else relevance_analysis.__dict__
+
         analysis_summary = f"""
 CONTRACT VIOLATION ANALYSIS:
-- Has Violation: {contract_analysis.has_violation}
-- Violation Type: {contract_analysis.violation_type}
-- Confidence: {contract_analysis.confidence}
-- Evidence: {contract_analysis.evidence}
-- Severity: {contract_analysis.violation_severity}
+- Has Violation: {contract_data.get('has_violation', False)}
+- Violation Type: {contract_data.get('violation_type', 'None')}
+- Confidence: {contract_data.get('confidence', 0.0)}
+- Evidence: {contract_data.get('evidence', [])}
+- Severity: {contract_data.get('violation_severity', 'unknown')}
 
 TECHNICAL ERROR ANALYSIS:
-- Is Technical Error: {technical_analysis.is_technical_error}
-- Error Category: {technical_analysis.error_category}
-- Root Cause: {technical_analysis.root_cause}
-- API Related: {technical_analysis.api_related}
-- Confidence: {technical_analysis.confidence}
-- Error Patterns: {technical_analysis.error_patterns}
+- Is Technical Error: {technical_data.get('is_technical_error', False)}
+- Error Category: {technical_data.get('error_category', 'None')}
+- Root Cause: {technical_data.get('root_cause', 'None')}
+- API Related: {technical_data.get('api_related', False)}
+- Confidence: {technical_data.get('confidence', 0.0)}
+- Error Patterns: {technical_data.get('error_patterns', [])}
 
 CONTEXT RELEVANCE ANALYSIS:
-- Is LLM Related: {relevance_analysis.is_llm_related}
-- Relevance Score: {relevance_analysis.relevance_score}
-- LLM Indicators: {relevance_analysis.llm_indicators}
-- Context Quality: {relevance_analysis.context_quality}
-- Requires Expert Review: {relevance_analysis.requires_expert_review}
+- Is LLM Related: {relevance_data.get('is_llm_related', False)}
+- Relevance Score: {relevance_data.get('relevance_score', 0.0)}
+- LLM Indicators: {relevance_data.get('llm_indicators', [])}
+- Context Quality: {relevance_data.get('context_quality', 'unknown')}
+- Requires Expert Review: {relevance_data.get('requires_expert_review', False)}
 
-POST METADATA: {json.dumps(post_metadata) if post_metadata else 'None'}
+POST METADATA: {post_metadata if post_metadata else 'None'}
 """
 
         try:
             result = await self.chain.arun(analysis_summary=analysis_summary)
-            return self.parser.parse(result)
+
+            # Try to parse JSON response
+            try:
+                import json
+
+                # Check if result is already parsed
+                if isinstance(result, FinalDecision):
+                    return result
+                elif isinstance(result, dict):
+                    return FinalDecision(**result)
+                elif isinstance(result, str):
+                    # Clean up the result string
+                    result = result.strip()
+                    if not result.startswith('{'):
+                        # Try to extract JSON from the response
+                        start = result.find('{')
+                        end = result.rfind('}') + 1
+                        if start != -1 and end != 0:
+                            result = result[start:end]
+
+                    parsed_result = json.loads(result)
+                    return FinalDecision(**parsed_result)
+                else:
+                    # Try the original parser as fallback
+                    return self.parser.parse(str(result))
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(
+                    f"Failed to parse JSON response: {e}. Raw response: {str(result)[:200]}...")
+                # Try the original parser as fallback
+                return self.parser.parse(str(result))
         except Exception as e:
             logger.error(f"Final decision synthesis failed: {str(e)}")
             # Fallback decision logic
@@ -524,33 +867,52 @@ POST METADATA: {json.dumps(post_metadata) if post_metadata else 'None'}
     ) -> FinalDecision:
         """Fallback decision logic when LLM synthesis fails."""
 
-        # Simple decision logic
+        # More nuanced decision logic
         if not relevance_analysis.is_llm_related:
             decision = "N"
             confidence = 0.8
             rationale = "Not LLM-related content"
-        elif contract_analysis.has_violation and contract_analysis.confidence > 0.7:
+        elif contract_analysis.has_violation and contract_analysis.confidence > 0.5:
             decision = "Y"
-            confidence = contract_analysis.confidence
-            rationale = f"Clear contract violation: {contract_analysis.violation_type}"
+            confidence = min(contract_analysis.confidence +
+                             0.1, 1.0)  # Slightly boost confidence
+            rationale = f"Contract violation detected: {contract_analysis.violation_type or 'unspecified'}"
         elif technical_analysis.is_technical_error and technical_analysis.api_related:
             decision = "Y"
-            confidence = technical_analysis.confidence
-            rationale = f"API-related technical error: {technical_analysis.error_category}"
+            confidence = min(technical_analysis.confidence +
+                             0.1, 1.0)  # Slightly boost confidence
+            rationale = f"API-related technical error: {technical_analysis.error_category or 'unspecified'}"
+        elif contract_analysis.has_violation and contract_analysis.confidence > 0.3:
+            decision = "Borderline"
+            confidence = 0.6
+            rationale = f"Potential contract violation needs review: {contract_analysis.violation_type or 'unspecified'}"
+        elif technical_analysis.is_technical_error:
+            decision = "Borderline"
+            confidence = 0.5
+            rationale = f"Technical error may be API-related: {technical_analysis.error_category or 'unspecified'}"
         elif relevance_analysis.requires_expert_review:
             decision = "Borderline"
             confidence = 0.5
-            rationale = "Requires expert review"
+            rationale = "Content requires expert review for API relevance"
+        elif relevance_analysis.relevance_score > 0.7:
+            decision = "Borderline"
+            confidence = 0.4
+            rationale = "High relevance but unclear contract violations"
         else:
             decision = "N"
             confidence = 0.6
             rationale = "Insufficient evidence for inclusion"
 
+        # Identify contract types if violations found
+        contract_types = []
+        if contract_analysis.has_violation and contract_analysis.violation_type:
+            contract_types.append(contract_analysis.violation_type)
+
         return FinalDecision(
             decision=decision,
             confidence=confidence,
             rationale=rationale,
-            contract_types_identified=[],
+            contract_types_identified=contract_types,
             recommended_action="Standard processing",
             quality_flags=["Fallback decision used"]
         )
@@ -598,18 +960,32 @@ class AgenticScreeningOrchestrator:
                 f"Raw post not found for filtered post {filtered_post['_id']}")
 
         title = raw_post.get('title', '')
-        content = raw_post.get('body_md', '')
+        content = raw_post.get('body_md', '') or raw_post.get(
+            'body', '') or raw_post.get('content', '')
 
-        # Prepare metadata
-        metadata = {
-            'platform': raw_post.get('platform'),
-            'tags': raw_post.get('tags', []),
-            'labels': raw_post.get('labels', []),
-            'score': raw_post.get('score', 0),
-            'created_at': raw_post.get('created_at'),
-            'filter_confidence': filtered_post.get('filter_confidence', 0.0),
-            'matched_keywords': filtered_post.get('matched_keywords', [])
-        } if include_metadata else {}
+        # Ensure we have content to analyze
+        if not content and not title:
+            logger.warning(f"No content found for post {filtered_post['_id']}")
+            content = "No content available for analysis"
+
+        # Prepare metadata with proper datetime handling
+        metadata = {}
+        if include_metadata:
+            # Convert datetime objects to strings for JSON serialization
+            metadata = {
+                'platform': raw_post.get('platform'),
+                'tags': raw_post.get('tags', []),
+                'labels': raw_post.get('labels', []),
+                'score': raw_post.get('score', 0),
+                'created_at': raw_post.get('created_at').isoformat() if raw_post.get('created_at') else None,
+                'filter_confidence': filtered_post.get('filter_confidence', 0.0),
+                'matched_keywords': filtered_post.get('matched_keywords', [])
+            }
+            # Remove None values to avoid JSON issues
+            metadata = {k: v for k, v in metadata.items() if v is not None}
+
+        logger.info(
+            f"Screening post: '{title[:50]}...' with content length: {len(content)}")
 
         # Run all agents in parallel
         agent_tasks = [
@@ -632,6 +1008,14 @@ class AgenticScreeningOrchestrator:
                 logger.error(f"Agent {i} failed: {str(result)}")
                 # Create fallback result
                 agent_results[i] = self._create_fallback_agent_result(i)
+
+        # Extract successful results
+        contract_result = agent_results[0] if not isinstance(
+            agent_results[0], Exception) else self._create_fallback_agent_result(0)
+        technical_result = agent_results[1] if not isinstance(
+            agent_results[1], Exception) else self._create_fallback_agent_result(1)
+        relevance_result = agent_results[2] if not isinstance(
+            agent_results[2], Exception) else self._create_fallback_agent_result(2)
 
         # Synthesize final decision
         decision_start = datetime.utcnow()
@@ -707,6 +1091,7 @@ class AgenticScreeningOrchestrator:
         if agent_name == "contract_detector":
             return ContractViolationAnalysis(
                 has_violation=False,
+                violation_type=None,
                 confidence=0.0,
                 evidence=["Agent failed"],
                 violation_severity="unknown"
@@ -714,6 +1099,8 @@ class AgenticScreeningOrchestrator:
         elif agent_name == "technical_analyst":
             return TechnicalErrorAnalysis(
                 is_technical_error=False,
+                error_category=None,
+                root_cause=None,
                 api_related=False,
                 confidence=0.0,
                 error_patterns=["Agent failed"]
@@ -843,8 +1230,16 @@ class AgenticScreeningOrchestrator:
         detailed_data = {}
         for agent_name, agent_result in detailed_results.items():
             if hasattr(agent_result, 'analysis'):
+                # Use model_dump() for Pydantic models, dict conversion for others
+                if hasattr(agent_result.analysis, 'model_dump'):
+                    analysis_data = agent_result.analysis.model_dump()
+                elif hasattr(agent_result.analysis, '__dict__'):
+                    analysis_data = agent_result.analysis.__dict__
+                else:
+                    analysis_data = str(agent_result.analysis)
+
                 detailed_data[agent_name] = {
-                    'analysis': asdict(agent_result.analysis) if hasattr(agent_result.analysis, '__dict__') else str(agent_result.analysis),
+                    'analysis': analysis_data,
                     'processing_time': agent_result.processing_time,
                     'errors': agent_result.errors
                 }

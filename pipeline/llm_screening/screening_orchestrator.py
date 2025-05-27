@@ -54,6 +54,9 @@ class ScreeningOrchestrator:
     def _setup_screeners(self):
         """Setup screeners based on configuration."""
         try:
+            logger.info(
+                f"Setting up screeners for {self.config.screening_mode.value} mode")
+
             # Traditional screening components
             if self.config.screening_mode in [ScreeningMode.TRADITIONAL, ScreeningMode.HYBRID]:
                 if self.config.traditional_screening.bulk_screener_llm:
@@ -76,7 +79,14 @@ class ScreeningOrchestrator:
 
             # Agentic screening components
             if self.config.screening_mode in [ScreeningMode.AGENTIC, ScreeningMode.HYBRID]:
+                logger.info("🔍 Checking agentic screening configuration...")
+
                 if self.config.agentic_screening.contract_detector_llm:
+                    logger.info(
+                        f"✅ Found contract detector LLM config: {self.config.agentic_screening.contract_detector_llm.model_name}")
+                    logger.info(
+                        f"🔑 API key present: {bool(self.config.agentic_screening.contract_detector_llm.api_key)}")
+
                     self.agentic_screener = AgenticScreeningOrchestrator(
                         api_key=self.config.agentic_screening.contract_detector_llm.api_key,
                         model_name=self.config.agentic_screening.contract_detector_llm.model_name,
@@ -84,9 +94,16 @@ class ScreeningOrchestrator:
                         base_url=self.config.agentic_screening.contract_detector_llm.base_url
                     )
                     logger.info("✅ Agentic screener initialized")
+                else:
+                    logger.warning(
+                        "❌ No contract detector LLM configuration found")
+                    logger.info(
+                        f"Agentic config object: {self.config.agentic_screening}")
 
         except Exception as e:
             logger.error(f"Error setting up screeners: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
 
     async def run_screening_pipeline(
         self,
