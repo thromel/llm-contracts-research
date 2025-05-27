@@ -139,6 +139,55 @@ class RawPost:
 
         return data
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'RawPost':
+        """Create RawPost from dictionary (e.g., from MongoDB)."""
+        # Handle platform enum conversion
+        platform = Platform(data.get('platform', 'github'))
+
+        # Handle datetime fields
+        created_at = data.get('created_at')
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(
+                created_at.replace('Z', '+00:00'))
+        elif created_at is None:
+            created_at = datetime.now()
+
+        updated_at = data.get('updated_at')
+        if isinstance(updated_at, str):
+            updated_at = datetime.fromisoformat(
+                updated_at.replace('Z', '+00:00'))
+
+        acquisition_timestamp = data.get('acquisition_timestamp')
+        if isinstance(acquisition_timestamp, str):
+            acquisition_timestamp = datetime.fromisoformat(
+                acquisition_timestamp.replace('Z', '+00:00'))
+        elif acquisition_timestamp is None:
+            acquisition_timestamp = datetime.now()
+
+        return cls(
+            _id=data.get('_id'),
+            platform=platform,
+            source_id=data.get('source_id', ''),
+            url=data.get('url', ''),
+            title=data.get('title', ''),
+            body_md=data.get('body_md', ''),
+            created_at=created_at,
+            updated_at=updated_at,
+            score=data.get('score', 0),
+            answer_score=data.get('answer_score'),
+            tags=data.get('tags', []),
+            author=data.get('author', ''),
+            state=data.get('state'),
+            labels=data.get('labels', []),
+            comments_count=data.get('comments_count', 0),
+            accepted_answer_id=data.get('accepted_answer_id'),
+            view_count=data.get('view_count', 0),
+            acquisition_timestamp=acquisition_timestamp,
+            acquisition_version=data.get('acquisition_version', '1.0.0'),
+            content_hash=data.get('content_hash')
+        )
+
 
 @dataclass
 class FilteredPost:

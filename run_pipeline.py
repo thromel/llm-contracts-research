@@ -237,7 +237,7 @@ class MultiSourcePipelineRunner:
                     tags=[tag],
                     since_days=so_config['days_back'],
                     max_questions=so_config['max_questions_per_tag'],
-                    include_answers=False
+                    include_answers=False  # Answers will be merged into question body
                 ):
                     # Check for duplicates
                     content_hash = self._generate_content_hash(
@@ -266,8 +266,15 @@ class MultiSourcePipelineRunner:
             # Load unfiltered posts from database
             raw_posts = []
             async for post_doc in self.db.find_many('raw_posts', {'filtered': {'$ne': True}}):
-                # Convert back to RawPost object if needed
-                raw_posts.append(post_doc)
+                # Convert back to RawPost object from dictionary
+                try:
+                    # Convert MongoDB document back to RawPost object
+                    raw_post_obj = RawPost.from_dict(post_doc)
+                    raw_posts.append(raw_post_obj)
+                except Exception as e:
+                    logger.error(f"Error converting post to RawPost: {e}")
+                    # Skip this post if conversion fails
+                    continue
 
         filtered_posts = []
         passed_count = 0

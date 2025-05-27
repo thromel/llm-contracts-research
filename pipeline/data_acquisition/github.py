@@ -45,45 +45,37 @@ class GitHubAcquisition:
             'User-Agent': 'LLM-Contracts-Research/1.0'
         }
 
-        # LLM Provider repositories to target
+        # LLM Provider repositories (broad selection for maximum coverage)
         self.target_repositories = [
-            # OpenAI
+            # OpenAI repositories
             'openai/openai-python',
-            'openai/openai-cookbook',
             'openai/openai-node',
+            'openai/openai-cookbook',
 
-            # Anthropic
+            # Anthropic repositories
             'anthropics/anthropic-sdk-python',
             'anthropics/anthropic-sdk-typescript',
 
-            # Other major LLM providers
+            # LangChain
             'langchain-ai/langchain',
-            'huggingface/transformers',
-            'microsoft/semantic-kernel',
+
+            # Google
             'google/generative-ai-python',
 
-            # Community/wrapper libraries
-            'hwchase17/langchain',
+            # Microsoft
+            'microsoft/semantic-kernel',
+
+            # Multi-provider wrappers
+            'BerriAI/litellm',
+
+            # ML/AI frameworks
+            'huggingface/transformers',
+
+            # Utility tools
             'simonw/llm',
-            'BerriAI/litellm'
         ]
 
-        # LLM-specific keywords for initial filtering
-        self.llm_keywords = [
-            # API contract terms
-            'max_tokens', 'temperature', 'top_p', 'frequency_penalty',
-            'presence_penalty', 'stop', 'stream', 'logprobs',
-
-            # Error patterns
-            'rate_limit', 'context_length', 'token_limit', 'quota',
-            'invalid_request', 'model_not_found', 'insufficient_quota',
-
-            # JSON/Schema related
-            'json_schema', 'function_calling', 'tools', 'response_format',
-
-            # Common error scenarios
-            'timeout', 'connection_error', 'authentication', 'api_key'
-        ]
+        # No filtering patterns - minimal filtering only
 
     async def acquire_all_repositories(
         self,
@@ -179,12 +171,18 @@ class GitHubAcquisition:
                         if 'pull_request' in issue:
                             continue
 
-                        # Quick LLM-relevance filter
-                        if not self._is_potentially_llm_relevant(issue):
+                        # Simple filtering: only closed issues
+                        if issue['state'] != 'closed':
                             continue
 
-                        # Only process issues with comments
-                        if issue.get('comments', 0) == 0:
+                        # Require at least 1 comment
+                        if issue.get('comments', 0) < 1:
+                            continue
+
+                        # Exclude issues with enhancement or bug labels
+                        labels = [label['name'].lower()
+                                  for label in issue.get('labels', [])]
+                        if any('enhancement' in label or 'bug' in label for label in labels):
                             continue
 
                         # Convert to RawPost (with comments)
@@ -291,9 +289,7 @@ class GitHubAcquisition:
                         if updated_at < since:
                             return  # No more recent discussions
 
-                        # Quick LLM-relevance filter
-                        if not self._is_potentially_llm_relevant_discussion(discussion):
-                            continue
+                        # No filtering for discussions - include all
 
                         # Convert to RawPost
                         raw_post = await self._convert_discussion_to_rawpost(
@@ -317,44 +313,6 @@ class GitHubAcquisition:
                     logger.error(
                         f"Error fetching {owner}/{repo} discussions: {str(e)}")
                     break
-
-    def _is_potentially_llm_relevant(self, issue: Dict[str, Any]) -> bool:
-        """Quick check if issue might be LLM-related."""
-        text_to_check = f"{issue.get('title', '')} {issue.get('body', '')}"
-        text_lower = text_to_check.lower()
-
-        # Check for LLM keywords
-        for keyword in self.llm_keywords:
-            if keyword.lower() in text_lower:
-                return True
-
-        # Check labels
-        labels = [label.get('name', '').lower()
-                  for label in issue.get('labels', [])]
-        llm_labels = ['api', 'bug', 'error', 'rate-limit', 'timeout', 'json']
-        for label in llm_labels:
-            if any(label in l for l in labels):
-                return True
-
-        return False
-
-    def _is_potentially_llm_relevant_discussion(self, discussion: Dict[str, Any]) -> bool:
-        """Quick check if discussion might be LLM-related."""
-        text_to_check = f"{discussion.get('title', '')} {discussion.get('body', '')}"
-        text_lower = text_to_check.lower()
-
-        # Check for LLM keywords
-        for keyword in self.llm_keywords:
-            if keyword.lower() in text_lower:
-                return True
-
-        # Check category
-        category = discussion.get('category', {}).get('name', '').lower()
-        relevant_categories = ['help', 'q&a', 'support', 'bugs', 'general']
-        if any(cat in category for cat in relevant_categories):
-            return True
-
-        return False
 
     async def _fetch_issue_comments(
         self,

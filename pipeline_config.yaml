@@ -1,18 +1,28 @@
 sources:
   github:
-    enabled: true
+    enabled: false
     repositories:
+      # Core LLM provider repositories
       - owner: openai
         repo: openai-python
-    max_issues_per_repo: 10
-    days_back: 1000
+      - owner: openai
+        repo: openai-node
+      - owner: openai
+        repo: openai-cookbook
+      - owner: langchain-ai
+        repo: langchain
+    max_issues_per_repo: 10000
+    days_back: 1365
   stackoverflow:
     enabled: true
     tags:
+      # Focus on highest-signal tags only
       - openai-api
       - langchain
-    max_questions_per_tag: 10
-    days_back: 1000
+      - gpt-4
+      - chatgpt-api
+    max_questions_per_tag: 5000000
+    days_back: 1365
 
 deduplication:
   enabled: true

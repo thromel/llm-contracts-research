@@ -43,24 +43,15 @@ class StackOverflowAcquisition:
         self.base_url = "https://api.stackexchange.com/2.3"
         self.site = "stackoverflow"
 
-        # LLM-related tags to search for
+        # Focus on highest-signal tags only
         self.llm_tags = [
-            # Core LLM APIs
-            'openai-api', 'gpt-3', 'gpt-4', 'chatgpt', 'claude',
-            'anthropic', 'palm-api', 'bard-api',
-
-            # Libraries and frameworks
-            'langchain', 'transformers', 'huggingface', 'openai-python',
-            'semantic-kernel', 'llama-index',
-
-            # Technical concepts
-            'json-schema', 'function-calling', 'prompt-engineering',
-            'token-limit', 'rate-limiting', 'context-window',
-
-            # Error patterns
-            'api-rate-limit', 'timeout', 'authentication-error',
-            'json-parsing', 'schema-validation'
+            'openai-api',
+            'langchain',
+            'gpt-4',
+            'chatgpt-api'
         ]
+
+        # No exclusion patterns - minimal filtering only
 
         # Request parameters
         self.default_params = {
@@ -68,7 +59,7 @@ class StackOverflowAcquisition:
             'pagesize': 100,
             'order': 'desc',
             'sort': 'activity',
-            'filter': '!nNPvSNdWme'  # Custom filter for full question/answer content
+            'filter': '!9_bDDxJY5'  # Include body content for questions/answers
         }
 
         if self.api_key:
@@ -186,15 +177,8 @@ class StackOverflowAcquisition:
                         break
 
                     for question in questions:
-                        # Filter for answered questions with comments
+                        # Simple filtering: only answered questions
                         if not question.get('is_answered', False):
-                            continue
-
-                        if question.get('comment_count', 0) == 0:
-                            continue
-
-                        # Filter for LLM relevance
-                        if not self._is_llm_relevant_question(question):
                             continue
 
                         # Convert to RawPost (with comments)
@@ -257,11 +241,7 @@ class StackOverflowAcquisition:
                 answers = data.get('items', [])
 
                 for answer in answers:
-                    # Filter for LLM relevance
-                    if not self._is_llm_relevant_answer(answer):
-                        continue
-
-                    # Convert to RawPost
+                    # Include all answers without filtering
                     raw_post = self._convert_answer_to_rawpost(
                         answer, question_id)
                     yield raw_post
@@ -269,69 +249,6 @@ class StackOverflowAcquisition:
             except Exception as e:
                 logger.error(
                     f"Error fetching answers for question {question_id}: {str(e)}")
-
-    def _is_llm_relevant_question(self, question: Dict[str, Any]) -> bool:
-        """Check if question is relevant to LLM contracts research."""
-
-        # Check title and body for LLM keywords
-        text_content = f"{question.get('title', '')} {question.get('body', '')}"
-        text_lower = text_content.lower()
-
-        # LLM-specific keywords
-        llm_keywords = [
-            'max_tokens', 'temperature', 'top_p', 'openai', 'gpt',
-            'claude', 'anthropic', 'langchain', 'api_key', 'rate_limit',
-            'context_length', 'token_limit', 'json_schema', 'function_calling',
-            'prompt', 'completion', 'embeddings', 'fine_tuning'
-        ]
-
-        for keyword in llm_keywords:
-            if keyword in text_lower:
-                return True
-
-        # Check tags
-        tags = [tag.lower() for tag in question.get('tags', [])]
-        for tag in tags:
-            if any(llm_tag in tag for llm_tag in ['openai', 'gpt', 'llm', 'langchain', 'claude']):
-                return True
-
-        # Check for error-related patterns
-        error_patterns = [
-            'error', 'exception', 'failed', 'not working', 'issue',
-            'problem', 'trouble', 'help', 'fix'
-        ]
-
-        for pattern in error_patterns:
-            if pattern in text_lower and any(keyword in text_lower for keyword in llm_keywords[:5]):
-                return True
-
-        return False
-
-    def _is_llm_relevant_answer(self, answer: Dict[str, Any]) -> bool:
-        """Check if answer is relevant to LLM contracts research."""
-
-        # Check answer body for LLM keywords
-        body = answer.get('body', '').lower()
-
-        llm_keywords = [
-            'max_tokens', 'temperature', 'top_p', 'openai', 'gpt',
-            'claude', 'anthropic', 'api_key', 'rate_limit', 'context_length',
-            'json_schema', 'function_calling', 'completion'
-        ]
-
-        for keyword in llm_keywords:
-            if keyword in body:
-                return True
-
-        # Prioritize accepted answers
-        if answer.get('is_accepted', False):
-            return True
-
-        # High-scored answers are more likely to be useful
-        if answer.get('score', 0) >= 3:
-            return True
-
-        return False
 
     async def _fetch_question_comments(
         self,
@@ -387,6 +304,78 @@ class StackOverflowAcquisition:
                 f"Error fetching comments for question {question_id}: {str(e)}")
             return ""
 
+    async def _fetch_question_answers_text(
+        self,
+        question_id: str,
+        client: httpx.AsyncClient,
+        accepted_answer_id: Optional[str] = None
+    ) -> str:
+        """Fetch answers for a question as formatted text with accepted answer first."""
+
+        try:
+            # Use specific filter for answers to ensure body content is included
+            params = {
+                'site': self.site,
+                'pagesize': 100,
+                'order': 'desc',
+                'sort': 'votes',
+                'filter': '!nNPvSNdWme'  # Filter specifically for answers with body content
+            }
+
+            if self.api_key:
+                params['key'] = self.api_key
+
+            url = f"{self.base_url}/questions/{question_id}/answers"
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+
+            # Handle response - Stack Exchange API can return gzipped or regular JSON
+            try:
+                if response.headers.get('content-encoding') == 'gzip':
+                    content = gzip.decompress(response.content)
+                    data = json.loads(content.decode('utf-8'))
+                else:
+                    data = response.json()
+            except (gzip.BadGzipFile, json.JSONDecodeError) as e:
+                # Fallback: try to parse as regular JSON
+                try:
+                    data = response.json()
+                except json.JSONDecodeError:
+                    logger.error(
+                        f"Could not parse answers response for question {question_id}: {str(e)}")
+                    return ""
+
+            answers = data.get('items', [])
+            answers_text = []
+            accepted_answers = []
+            other_answers = []
+
+            # Separate accepted and other answers
+            for answer in answers:
+                author = answer.get('owner', {}).get('display_name', 'unknown')
+                body = answer.get('body', '').strip()
+                score = answer.get('score', 0)
+                is_accepted = answer.get('is_accepted', False)
+                answer_id = str(answer.get('answer_id', ''))
+
+                if body:
+                    if is_accepted or (accepted_answer_id and answer_id == str(accepted_answer_id)):
+                        accepted_mark = " ✓ ACCEPTED"
+                        formatted_answer = f"Answer by {author} (score: {score}){accepted_mark}:\n{body}"
+                        accepted_answers.append(formatted_answer)
+                    else:
+                        formatted_answer = f"Answer by {author} (score: {score}):\n{body}"
+                        other_answers.append(formatted_answer)
+
+            # Put accepted answers first, then other answers sorted by score
+            all_answers = accepted_answers + other_answers
+            return '\n\n'.join(all_answers)
+
+        except Exception as e:
+            logger.error(
+                f"Error fetching answers for question {question_id}: {str(e)}")
+            return ""
+
     async def _convert_question_to_rawpost_with_comments(
         self,
         question: Dict[str, Any],
@@ -400,10 +389,18 @@ class StackOverflowAcquisition:
             str(question['question_id']), client
         )
 
-        # Combine body with comments
+        # Fetch answers for the question (accepted answer prioritized)
+        answers_text = await self._fetch_question_answers_text(
+            str(question['question_id']), client, question.get(
+                'accepted_answer_id')
+        )
+
+        # Combine body with comments and answers
         body_with_comments = question.get('body', '') or ''
         if comments_text:
             body_with_comments += f"\n\n--- COMMENTS ---\n{comments_text}"
+        if answers_text:
+            body_with_comments += f"\n\n--- ANSWERS ---\n{answers_text}"
 
         return RawPost(
             platform=Platform.STACKOVERFLOW,
@@ -419,9 +416,7 @@ class StackOverflowAcquisition:
             tags=question.get('tags', []) + [original_tag],
             author=question.get('owner', {}).get('display_name', 'unknown'),
             view_count=question.get('view_count', 0),
-            answer_count=question.get('answer_count', 0),
-            comment_count=question.get('comment_count', 0),
-            is_answered=question.get('is_answered', False),
+            comments_count=question.get('comment_count', 0),
             accepted_answer_id=question.get('accepted_answer_id'),
             acquisition_timestamp=datetime.utcnow(),
             acquisition_version="1.0.0"
@@ -598,7 +593,8 @@ class StackOverflowAcquisition:
                             break
 
                         for question in questions:
-                            if self._is_llm_relevant_question(question):
+                            # Simple filtering: only answered questions
+                            if question.get('is_answered', False):
                                 raw_post = self._convert_question_to_rawpost(
                                     question, f"search:{search_term}"
                                 )
