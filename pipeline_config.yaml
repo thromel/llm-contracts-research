@@ -1,6 +1,6 @@
 sources:
   github:
-    enabled: false
+    enabled: true
     repositories:
       # Core LLM provider repositories
       - owner: openai
@@ -12,7 +12,12 @@ sources:
       - owner: langchain-ai
         repo: langchain
     max_issues_per_repo: 10000
-    days_back: 1365
+    days_back: 2000
+    filtering:
+      min_comments: 1                    # Minimum comments required
+      require_closed: true              # Whether to require closed issues
+      exclude_labels: []                 # Labels to exclude (e.g., ['bug', 'enhancement'])
+      check_duplicates: true             # Skip issues already in database
   stackoverflow:
     enabled: true
     tags:
@@ -21,8 +26,14 @@ sources:
       - langchain
       - gpt-4
       - chatgpt-api
-    max_questions_per_tag: 5000000
-    days_back: 1365
+    max_questions_per_tag: 10000
+    days_back: 2000
+    filtering:
+      min_score: 1                       # Minimum question score
+      require_answered: true             # Must have at least one answer
+      require_accepted_answer: false     # Must have accepted answer
+      min_accepted_answer_score: 0       # Minimum score for accepted answer (if required)
+      check_duplicates: true             # Skip questions already in database
 
 deduplication:
   enabled: true

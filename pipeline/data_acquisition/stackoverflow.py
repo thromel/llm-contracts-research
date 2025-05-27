@@ -31,17 +31,32 @@ class StackOverflowAcquisition:
     - Back-pagination for historical data
     """
 
-    def __init__(self, db_manager: MongoDBManager, api_key: Optional[str] = None):
+    def __init__(self, db_manager: MongoDBManager, api_key: Optional[str] = None, config: Optional[Dict[str, Any]] = None):
         """Initialize Stack Overflow acquisition.
 
         Args:
             db_manager: MongoDB manager for storage
             api_key: Optional Stack Exchange API key for higher rate limits
+            config: Optional configuration dict with filtering criteria
         """
         self.db = db_manager
         self.api_key = api_key
         self.base_url = "https://api.stackexchange.com/2.3"
         self.site = "stackoverflow"
+
+        # Load filtering configuration
+        self.config = config or {}
+        so_filtering = self.config.get('sources', {}).get(
+            'stackoverflow', {}).get('filtering', {})
+
+        # Configurable filtering criteria
+        self.min_score = so_filtering.get('min_score', 1)
+        self.require_answered = so_filtering.get('require_answered', True)
+        self.require_accepted_answer = so_filtering.get(
+            'require_accepted_answer', False)
+        self.min_accepted_answer_score = so_filtering.get(
+            'min_accepted_answer_score', 0)
+        self.check_duplicates = so_filtering.get('check_duplicates', True)
 
         # Focus on highest-signal tags only
         self.llm_tags = [
@@ -134,7 +149,8 @@ class StackOverflowAcquisition:
                         **self.default_params,
                         'tagged': tag,
                         'fromdate': since_timestamp,
-                        'page': page
+                        'page': page,
+                        'min': self.min_score
                     }
 
                     url = f"{self.base_url}/questions"
@@ -177,9 +193,38 @@ class StackOverflowAcquisition:
                         break
 
                     for question in questions:
-                        # Simple filtering: only answered questions
-                        if not question.get('is_answered', False):
+                        # Check if we already have this post (if enabled)
+                        if self.check_duplicates:
+                            question_id = str(question['question_id'])
+                            existing = await self.db.find_one(
+                                'raw_posts',
+                                {
+                                    'platform': 'stackoverflow',
+                                    'source_id': question_id
+                                }
+                            )
+                            if existing:
+                                continue
+
+                        # Stage 1: Check if question must be answered
+                        if self.require_answered and not question.get('is_answered', False):
                             continue
+
+                        # Stage 2: Check if accepted answer is required
+                        if self.require_accepted_answer and not question.get('accepted_answer_id'):
+                            continue
+
+                        # Stage 3: Validate accepted answer score if required
+                        if (self.require_accepted_answer and
+                            question.get('accepted_answer_id') and
+                                self.min_accepted_answer_score > 0):
+                            accepted_answer_score = await self._get_accepted_answer_score(
+                                str(question['question_id']),
+                                str(question['accepted_answer_id']),
+                                client
+                            )
+                            if accepted_answer_score < self.min_accepted_answer_score:
+                                continue
 
                         # Convert to RawPost (with comments)
                         raw_post = await self._convert_question_to_rawpost_with_comments(
@@ -375,6 +420,90 @@ class StackOverflowAcquisition:
             logger.error(
                 f"Error fetching answers for question {question_id}: {str(e)}")
             return ""
+
+    def _contains_code(self, text: str) -> bool:
+        """Stage 1: Check if text contains executable code."""
+        if not text:
+            return False
+
+        # Code indicators
+        code_indicators = [
+            '```',  # Markdown code blocks
+            '<code>',  # HTML code tags
+            'import ',  # Python imports
+            'from ',  # Python imports
+            'def ',  # Python functions
+            'class ',  # Python classes
+            'function ',  # JavaScript functions
+            'const ',  # JavaScript constants
+            'let ',  # JavaScript variables
+            'var ',  # JavaScript variables
+            '#!/',  # Shebang
+            'SELECT ',  # SQL
+            'INSERT ',  # SQL
+            'UPDATE ',  # SQL
+            'curl ',  # API calls
+            'POST ',  # HTTP methods
+            'GET ',  # HTTP methods
+            'openai.',  # OpenAI API calls
+            'client.',  # API client calls
+            'await ',  # Async code
+            'async ',  # Async code
+            '.api.',  # API calls
+            'response =',  # API responses
+            'request =',  # API requests
+        ]
+
+        text_lower = text.lower()
+        code_count = sum(
+            1 for indicator in code_indicators if indicator.lower() in text_lower)
+
+        # Require at least 2 code indicators for high confidence
+        return code_count >= 2
+
+    async def _get_accepted_answer_score(
+        self,
+        question_id: str,
+        accepted_answer_id: str,
+        client: httpx.AsyncClient
+    ) -> int:
+        """Stage 3: Get the score of the accepted answer."""
+        try:
+            params = {
+                'site': self.site,
+                'filter': '!nNPvSNdWme'
+            }
+            if self.api_key:
+                params['key'] = self.api_key
+
+            url = f"{self.base_url}/answers/{accepted_answer_id}"
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+
+            # Handle response
+            try:
+                if response.headers.get('content-encoding') == 'gzip':
+                    content = gzip.decompress(response.content)
+                    data = json.loads(content.decode('utf-8'))
+                else:
+                    data = response.json()
+            except (gzip.BadGzipFile, json.JSONDecodeError):
+                try:
+                    data = response.json()
+                except json.JSONDecodeError:
+                    logger.error(
+                        f"Could not parse answer response for {accepted_answer_id}")
+                    return 0
+
+            answers = data.get('items', [])
+            if answers:
+                return answers[0].get('score', 0)
+            return 0
+
+        except Exception as e:
+            logger.error(
+                f"Error fetching accepted answer score for {accepted_answer_id}: {str(e)}")
+            return 0
 
     async def _convert_question_to_rawpost_with_comments(
         self,
@@ -578,7 +707,8 @@ class StackOverflowAcquisition:
                             **self.default_params,
                             'intitle': search_term,
                             'fromdate': since_timestamp,
-                            'page': page
+                            'page': page,
+                            'min': self.min_score
                         }
 
                         url = f"{self.base_url}/search"
@@ -593,13 +723,31 @@ class StackOverflowAcquisition:
                             break
 
                         for question in questions:
-                            # Simple filtering: only answered questions
-                            if question.get('is_answered', False):
-                                raw_post = self._convert_question_to_rawpost(
-                                    question, f"search:{search_term}"
+                            # Check if we already have this post (if enabled)
+                            if self.check_duplicates:
+                                question_id = str(question['question_id'])
+                                existing = await self.db.find_one(
+                                    'raw_posts',
+                                    {
+                                        'platform': 'stackoverflow',
+                                        'source_id': question_id
+                                    }
                                 )
-                                yield raw_post
-                                results_fetched += 1
+                                if existing:
+                                    continue
+
+                            # Configurable filtering
+                            if self.require_answered and not question.get('is_answered', False):
+                                continue
+
+                            if self.require_accepted_answer and not question.get('accepted_answer_id'):
+                                continue
+
+                            raw_post = self._convert_question_to_rawpost(
+                                question, f"search:{search_term}"
+                            )
+                            yield raw_post
+                            results_fetched += 1
 
                         page += 1
                         await asyncio.sleep(0.1)

@@ -29,12 +29,13 @@ class GitHubAcquisition:
     - Normalized data output
     """
 
-    def __init__(self, github_token: str, db_manager: MongoDBManager):
+    def __init__(self, github_token: str, db_manager: MongoDBManager, config: Optional[Dict[str, Any]] = None):
         """Initialize GitHub acquisition.
 
         Args:
             github_token: GitHub API token
             db_manager: MongoDB manager for storage
+            config: Optional configuration dict with filtering criteria
         """
         self.token = github_token
         self.db = db_manager
@@ -44,6 +45,17 @@ class GitHubAcquisition:
             'Accept': 'application/vnd.github.v3+json',
             'User-Agent': 'LLM-Contracts-Research/1.0'
         }
+
+        # Load filtering configuration
+        self.config = config or {}
+        github_filtering = self.config.get('sources', {}).get(
+            'github', {}).get('filtering', {})
+
+        # Configurable filtering criteria
+        self.min_comments = github_filtering.get('min_comments', 1)
+        self.require_closed = github_filtering.get('require_closed', False)
+        self.exclude_labels = github_filtering.get('exclude_labels', [])
+        self.check_duplicates = github_filtering.get('check_duplicates', True)
 
         # LLM Provider repositories (broad selection for maximum coverage)
         self.target_repositories = [
@@ -139,7 +151,7 @@ class GitHubAcquisition:
                 try:
                     url = f"{self.base_url}/repos/{owner}/{repo}/issues"
                     params = {
-                        'state': 'closed',  # Only fetch closed issues
+                        'state': 'closed' if self.require_closed else 'all',
                         'since': since.isoformat(),
                         'per_page': min(100, max_issues - issues_fetched),
                         'page': page,
@@ -171,19 +183,34 @@ class GitHubAcquisition:
                         if 'pull_request' in issue:
                             continue
 
-                        # Simple filtering: only closed issues
-                        if issue['state'] != 'closed':
+                        # Check if we already have this issue (if enabled)
+                        if self.check_duplicates:
+                            issue_id = str(issue['number'])
+                            existing = await self.db.find_one(
+                                'raw_posts',
+                                {
+                                    'platform': 'github',
+                                    'source_id': issue_id,
+                                    'url': {'$regex': f'{owner}/{repo}'}
+                                }
+                            )
+                            if existing:
+                                continue
+
+                        # Stage 1: Check issue state if required
+                        if self.require_closed and issue['state'] != 'closed':
                             continue
 
-                        # Require at least 1 comment
-                        if issue.get('comments', 0) < 1:
+                        # Stage 2: Check minimum comments
+                        if issue.get('comments', 0) < self.min_comments:
                             continue
 
-                        # Exclude issues with enhancement or bug labels
-                        labels = [label['name'].lower()
-                                  for label in issue.get('labels', [])]
-                        if any('enhancement' in label or 'bug' in label for label in labels):
-                            continue
+                        # Stage 3: Check excluded labels
+                        if self.exclude_labels:
+                            issue_labels = [label['name'].lower()
+                                            for label in issue.get('labels', [])]
+                            if any(excluded.lower() in issue_labels for excluded in self.exclude_labels):
+                                continue
 
                         # Convert to RawPost (with comments)
                         raw_post = await self._convert_issue_to_rawpost(
@@ -346,6 +373,49 @@ class GitHubAcquisition:
             logger.error(
                 f"Error fetching comments for issue {issue_number}: {str(e)}")
             return ""
+
+    def _contains_code(self, text: str) -> bool:
+        """Stage 1: Check if text contains executable code."""
+        if not text:
+            return False
+
+        # Code indicators specific to GitHub issues
+        code_indicators = [
+            '```',  # Markdown code blocks
+            '`',    # Inline code
+            'import ',  # Python imports
+            'from ',  # Python imports
+            'def ',  # Python functions
+            'class ',  # Python classes
+            'function ',  # JavaScript functions
+            'const ',  # JavaScript constants
+            'let ',  # JavaScript variables
+            'var ',  # JavaScript variables
+            'openai.',  # OpenAI API calls
+            'anthropic.',  # Anthropic API calls
+            'client.',  # API client calls
+            'await ',  # Async code
+            'async ',  # Async code
+            '.api.',  # API calls
+            'response =',  # API responses
+            'request =',  # API requests
+            'error',  # Error discussions
+            'traceback',  # Python tracebacks
+            'stack trace',  # Stack traces
+            'exception',  # Exception handling
+            'pip install',  # Package installation
+            'npm install',  # Package installation
+            'curl ',  # API calls
+            'POST ',  # HTTP methods
+            'GET ',  # HTTP methods
+        ]
+
+        text_lower = text.lower()
+        code_count = sum(
+            1 for indicator in code_indicators if indicator.lower() in text_lower)
+
+        # Require at least 2 code indicators for high confidence
+        return code_count >= 2
 
     async def _convert_issue_to_rawpost(
         self,

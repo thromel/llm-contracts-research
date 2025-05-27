@@ -147,8 +147,10 @@ class MultiSourcePipelineRunner:
         if self.pipeline_config['sources']['github']['enabled']:
             github_token = os.getenv('GITHUB_TOKEN')
             if github_token:
-                self.github_client = GitHubAcquisition(github_token, self.db)
-                logger.info("GitHub client initialized")
+                self.github_client = GitHubAcquisition(
+                    github_token, self.db, self.pipeline_config)
+                logger.info(
+                    "GitHub client initialized with configurable filtering")
             else:
                 logger.warning(
                     "GITHUB_TOKEN not found, GitHub acquisition disabled")
@@ -157,13 +159,13 @@ class MultiSourcePipelineRunner:
             # Optional - increases rate limits
             so_key = os.getenv('STACKOVERFLOW_API_KEY')
             self.stackoverflow_client = StackOverflowAcquisition(
-                self.db, so_key)
+                self.db, so_key, self.pipeline_config)
             if so_key:
                 logger.info(
-                    "Stack Overflow client initialized with API key (10k requests/day)")
+                    "Stack Overflow client initialized with API key and configurable filtering")
             else:
                 logger.info(
-                    "Stack Overflow client initialized without API key (300 requests/day)")
+                    "Stack Overflow client initialized without API key but with configurable filtering")
                 logger.warning(
                     "Consider setting STACKOVERFLOW_API_KEY for higher rate limits")
 
