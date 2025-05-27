@@ -51,4 +51,6 @@ llm_screening:
   model: gpt-4.1
   temperature: 0.1
   max_tokens: 2000
-  provider: openai 
+  provider: openai
+  batch_size: 100                    # Increase batch size for better throughput
+  rate_limit_delay: 0.5              # Reduce delay between API calls 

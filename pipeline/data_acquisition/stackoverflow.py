@@ -153,6 +153,11 @@ class StackOverflowAcquisition:
                         'min': self.min_score
                     }
 
+                    # Log filtering configuration for debugging
+                    if page == 1:  # Only log on first page to avoid spam
+                        logger.info(
+                            f"Stack Overflow filtering for tag '{tag}': min_score={self.min_score}, require_answered={self.require_answered}, require_accepted_answer={self.require_accepted_answer}, check_duplicates={self.check_duplicates}")
+
                     url = f"{self.base_url}/questions"
                     response = await client.get(url, params=params)
 

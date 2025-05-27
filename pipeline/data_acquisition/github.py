@@ -159,6 +159,11 @@ class GitHubAcquisition:
                         'direction': 'desc'
                     }
 
+                    # Log filtering configuration for debugging
+                    if page == 1:  # Only log on first page to avoid spam
+                        logger.info(
+                            f"GitHub filtering for {owner}/{repo}: state={params['state']}, min_comments={self.min_comments}, exclude_labels={self.exclude_labels}, check_duplicates={self.check_duplicates}")
+
                     response = await client.get(url, params=params)
 
                     if response.status_code == 403:
@@ -197,15 +202,11 @@ class GitHubAcquisition:
                             if existing:
                                 continue
 
-                        # Stage 1: Check issue state if required
-                        if self.require_closed and issue['state'] != 'closed':
-                            continue
-
-                        # Stage 2: Check minimum comments
+                        # Stage 1: Check minimum comments
                         if issue.get('comments', 0) < self.min_comments:
                             continue
 
-                        # Stage 3: Check excluded labels
+                        # Stage 2: Check excluded labels
                         if self.exclude_labels:
                             issue_labels = [label['name'].lower()
                                             for label in issue.get('labels', [])]
