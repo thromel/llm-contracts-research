@@ -163,12 +163,21 @@ class StackOverflowAcquisition:
 
                     response.raise_for_status()
 
-                    # Handle gzipped response
-                    if response.headers.get('content-encoding') == 'gzip':
-                        content = gzip.decompress(response.content)
-                        data = json.loads(content.decode('utf-8'))
-                    else:
-                        data = response.json()
+                    # Handle response - Stack Exchange API can return gzipped or regular JSON
+                    try:
+                        if response.headers.get('content-encoding') == 'gzip':
+                            content = gzip.decompress(response.content)
+                            data = json.loads(content.decode('utf-8'))
+                        else:
+                            data = response.json()
+                    except (gzip.BadGzipFile, json.JSONDecodeError) as e:
+                        # Fallback: try to parse as regular JSON
+                        try:
+                            data = response.json()
+                        except json.JSONDecodeError:
+                            logger.error(
+                                f"Could not parse response for tag {tag}: {str(e)}")
+                            break
 
                     questions = data.get('items', [])
                     has_more = data.get('has_more', False)
@@ -222,12 +231,21 @@ class StackOverflowAcquisition:
                 response = await client.get(url, params=params)
                 response.raise_for_status()
 
-                # Handle gzipped response
-                if response.headers.get('content-encoding') == 'gzip':
-                    content = gzip.decompress(response.content)
-                    data = json.loads(content.decode('utf-8'))
-                else:
-                    data = response.json()
+                # Handle response - Stack Exchange API can return gzipped or regular JSON
+                try:
+                    if response.headers.get('content-encoding') == 'gzip':
+                        content = gzip.decompress(response.content)
+                        data = json.loads(content.decode('utf-8'))
+                    else:
+                        data = response.json()
+                except (gzip.BadGzipFile, json.JSONDecodeError) as e:
+                    # Fallback: try to parse as regular JSON
+                    try:
+                        data = response.json()
+                    except json.JSONDecodeError:
+                        logger.error(
+                            f"Could not parse response for question {question_id}: {str(e)}")
+                        return
 
                 answers = data.get('items', [])
 

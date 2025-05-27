@@ -97,6 +97,9 @@ class RawPost:
         default_factory=lambda: datetime.now())
     acquisition_version: str = "1.0.0"
 
+    # Deduplication
+    content_hash: Optional[str] = None
+
     def __post_init__(self):
         """Generate unique ID if not provided."""
         if self._id is None:
@@ -126,7 +129,8 @@ class RawPost:
             'accepted_answer_id': self.accepted_answer_id,
             'view_count': self.view_count,
             'acquisition_timestamp': self.acquisition_timestamp,
-            'acquisition_version': self.acquisition_version
+            'acquisition_version': self.acquisition_version,
+            'content_hash': self.content_hash
         }
 
         # Only include _id if it's not None
