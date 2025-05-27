@@ -231,13 +231,31 @@ class LLMScreeningResult:
     confidence: float
     model_used: str  # "deepseek-r1", "gpt-4.1"
 
+    # Contract violation classification (optional)
+    contract_violations: Optional[List[Dict[str, Any]]] = None
+    novel_patterns: Optional[str] = None
+    research_value: Optional[str] = None
+    verification_notes: Optional[str] = None
+
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             'decision': self.decision,
             'rationale': self.rationale,
             'confidence': self.confidence,
             'model_used': self.model_used
         }
+
+        # Add classification data if available
+        if self.contract_violations is not None:
+            result['contract_violations'] = self.contract_violations
+        if self.novel_patterns is not None:
+            result['novel_patterns'] = self.novel_patterns
+        if self.research_value is not None:
+            result['research_value'] = self.research_value
+        if self.verification_notes is not None:
+            result['verification_notes'] = self.verification_notes
+
+        return result
 
 
 @dataclass

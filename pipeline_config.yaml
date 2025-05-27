@@ -11,6 +11,108 @@ sources:
         repo: openai-cookbook
       - owner: langchain-ai
         repo: langchain
+      - owner: langchain-ai
+        repo: langchainjs
+      - owner: langchain-ai
+        repo: langgraph
+      - owner: langchain-ai
+        repo: langsmith-sdk
+      
+      # Anthropic repositories
+      - owner: anthropics
+        repo: anthropic-sdk-python
+      - owner: anthropics
+        repo: anthropic-sdk-typescript
+      - owner: anthropics
+        repo: courses
+      
+      # Google AI repositories
+      - owner: google
+        repo: generative-ai-python
+      - owner: google
+        repo: generative-ai-js
+      - owner: google-gemini
+        repo: cookbook
+      
+      # Microsoft/Azure OpenAI
+      - owner: Azure
+        repo: azure-sdk-for-python
+      - owner: Azure
+        repo: azure-sdk-for-js
+      - owner: microsoft
+        repo: semantic-kernel
+      - owner: microsoft
+        repo: autogen
+      
+      # Popular LLM frameworks and tools
+      - owner: run-llama
+        repo: llama_index
+      - owner: chroma-core
+        repo: chroma
+      - owner: pinecone-io
+        repo: pinecone-python-client
+      - owner: weaviate
+        repo: weaviate-python-client
+      - owner: qdrant
+        repo: qdrant-client
+      - owner: pgvector
+        repo: pgvector
+      
+      # AI application frameworks
+      - owner: streamlit
+        repo: streamlit
+      - owner: gradio-app
+        repo: gradio
+      - owner: chainlit
+        repo: chainlit
+      - owner: modal-labs
+        repo: modal-client
+      - owner: vercel
+        repo: ai
+      
+      # LLM orchestration and agents
+      - owner: crewAIInc
+        repo: crewAI
+      - owner: SillyTavern
+        repo: SillyTavern
+      - owner: danny-avila
+        repo: LibreChat
+      - owner: mckaywrigley
+        repo: chatbot-ui
+      - owner: Yidadaa
+        repo: ChatGPT-Next-Web
+      
+      # API and integration tools
+      - owner: openai
+        repo: chatgpt-retrieval-plugin
+      - owner: activeloopai
+        repo: deeplake
+      - owner: supabase
+        repo: supabase
+      - owner: hwchase17
+        repo: chat-langchain
+      
+      # Development tools
+      - owner: geekan
+        repo: MetaGPT
+      - owner: smol-ai
+        repo: developer
+      - owner: AntonOsika
+        repo: gpt-engineer
+      - owner: biobootloader
+        repo: wolverine
+      
+      # Research and experimental
+      - owner: microsoft
+        repo: guidance
+      - owner: microsoft
+        repo: promptflow
+      - owner: BerriAI
+        repo: litellm
+      - owner: ollama
+        repo: ollama
+      - owner: ollama
+        repo: ollama-python
     max_issues_per_repo: 10000
     days_back: 2000
     filtering:
@@ -21,11 +123,89 @@ sources:
   stackoverflow:
     enabled: true
     tags:
-      # Focus on highest-signal tags only
+      # Core LLM provider APIs
       - openai-api
-      - langchain
-      - gpt-4
       - chatgpt-api
+      - gpt-4
+      - gpt-3.5
+      - anthropic-claude
+      - claude-api
+      - google-gemini
+      - azure-openai
+      - palm-api
+      
+      # LLM frameworks and libraries
+      - langchain
+      - llamaindex
+      - llama-index
+      - semantic-kernel
+      - guidance
+      - autogen
+      - crewai
+      
+      # Vector databases and embeddings
+      - embeddings
+      - vector-database
+      - pinecone
+      - chroma
+      - weaviate
+      - qdrant
+      - faiss
+      - pgvector
+      
+      # AI application development
+      - streamlit
+      - gradio
+      - chainlit
+      - chatbot
+      - ai-chat
+      - retrieval-augmented-generation
+      - rag
+      
+      # API integration and tools
+      - huggingface-transformers
+      - transformers
+      - openai-python
+      - anthropic-python
+      - litellm
+      - ollama
+      
+      # LLM operations and deployment
+      - prompt-engineering
+      - fine-tuning
+      - model-deployment
+      - ai-safety
+      - token-limit
+      - rate-limiting
+      
+      # Related AI/ML tags with LLM overlap
+      - artificial-intelligence
+      - machine-learning
+      - natural-language-processing
+      - nlp
+      - generative-ai
+      - large-language-model
+      - llm
+      
+      # Development platforms
+      - azure-cognitive-services
+      - aws-bedrock
+      - google-cloud-ai
+      - vercel-ai
+      - modal
+      
+      # JSON and structured output
+      - json-schema
+      - structured-output
+      - function-calling
+      - tool-use
+      
+      # Error handling and debugging
+      - api-error
+      - timeout
+      - rate-limit-exceeded
+      - context-length
+      - token-count
     max_questions_per_tag: 10000
     days_back: 2000
     filtering:
@@ -50,7 +230,8 @@ llm_screening:
   mode: traditional
   model: gpt-4.1
   temperature: 0.1
-  max_tokens: 2000
+  max_tokens: 200000
   provider: openai
-  batch_size: 100                    # Increase batch size for better throughput
-  rate_limit_delay: 0.5              # Reduce delay between API calls 
+  batch_size: 1000                   # Increase batch size for better throughput
+  rate_limit_delay: 0.5              # Increased delay between API calls for stability
+  max_concurrent_requests: 1        # Reduced concurrent requests to avoid rate limits 

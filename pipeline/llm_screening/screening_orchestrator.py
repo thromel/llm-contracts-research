@@ -73,7 +73,9 @@ class ScreeningOrchestrator:
                         api_key=self.config.traditional_screening.borderline_screener_llm.api_key,
                         db_manager=self.db,
                         base_url=self.config.traditional_screening.borderline_screener_llm.base_url,
-                        model=self.config.traditional_screening.borderline_screener_llm.model_name
+                        model=self.config.traditional_screening.borderline_screener_llm.model_name,
+                        rate_limit_delay=self.config.traditional_screening.rate_limit_delay,
+                        max_concurrent_requests=self.config.traditional_screening.max_concurrent_requests
                     )
                     logger.info("✅ Borderline screener initialized")
 

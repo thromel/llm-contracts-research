@@ -125,6 +125,22 @@ class MultiSourcePipelineRunner:
         os.environ['SCREENING_MODE'] = screening_mode
         logger.info(f"Set screening mode: {screening_mode}")
 
+        # Set batch size and rate limiting from config
+        if 'batch_size' in llm_config:
+            batch_size = str(llm_config['batch_size'])
+            os.environ['LLM_BATCH_SIZE'] = batch_size
+            logger.info(f"Set batch size: {batch_size}")
+
+        if 'rate_limit_delay' in llm_config:
+            rate_delay = str(llm_config['rate_limit_delay'])
+            os.environ['LLM_RATE_LIMIT_DELAY'] = rate_delay
+            logger.info(f"Set rate limit delay: {rate_delay}")
+
+        if 'max_concurrent_requests' in llm_config:
+            max_concurrent = str(llm_config['max_concurrent_requests'])
+            os.environ['LLM_MAX_CONCURRENT_REQUESTS'] = max_concurrent
+            logger.info(f"Set max concurrent requests: {max_concurrent}")
+
         # Set OpenAI configuration for traditional screening
         if llm_config.get('provider') == 'openai':
             model = llm_config.get('model', 'gpt-4-turbo-2024-04-09')

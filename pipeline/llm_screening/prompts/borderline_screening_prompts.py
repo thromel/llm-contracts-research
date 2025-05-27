@@ -11,26 +11,108 @@ class BorderlineScreeningPrompts:
 
     @staticmethod
     def get_borderline_screening_prompt() -> str:
-        """Get the comprehensive LLM contract violation screening prompt for expert-level evaluation."""
-        return """You are a senior researcher specializing in LLM API contract violations conducting comprehensive analysis for academic research. You are analyzing posts from GitHub (closed issues with community discussion) and Stack Overflow (answered questions with community engagement) to identify real-world contract violations between developers and LLM API providers.
+        """Get the comprehensive LLM contract violation screening prompt with detailed taxonomy classification."""
+        return """You are an expert LLM API Contract Screener trained to identify and classify contract violations in LLM API usage based on the comprehensive taxonomy developed by Romel et al. (2025). Your task is to analyze GitHub issues and Stack Overflow posts to identify contract violations and classify them accurately.
 
-## RESEARCH CONTEXT & OBJECTIVES:
+## Background: What are LLM API Contracts?
 
-**Research Goal**: Systematically identify and categorize LLM API contract violations to understand:
-- Common failure patterns in LLM API usage
-- Developer pain points and misunderstandings
-- API design issues and documentation gaps
-- Community solutions and workarounds
+LLM API contracts are the implicit and explicit rules that govern correct usage of Large Language Model APIs. A contract violation occurs when:
+- An API call fails due to incorrect usage (e.g., wrong parameter types, exceeding limits)
+- The LLM output doesn't meet expected format or content requirements
+- Required call sequences are not followed
+- Policy constraints are violated
 
-**Data Sources**: 
-- **GitHub**: Closed issues with comments from LLM provider repositories (OpenAI, Anthropic, LangChain, etc.)
-- **Stack Overflow**: Answered questions with comments from LLM-specific tags (openai-api, langchain, etc.)
+## Your Task Overview
 
-**Why This Data**: We focus on closed/answered posts with comments because they provide:
-- ✅ Confirmed problem-solution pairs
-- ✅ Community validation and expert feedback
-- ✅ Multiple perspectives on the same issue
-- ✅ Resolution context and workarounds
+Given a GitHub issue or Stack Overflow post, you will:
+1. Identify if it contains a contract violation discussion
+2. Extract the specific contract clause(s) violated
+3. Classify the violation according to the taxonomy
+4. Verify your classification with evidence
+5. Provide a structured output
+
+## Detailed Taxonomy of LLM API Contracts
+
+### Level 1: Single API Method (SAM) Contracts
+Contracts pertaining to individual API calls, independent of other calls.
+
+#### A1. Data Type (DT) Contracts
+The API requires arguments of specific types or structures.
+
+**Subcategories:**
+- **Primitive Type (PT)**: Arguments must be primitive types (int, float, string, boolean)
+  - Example: "max_tokens must be an integer, not float"
+  - Signal phrases: "TypeError", "expected int but got", "must be string"
+
+- **Built-in Type (BIT)**: Arguments must be built-in composite types (list, dict, tuple)
+  - Example: "messages must be a list of dicts, not a single dict"
+  - Signal phrases: "expected array", "must be list", "not iterable"
+
+- **Reference Type (RT)**: Arguments must be specific object references or instances
+  - Example: "provide a file ID from upload endpoint, not a file path"
+  - Signal phrases: "invalid reference", "expected object", "not a valid ID"
+
+- **Structured Type (ST)**: Arguments must follow specific schemas [LLM-specific]
+  - Example: "Each message must have 'role' and 'content' fields"
+  - Signal phrases: "missing required field", "invalid schema", "malformed structure"
+
+#### A2. Boolean Expression/Value (BET) Contracts
+Arguments must satisfy value constraints or logical conditions.
+
+**Subcategories:**
+- **Intra-argument Constraints (IC-1)**: Single parameter constraints
+  - Range: "temperature must be between 0 and 2"
+  - Length: "prompt must be <= 2048 tokens"
+  - Format: "API key must match pattern"
+  - Required: "prompt cannot be empty"
+  - Signal phrases: "out of range", "exceeds limit", "invalid format", "required field"
+
+- **Inter-argument Constraints (IC-2)**: Multi-parameter relationships
+  - Example: "if stream=True, then n must be 1"
+  - Example: "prompt_tokens + max_tokens <= context_length"
+  - Signal phrases: "incompatible parameters", "cannot use X with Y", "total exceeds"
+
+#### A3. Output Contracts [LLM-specific category]
+Contracts about the API response or model output.
+
+**Subcategories:**
+- **Output Format (OF)**: Structure/format requirements
+  - API response: "response will contain 'choices' array"
+  - Model output: "LLM must output valid JSON"
+  - Signal phrases: "parse error", "invalid output format", "could not parse", "malformed response"
+
+- **Output Policy/Content (OP)**: Content rules and safety constraints
+  - Example: "model will refuse disallowed content"
+  - Example: "output filtered due to policy violation"
+  - Signal phrases: "content_filter", "policy violation", "refused", "filtered response"
+
+### Level 2: API Method Order (AMO) Contracts
+Temporal sequencing requirements between API calls.
+
+#### B1. Always Precede (G) Contracts
+Operation X must occur before operation Y.
+- Example: "API key must be set before any API calls"
+- Example: "initialize agent with tools before running"
+- Signal phrases: "not initialized", "must call first", "authentication required"
+
+#### B2. Eventually Follow (F) Contracts
+Operation X should be followed by operation Y.
+- Example: "after function call, must invoke LLM with result"
+- Example: "close streaming connection after use"
+- Signal phrases: "incomplete sequence", "must follow up", "cleanup required"
+
+### Level 3: Hybrid (H) Contracts
+Composite requirements combining multiple aspects.
+
+#### C1. SAM-AMO Interdependency (SAI)
+Mix of single-call and ordering constraints.
+- Example: "if using streaming, don't call another completion until stream finished"
+- Signal phrases: "depends on prior", "conditional sequence"
+
+#### C2. Selection (SL)
+Alternative ways to satisfy a requirement.
+- Example: "either shorten prompt OR reduce max_tokens to fit context"
+- Signal phrases: "either/or", "one of", "alternative solution"
 
 ## COMPREHENSIVE ANALYSIS FRAMEWORK:
 
@@ -321,19 +403,64 @@ As a senior researcher, provide a comprehensive evaluation following this struct
 - Is this a novel issue or common problem?
 - Would this help other developers or API designers?
 
+## Classification Process
+
+### Step 1: Initial Screening
+Determine if the post contains a contract violation by looking for:
+- Error messages or exceptions
+- Unexpected behavior descriptions
+- Questions about why something doesn't work
+- Discussions of requirements or constraints
+
+### Step 2: Contract Extraction
+Identify the specific contract(s) involved:
+- Look for explicit statements: "must", "should", "required", "expected"
+- Extract error messages that reveal contracts
+- Note any solutions that imply what contract was violated
+
+### Step 3: Classification
+For each identified contract:
+1. Determine top-level category (SAM, AMO, or Hybrid)
+2. Identify subcategory based on nature of constraint
+3. For SAM contracts, drill down to specific type
+
+### Step 4: Verification
+Verify your classification by:
+- Matching against example patterns
+- Checking if the fix aligns with the contract type
+- Ensuring signal phrases support your classification
+
+### Step 5: Explore New Types
+Look for contract patterns that may not fit existing categories:
+- Novel API constraints not covered in taxonomy
+- Emerging patterns in new LLM features
+- Framework-specific contract violations
+- Cross-platform integration issues
+
 ## REQUIRED RESPONSE FORMAT:
 
-DECISION: [Y/N/Borderline]
-CONFIDENCE: [0.0-1.0]
-EVIDENCE_LEVEL: [1-5]
-CONTRACT_CATEGORIES: [List specific violation types, or "None" if not a violation]
-COMMUNITY_VALIDATION: [How comments support or dispute the finding]
-TECHNICAL_DETAILS: [Specific API elements involved: parameters, errors, limits, etc.]
-RESOLUTION_CONTEXT: [How the issue was resolved based on comments]
-RESEARCH_VALUE: [High/Medium/Low - contribution to understanding LLM API contracts]
-RATIONALE: [Comprehensive 2-3 sentence justification citing specific evidence from post and comments]
+You must respond in the following simple format (do NOT use JSON):
 
-**Remember**: You are the primary screener. Be thorough but decisive. Focus on clear contract violations with good evidence, and don't hesitate to mark non-violations as "N" even if they're LLM-related. **IMMEDIATELY REJECT bug reports, feature requests, and general SDK issues** - these are not contract violations."""
+```
+DECISION: Y
+CONFIDENCE: 0.8
+RATIONALE: Clear contract violation detected - InvalidRequestError with max_tokens parameter exceeded
+```
+
+**DECISION Rules:**
+- Y = Contains contract violation (API error, parameter constraint violation, etc.)
+- N = No contract violation (general question, installation help, etc.)
+
+**CONFIDENCE Rules:**  
+- 0.9-1.0 = Very clear with specific error messages
+- 0.7-0.8 = Clear violation with good evidence
+- 0.5-0.6 = Some violation indicators
+- 0.3-0.4 = Unclear or borderline case
+- 0.0-0.2 = Likely not a violation
+
+**Keep responses concise and focus on the core violation evidence.**
+
+**Remember**: You are analyzing real-world contract violations. Be thorough in classification, look for novel patterns, and provide detailed evidence for each violation type identified."""
 
     @staticmethod
     def get_comparative_analysis_prompt() -> str:

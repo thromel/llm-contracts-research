@@ -89,6 +89,8 @@ class TraditionalConfig:
     bulk_batch_size: int = 100
     borderline_batch_size: int = 25
     concurrent_requests: int = 10
+    rate_limit_delay: float = 2.0
+    max_concurrent_requests: int = 10
 
 
 @dataclass
@@ -230,6 +232,39 @@ class PipelineConfig:
 
         # LLM configurations
         config._setup_llm_configs_from_env()
+
+        # Performance settings from environment
+        logger = logging.getLogger(__name__)
+
+        if os.getenv('LLM_BATCH_SIZE'):
+            try:
+                batch_size = int(os.getenv('LLM_BATCH_SIZE'))
+                config.traditional_screening.borderline_batch_size = batch_size
+                config.agentic_screening.batch_size = batch_size
+                logger.info(f"Set batch size from environment: {batch_size}")
+            except ValueError:
+                logger.warning(
+                    f"Invalid LLM_BATCH_SIZE: {os.getenv('LLM_BATCH_SIZE')}")
+
+        if os.getenv('LLM_RATE_LIMIT_DELAY'):
+            try:
+                rate_delay = float(os.getenv('LLM_RATE_LIMIT_DELAY'))
+                config.traditional_screening.rate_limit_delay = rate_delay
+                logger.info(
+                    f"Set rate limit delay from environment: {rate_delay}")
+            except ValueError:
+                logger.warning(
+                    f"Invalid LLM_RATE_LIMIT_DELAY: {os.getenv('LLM_RATE_LIMIT_DELAY')}")
+
+        if os.getenv('LLM_MAX_CONCURRENT_REQUESTS'):
+            try:
+                max_concurrent = int(os.getenv('LLM_MAX_CONCURRENT_REQUESTS'))
+                config.traditional_screening.max_concurrent_requests = max_concurrent
+                logger.info(
+                    f"Set max concurrent requests from environment: {max_concurrent}")
+            except ValueError:
+                logger.warning(
+                    f"Invalid LLM_MAX_CONCURRENT_REQUESTS: {os.getenv('LLM_MAX_CONCURRENT_REQUESTS')}")
 
         return config
 

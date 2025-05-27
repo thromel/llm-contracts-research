@@ -48,115 +48,41 @@ class KeywordPreFilter:
         self.db = db_manager
         self.provenance = ProvenanceTracker(db_manager)
 
-        # LLM Contract Keywords - focused on contract violations from research
-        self.llm_contract_keywords = {
-            # Core API parameters (from contract violations)
+        # Simple unified keyword list - if ANY of these match, the post passes
+        self.keywords = {
+            # Core LLM/API terms
+            'openai', 'gpt', 'claude', 'anthropic', 'api', 'llm', 'chatgpt',
+            'langchain', 'huggingface', 'transformers', 'ai', 'model',
+
+            # API parameters
             'max_tokens', 'temperature', 'top_p', 'frequency_penalty',
-            'presence_penalty', 'stop', 'stream', 'logprobs', 'logit_bias',
-            'n', 'best_of', 'echo', 'suffix', 'context_length', 'context_limit',
+            'presence_penalty', 'stop', 'stream', 'logprobs', 'context_length',
 
-            # JSON and schema violations (major category in research)
-            'json_schema', 'response_format', 'function_calling', 'tools',
-            'schema', 'structured_output', 'json_mode', 'parse_error',
-            'json_parse', 'malformed_json', 'invalid_json', 'schema_validation',
+            # JSON and formatting
+            'json', 'schema', 'response_format', 'function_calling', 'tools',
+            'structured_output', 'json_mode', 'parse', 'format',
 
-            # Rate limiting and quotas (frequent violations)
-            'rate_limit', 'quota', 'rpm', 'tpm', 'requests_per_minute',
-            'tokens_per_minute', 'usage_quota', 'billing', 'rate_exceeded',
-            'quota_exceeded', 'rate_limit_error', 'too_many_requests',
+            # Rate limiting and quotas
+            'rate_limit', 'quota', 'rpm', 'tpm', 'billing', 'usage',
+            'rate_exceeded', 'quota_exceeded', 'too_many_requests',
 
-            # Error codes and patterns (API contract violations)
-            'invalid_request', 'model_not_found', 'insufficient_quota',
-            'context_length_exceeded', 'rate_limit_exceeded', 'timeout',
-            'authentication_error', 'permission_denied', 'bad_request',
-            'unauthorized', 'forbidden', 'server_error', 'service_unavailable',
+            # Errors and issues
+            'error', 'exception', 'failed', 'fail', 'bug', 'issue',
+            'problem', 'trouble', 'broken', 'help', 'fix', 'solve',
+            'timeout', 'unauthorized', 'forbidden', 'invalid_request',
 
-            # Content policy violations (new category from research)
-            'content_policy', 'usage_policy', 'content_filter', 'safety_filter',
-            'policy_violation', 'flagged_content', 'moderation', 'content_moderation',
+            # Token and context issues
+            'token_limit', 'context_overflow', 'input_too_long',
+            'prompt_too_long', 'context_length_exceeded',
 
-            # Token limit violations (very common)
-            'token_limit', 'token_exceeded', 'context_overflow', 'input_too_long',
-            'prompt_too_long', 'message_too_long', 'conversation_too_long',
+            # Content policy
+            'content_policy', 'policy_violation', 'moderation',
+            'content_filter', 'safety_filter',
 
-            # Model-specific issues
-            'model_name', 'model_id', 'engine', 'deployment_id',
-            'fine_tuning', 'custom_model', 'base_model', 'model_error'
+            # General programming/ML terms that might be relevant
+            'python', 'javascript', 'node', 'sdk', 'library', 'package',
+            'installation', 'import', 'module', 'version', 'update'
         }
-
-        # ML-style root-cause cues from Khairunnesa et al.
-        self.ml_root_cause_keywords = {
-            # Data type issues
-            'dtype', 'datatype', 'type_error', 'shape_mismatch', 'dimension',
-            'tensor_shape', 'array_shape', 'ndarray', 'dtype_mismatch',
-
-            # Preprocessing issues
-            'preprocess', 'normalize', 'tokenize', 'encode', 'decode',
-            'transform', 'clean', 'filter', 'split', 'batch',
-
-            # Seed and reproducibility
-            'seed', 'random_state', 'reproducible', 'deterministic',
-            'random_seed', 'numpy_seed', 'torch_seed',
-
-            # Memory and performance
-            'memory_error', 'out_of_memory', 'cuda_error', 'gpu_memory',
-            'memory_leak', 'performance', 'slow', 'timeout',
-
-            # Version and compatibility
-            'version_mismatch', 'compatibility', 'deprecated', 'upgrade',
-            'downgrade', 'version_error', 'library_version'
-        }
-
-        # Error indicators
-        self.error_indicators = {
-            'error', 'exception', 'failed', 'fail', 'crash', 'bug',
-            'issue', 'problem', 'trouble', 'broken', 'not_working',
-            'doesnt_work', "doesn't work", 'help', 'fix', 'solve',
-            'debug', 'traceback', 'stack_trace'
-        }
-
-        # Contract violation patterns (regex) - enhanced for LLM contracts
-        self.contract_patterns = [
-            # Parameter validation patterns (core contract violations)
-            r'(?i)(max_tokens|temperature|top_p)\s*(must|should|cannot|error|invalid|exceeds?|limit)',
-            r'(?i)(rate.?limit|quota).*(exceeded|error|reached|hit|violation|denied)',
-            r'(?i)(context.?length|token.?limit).*(exceeded|too.?long|error|overflow|maximum)',
-            r'(?i)(json|schema).*(invalid|error|malformed|wrong|parse|failed|validation)',
-            r'(?i)(api.?key|token).*(invalid|expired|missing|error|unauthorized|forbidden)',
-
-            # Content policy patterns (new from research)
-            r'(?i)(content|usage).?policy.*(violation|violated|flagged|denied|rejected)',
-            r'(?i)(safety|moderation).*(filter|blocked|flagged|violation)',
-            r'(?i)(prompt|input|content).*(filtered|blocked|inappropriate|violation)',
-
-            # Token/context limit patterns (very common)
-            r'(?i)(context|token|input).*(limit|maximum|exceeded|overflow|too.?long)',
-            r'(?i)(conversation|history).*(too.?long|exceeded|truncated)',
-            r'(?i)maximum.?context.?length.*(exceeded|reached)',
-
-            # Error code patterns (HTTP status codes)
-            r'(?i)(400|401|403|429|500|502|503|504)\s*(error|status|code)',
-            r'(?i)error.?code\s*:?\s*\d+',
-            r'(?i)(BadRequest|Unauthorized|RateLimit|ServerError|InvalidRequest)',
-
-            # Contract-specific error messages (precise language)
-            r'(?i)(parameter|argument).*(required|missing|invalid|out.?of.?range)',
-            r'(?i)(must|should|cannot).*(be|provide|specify|exceed|contain)',
-            r'(?i)(expected|requires?).*(but|got|received|found|instead)',
-
-            # Output format violations (common in LLM usage)
-            r'(?i)(output|response).*(format|schema|structure).*(invalid|wrong|unexpected)',
-            r'(?i)(failed|unable).*(parse|decode|extract).*(json|xml|yaml)',
-            r'(?i)(model|llm).*(did.?not|failed.?to).*(follow|generate|produce)',
-
-            # Function calling violations (tool use contracts)
-            r'(?i)(function|tool).*(call|calling).*(error|failed|invalid|unknown)',
-            r'(?i)(tool|function).*(not.?found|unavailable|missing|undefined)'
-        ]
-
-        # Compile regex patterns for efficiency
-        self.compiled_patterns = [re.compile(
-            pattern) for pattern in self.contract_patterns]
 
     async def filter_batch(
         self,
@@ -249,7 +175,7 @@ class KeywordPreFilter:
         return stats
 
     def apply_filter(self, raw_post: RawPost) -> FilterResult:
-        """Apply keyword filter to a single post.
+        """Apply simple keyword filter to a single post.
 
         Args:
             raw_post: Raw post to filter
@@ -261,79 +187,55 @@ class KeywordPreFilter:
         combined_text = f"{raw_post.title} {raw_post.body_md}"
         combined_text_lower = combined_text.lower()
 
-        # Check for keywords
-        matched_llm_keywords = self._find_keywords(
-            combined_text_lower, self.llm_contract_keywords)
-        matched_ml_keywords = self._find_keywords(
-            combined_text_lower, self.ml_root_cause_keywords)
-        matched_error_keywords = self._find_keywords(
-            combined_text_lower, self.error_indicators)
+        # Simple keyword matching - if ANY keyword matches, pass the post
+        matched_keywords = []
+        for keyword in self.keywords:
+            if keyword in combined_text_lower:
+                matched_keywords.append(keyword)
 
-        all_matched_keywords = matched_llm_keywords + \
-            matched_ml_keywords + matched_error_keywords
+        # Check tags and labels for relevant terms
+        tag_matches = []
+        for tag in raw_post.tags + raw_post.labels:
+            tag_lower = tag.lower()
+            for keyword in self.keywords:
+                if keyword in tag_lower:
+                    tag_matches.append(tag)
+                    if keyword not in matched_keywords:
+                        matched_keywords.append(keyword)
 
-        # Check for contract patterns
-        contract_matches = self._find_contract_patterns(combined_text)
+        # Simple decision: if any keyword matches, pass it through
+        passed = len(matched_keywords) > 0
 
-        # Check tags and labels
-        tag_matches = self._check_tags_and_labels(
-            raw_post.tags + raw_post.labels)
+        # Simple confidence: more keywords = higher confidence
+        confidence = min(len(matched_keywords) * 0.1, 1.0)
 
-        # Calculate confidence score
-        confidence = self._calculate_confidence(
-            matched_llm_keywords,
-            matched_ml_keywords,
-            matched_error_keywords,
-            contract_matches,
-            tag_matches,
-            combined_text
-        )
+        # Extract a simple snippet around the first matched keyword
+        relevant_snippets = []
+        if matched_keywords and passed:
+            first_keyword = matched_keywords[0]
+            start_pos = combined_text_lower.find(first_keyword)
+            if start_pos != -1:
+                snippet_start = max(0, start_pos - 100)
+                snippet_end = min(len(combined_text),
+                                  start_pos + len(first_keyword) + 100)
+                snippet = combined_text[snippet_start:snippet_end].strip()
+                if len(snippet) > 20:
+                    relevant_snippets.append(snippet)
 
-        # Extract relevant snippets
-        relevant_snippets = self._extract_snippets(
-            combined_text,
-            all_matched_keywords + [match[0] for match in contract_matches]
-        )
-
-        # Identify potential contracts
-        potential_contracts = self._identify_potential_contracts(
-            combined_text,
-            matched_llm_keywords,
-            contract_matches
-        )
-
-        # More restrictive decision logic: require stronger signals for LLM contracts
-        passed = (
-            confidence >= 0.5 or  # Higher confidence threshold
-            # Require both LLM keywords AND error indicators (stronger signal)
-            (len(matched_llm_keywords) >= 2 and len(matched_error_keywords) >= 1) or
-            len(contract_matches) >= 2 or  # Multiple contract patterns
-            # High-quality tag combinations
-            (len(tag_matches) >= 2 and len(matched_llm_keywords) >= 1)
-        )
-
-        # Filter metadata
+        # Simple metadata
         filter_metadata = {
-            'llm_keywords_count': len(matched_llm_keywords),
-            'ml_keywords_count': len(matched_ml_keywords),
-            'error_keywords_count': len(matched_error_keywords),
-            'contract_patterns_count': len(contract_matches),
-            'tag_matches_count': len(tag_matches),
+            'keywords_matched': len(matched_keywords),
+            'tags_matched': len(tag_matches),
             'text_length': len(combined_text),
-            'decision_factors': {
-                'confidence_threshold': confidence >= 0.3,
-                'llm_plus_errors': len(matched_llm_keywords) > 0 and len(matched_error_keywords) > 0,
-                'contract_patterns': len(contract_matches) > 0,
-                'relevant_tags': len(tag_matches) > 0
-            }
+            'decision_reason': 'keyword_match' if passed else 'no_keywords'
         }
 
         return FilterResult(
             passed=passed,
             confidence=confidence,
-            matched_keywords=all_matched_keywords,
+            matched_keywords=matched_keywords,
             relevant_snippets=relevant_snippets,
-            potential_contracts=potential_contracts,
+            potential_contracts=[],  # Not needed for simple filtering
             filter_metadata=filter_metadata
         )
 
@@ -391,16 +293,17 @@ class KeywordPreFilter:
     ) -> float:
         """Calculate confidence score for the filter decision."""
 
-        # Base score components
-        # Up to 0.5 for LLM keywords
-        llm_score = min(len(llm_keywords) * 0.2, 0.5)
-        # Up to 0.2 for ML keywords
-        ml_score = min(len(ml_keywords) * 0.1, 0.2)
-        # Up to 0.2 for error keywords
-        error_score = min(len(error_keywords) * 0.1, 0.2)
-        pattern_score = min(len(contract_matches) * 0.3,
-                            0.6)  # Up to 0.6 for patterns
-        tag_score = min(len(tag_matches) * 0.15, 0.3)  # Up to 0.3 for tags
+        # More generous base score components
+        # Up to 0.6 for LLM keywords (increased)
+        llm_score = min(len(llm_keywords) * 0.25, 0.6)
+        # Up to 0.3 for ML keywords (increased)
+        ml_score = min(len(ml_keywords) * 0.15, 0.3)
+        # Up to 0.3 for error keywords (increased)
+        error_score = min(len(error_keywords) * 0.15, 0.3)
+        pattern_score = min(len(contract_matches) * 0.35,
+                            0.7)  # Up to 0.7 for patterns (increased)
+        # Up to 0.4 for tags (increased)
+        tag_score = min(len(tag_matches) * 0.2, 0.4)
 
         # Combination bonuses
         combination_bonus = 0.0

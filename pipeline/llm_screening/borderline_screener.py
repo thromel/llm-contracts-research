@@ -7,6 +7,7 @@ for higher accuracy on edge cases.
 
 import asyncio
 import logging
+import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import json
@@ -35,7 +36,9 @@ class BorderlineScreener:
         api_key: str,
         db_manager: MongoDBManager,
         base_url: str = "https://api.openai.com/v1",
-        model: str = "gpt-4-1106-preview"
+        model: str = "gpt-4-1106-preview",
+        rate_limit_delay: float = 2.0,
+        max_concurrent_requests: int = 10
     ):
         """Initialize borderline screener.
 
@@ -44,12 +47,19 @@ class BorderlineScreener:
             db_manager: MongoDB manager for storage
             base_url: OpenAI API base URL
             model: GPT-4 model to use for screening
+            rate_limit_delay: Delay between API calls in seconds
+            max_concurrent_requests: Maximum concurrent API requests
         """
         self.api_key = api_key
         self.db = db_manager
         self.base_url = base_url
         self.model = model
+        self.rate_limit_delay = rate_limit_delay
+        self.max_concurrent_requests = max_concurrent_requests
         self.provenance = ProvenanceTracker(db_manager)
+
+        # Semaphore for controlling concurrent requests
+        self.semaphore = asyncio.Semaphore(max_concurrent_requests)
 
         # HTTP client configuration
         self.headers = {
@@ -98,42 +108,14 @@ class BorderlineScreener:
             unscreened_posts.append(filtered_post)
 
         logger.info(
-            f"Starting direct screening of {len(unscreened_posts)} unscreened posts")
+            f"Starting concurrent screening of {len(unscreened_posts)} unscreened posts (max {self.max_concurrent_requests} concurrent)")
 
-        # Process posts individually
-        for filtered_post in unscreened_posts:
-            try:
-                # Screen post directly without previous analysis
-                screening_result = await self._screen_unscreened_post(filtered_post)
+        # Create concurrent tasks for all posts
+        tasks = [self._process_single_post_with_stats(post, stats)
+                 for post in unscreened_posts]
 
-                stats['processed'] += 1
-                stats['api_calls'] += 1
-
-                # Classify result
-                if screening_result.decision == 'Y':
-                    stats['positive_decisions'] += 1
-                    if screening_result.confidence >= 0.8:
-                        stats['high_confidence'] += 1
-                elif screening_result.decision == 'N':
-                    stats['negative_decisions'] += 1
-                else:
-                    stats['borderline_cases'] += 1
-
-                # Save the screening result as a new document
-                await self._save_initial_screening_result(filtered_post, screening_result)
-
-                # Mark filtered post as screened
-                await self.db.update_one('filtered_posts',
-                                         {'_id': filtered_post['_id']},
-                                         {'$set': {'llm_screened': True}})
-
-                # Rate limiting
-                await asyncio.sleep(2.0)  # Conservative for GPT-4
-
-            except Exception as e:
-                logger.error(
-                    f"Error screening post {filtered_post.get('_id')}: {str(e)}")
-                stats['errors'] += 1
+        # Process all posts concurrently
+        await asyncio.gather(*tasks, return_exceptions=True)
 
         stats['processing_time'] = (
             datetime.utcnow() - start_time).total_seconds()
@@ -187,57 +169,14 @@ class BorderlineScreener:
             borderline_posts.append(result)
 
         logger.info(
-            f"Starting borderline screening of {len(borderline_posts)} posts")
+            f"Starting concurrent borderline screening of {len(borderline_posts)} posts (max {self.max_concurrent_requests} concurrent)")
 
-        # Process posts individually (higher quality, slower processing)
-        for screening_result in borderline_posts:
-            try:
-                # Get the original filtered post
-                filtered_post = await self.db.find_one(
-                    'filtered_posts',
-                    {'_id': screening_result['filtered_post_id']}
-                )
+        # Create concurrent tasks for borderline posts
+        tasks = [self._process_borderline_post_with_stats(result, stats)
+                 for result in borderline_posts]
 
-                if not filtered_post:
-                    logger.warning(
-                        f"Filtered post not found for screening result {screening_result['_id']}")
-                    continue
-
-                # Re-screen with detailed analysis
-                enhanced_result = await self._screen_single_post(
-                    filtered_post,
-                    previous_analysis=screening_result
-                )
-
-                stats['processed'] += 1
-                stats['api_calls'] += 1
-
-                # Compare confidence improvement
-                original_confidence = screening_result.get('confidence', 0.0)
-                new_confidence = enhanced_result.confidence
-
-                if abs(new_confidence - original_confidence) > 0.2:
-                    stats['confidence_improvements'] += 1
-
-                # Classify result
-                if enhanced_result.decision == 'Y':
-                    stats['positive_decisions'] += 1
-                    if enhanced_result.confidence >= 0.8:
-                        stats['high_confidence'] += 1
-                elif enhanced_result.decision == 'N':
-                    stats['negative_decisions'] += 1
-                else:
-                    stats['borderline_cases'] += 1
-
-                # Update the screening result with borderline analysis
-                await self._update_screening_result(screening_result['_id'], enhanced_result)
-
-                # Rate limiting
-                await asyncio.sleep(2.0)  # More conservative for GPT-4
-
-            except Exception as e:
-                logger.error(f"Error in borderline screening: {str(e)}")
-                stats['errors'] += 1
+        # Process all posts concurrently
+        await asyncio.gather(*tasks, return_exceptions=True)
 
         stats['processing_time'] = (
             datetime.utcnow() - start_time).total_seconds()
@@ -351,6 +290,120 @@ Filter Confidence: {filtered_post.get('filter_confidence', 0.0)}
 
         return result
 
+    async def _process_single_post_with_stats(
+        self,
+        filtered_post: Dict[str, Any],
+        stats: Dict[str, Any]
+    ) -> None:
+        """Process a single post with concurrent rate limiting and stats tracking.
+
+        Args:
+            filtered_post: Filtered post document
+            stats: Shared statistics dictionary (thread-safe due to asyncio)
+        """
+        async with self.semaphore:  # Limit concurrent requests
+            try:
+                # Rate limiting before API call
+                await asyncio.sleep(self.rate_limit_delay)
+
+                # Screen post directly without previous analysis
+                screening_result = await self._screen_unscreened_post(filtered_post)
+
+                # Update stats (safe in asyncio)
+                stats['processed'] += 1
+                stats['api_calls'] += 1
+
+                # Classify result
+                if screening_result.decision == 'Y':
+                    stats['positive_decisions'] += 1
+                    if screening_result.confidence >= 0.8:
+                        stats['high_confidence'] += 1
+                elif screening_result.decision == 'N':
+                    stats['negative_decisions'] += 1
+                else:
+                    stats['borderline_cases'] += 1
+
+                # Save the screening result as a new document
+                await self._save_initial_screening_result(filtered_post, screening_result)
+
+                # Mark filtered post as screened
+                await self.db.update_one('filtered_posts',
+                                         {'_id': filtered_post['_id']},
+                                         {'$set': {'llm_screened': True}})
+
+                logger.info(
+                    f"✅ Screened post {filtered_post.get('_id', 'unknown')}: {screening_result.decision} (confidence: {screening_result.confidence:.3f})")
+
+            except Exception as e:
+                logger.error(
+                    f"❌ Error screening post {filtered_post.get('_id', 'unknown')}: {str(e)}")
+                stats['errors'] += 1
+
+    async def _process_borderline_post_with_stats(
+        self,
+        screening_result: Dict[str, Any],
+        stats: Dict[str, Any]
+    ) -> None:
+        """Process a single borderline post with concurrent rate limiting and stats tracking.
+
+        Args:
+            screening_result: Previous screening result document
+            stats: Shared statistics dictionary
+        """
+        async with self.semaphore:  # Limit concurrent requests
+            try:
+                # Rate limiting before API call
+                await asyncio.sleep(self.rate_limit_delay)
+
+                # Get the original filtered post
+                filtered_post = await self.db.find_one(
+                    'filtered_posts',
+                    {'_id': screening_result['filtered_post_id']}
+                )
+
+                if not filtered_post:
+                    logger.warning(
+                        f"Filtered post not found for screening result {screening_result['_id']}")
+                    return
+
+                # Re-screen with detailed analysis
+                enhanced_result = await self._screen_single_post(
+                    filtered_post,
+                    previous_analysis=screening_result
+                )
+
+                # Update stats
+                stats['processed'] += 1
+                stats['api_calls'] += 1
+
+                # Compare confidence improvement
+                original_confidence = screening_result.get('confidence', 0.0)
+                new_confidence = enhanced_result.confidence
+
+                if abs(new_confidence - original_confidence) > 0.2:
+                    stats['confidence_improvements'] += 1
+
+                # Classify result
+                if enhanced_result.decision == 'Y':
+                    stats['positive_decisions'] += 1
+                    if enhanced_result.confidence >= 0.8:
+                        stats['high_confidence'] += 1
+                elif enhanced_result.decision == 'N':
+                    stats['negative_decisions'] += 1
+                else:
+                    stats['borderline_cases'] += 1
+
+                # Update the screening result with borderline analysis
+                await self._update_screening_result(screening_result['_id'], enhanced_result)
+
+                logger.info(
+                    f"🔄 Re-screened borderline post {screening_result['_id']}: {enhanced_result.decision} (confidence: {enhanced_result.confidence:.3f})")
+
+            except Exception as e:
+                logger.error(
+                    f"❌ Error in borderline screening {screening_result.get('_id', 'unknown')}: {str(e)}")
+                stats['errors'] += 1
+
     async def _save_initial_screening_result(
         self,
         filtered_post: Dict[str, Any],
@@ -369,6 +422,16 @@ Filter Confidence: {filtered_post.get('filter_confidence', 0.0)}
             'borderline_reviewed': False
         }
 
+        # Add classification data if available
+        if screening_result.contract_violations:
+            screening_doc['contract_violations'] = screening_result.contract_violations
+        if screening_result.novel_patterns:
+            screening_doc['novel_patterns'] = screening_result.novel_patterns
+        if screening_result.research_value:
+            screening_doc['research_value'] = screening_result.research_value
+        if screening_result.verification_notes:
+            screening_doc['verification_notes'] = screening_result.verification_notes
+
         await self.db.insert_one('llm_screening_results', screening_doc)
 
         # Log provenance
@@ -382,7 +445,7 @@ Filter Confidence: {filtered_post.get('filter_confidence', 0.0)}
         )
 
     async def _call_openai_api(self, prompt: str) -> str:
-        """Make API call to OpenAI.
+        """Make API call to OpenAI with retry logic and exponential backoff.
 
         Args:
             prompt: The screening prompt
@@ -390,33 +453,77 @@ Filter Confidence: {filtered_post.get('filter_confidence', 0.0)}
         Returns:
             API response text
         """
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            payload = {
-                "model": self.model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are an expert researcher analyzing LLM API contract violations with high accuracy and detailed reasoning."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
+        max_retries = 5
+        base_delay = 1.0
+
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    payload = {
+                        "model": self.model,
+                        "messages": [
+                            {
+                                "role": "system",
+                                "content": "You are an expert researcher analyzing LLM API contract violations with high accuracy and detailed reasoning."
+                            },
+                            {
+                                "role": "user",
+                                "content": prompt
+                            }
+                        ],
+                        "temperature": 0.1,
+                        "max_tokens": 2000
                     }
-                ],
-                "temperature": 0.1,
-                "max_tokens": 2000
-            }
 
-            response = await client.post(
-                f"{self.base_url}/chat/completions",
-                headers=self.headers,
-                json=payload
-            )
+                    response = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        headers=self.headers,
+                        json=payload
+                    )
 
-            response.raise_for_status()
+                    if response.status_code == 200:
+                        result = response.json()
+                        content = result['choices'][0]['message']['content']
+                        logger.debug(
+                            f"API response content (first 200 chars): {content[:200]}...")
+                        return content
+                    elif response.status_code == 429:  # Rate limit
+                        # Extract retry-after from headers if available
+                        retry_after = response.headers.get('retry-after')
+                        if retry_after:
+                            delay = float(retry_after)
+                        else:
+                            # Exponential backoff: 1, 2, 4, 8, 16 seconds
+                            delay = base_delay * (2 ** attempt)
 
-            result = response.json()
-            return result['choices'][0]['message']['content']
+                        logger.warning(
+                            f"Rate limited (attempt {attempt + 1}/{max_retries}), waiting {delay}s...")
+                        await asyncio.sleep(delay)
+                        continue
+                    else:
+                        response.raise_for_status()
+
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 429 and attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(
+                        f"Rate limited (attempt {attempt + 1}/{max_retries}), waiting {delay}s...")
+                    await asyncio.sleep(delay)
+                    continue
+                else:
+                    raise
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(
+                        f"API error (attempt {attempt + 1}/{max_retries}): {str(e)}, retrying in {delay}s...")
+                    await asyncio.sleep(delay)
+                    continue
+                else:
+                    raise
+
+        raise Exception(
+            f"Failed to get API response after {max_retries} attempts")
 
     def _parse_screening_response(self, response: str) -> LLMScreeningResult:
         """Parse the API response into structured result.
@@ -427,27 +534,129 @@ Filter Confidence: {filtered_post.get('filter_confidence', 0.0)}
         Returns:
             LLMScreeningResult object
         """
-        lines = response.strip().split('\n')
-
-        # Default values
+        # Default values for fallback
         decision = "Borderline"
         confidence = 0.5
         rationale = "Failed to parse response"
+        contract_violations = None
+        novel_patterns = None
+        research_value = None
+        verification_notes = None
 
-        # Parse response format
+        # Strategy 1: Try to parse simple text format first (preferred)
+        lines = response.strip().split('\n')
+        text_parsed = False
+
         for line in lines:
             line = line.strip()
             if line.startswith('DECISION:'):
                 decision = line.split(':', 1)[1].strip()
+                text_parsed = True
             elif line.startswith('CONFIDENCE:'):
                 try:
                     confidence = float(line.split(':', 1)[1].strip())
-                    confidence = max(0.0, min(1.0, confidence)
-                                     )  # Clamp to valid range
+                    confidence = max(0.0, min(1.0, confidence))
                 except (ValueError, IndexError):
                     confidence = 0.5
             elif line.startswith('RATIONALE:'):
                 rationale = line.split(':', 1)[1].strip()
+
+        # Strategy 2: If text parsing failed, try JSON format as fallback
+        if not text_parsed:
+            try:
+                # Look for JSON in response
+                json_start = response.find('{')
+                if json_start != -1:
+                    brace_count = 0
+                    json_end = json_start
+                    in_string = False
+                    escape_next = False
+
+                    for i, char in enumerate(response[json_start:], json_start):
+                        if escape_next:
+                            escape_next = False
+                            continue
+                        if char == '\\':
+                            escape_next = True
+                            continue
+                        if char == '"' and not escape_next:
+                            in_string = not in_string
+                            continue
+                        if not in_string:
+                            if char == '{':
+                                brace_count += 1
+                            elif char == '}':
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    json_end = i + 1
+                                    break
+
+                    if brace_count == 0 and json_end > json_start:
+                        json_content = response[json_start:json_end]
+                        import json
+                        parsed = json.loads(json_content)
+
+                        # Map from JSON format to our variables
+                        contains_violation = parsed.get(
+                            'contains_violation', False)
+                        decision = 'Y' if contains_violation else 'N'
+
+                        # Map confidence from text to float
+                        confidence_str = parsed.get('confidence', 'medium')
+                        if confidence_str == 'high':
+                            confidence = 0.9
+                        elif confidence_str == 'medium':
+                            confidence = 0.7
+                        elif confidence_str == 'low':
+                            confidence = 0.4
+                        else:
+                            confidence = 0.5
+
+                        rationale = parsed.get(
+                            'verification_notes', 'JSON parsed response')
+                        text_parsed = True
+
+            except (json.JSONDecodeError, ValueError, AttributeError) as e:
+                logger.warning(
+                    f"Failed to parse JSON response: {str(e)[:100]}...")
+
+        # Strategy 3: If both failed, try to extract meaningful information from partial responses
+        if not text_parsed:
+            logger.debug(f"Raw response: {response[:300]}...")
+            response_lower = response.lower()
+
+            # Look for explicit decisions in the response
+            if 'contains_violation": true' in response_lower or 'violation": true' in response_lower or '"true"' in response_lower:
+                decision = 'Y'
+                confidence = 0.7
+                rationale = "Contract violation detected in response"
+            elif 'contains_violation": false' in response_lower or 'violation": false' in response_lower or '"false"' in response_lower:
+                decision = 'N'
+                confidence = 0.7
+                rationale = "No contract violation found"
+            elif 'contains_violation' in response_lower:
+                # If we see the field name but can't determine value, analyze content
+                if any(word in response_lower for word in ['error', 'invalid', 'limit', 'exceeded', 'failed', 'denied']):
+                    decision = 'Y'
+                    confidence = 0.6
+                    rationale = "Partial response with violation indicators"
+                else:
+                    decision = 'N'
+                    confidence = 0.5
+                    rationale = "Partial response, no clear violation indicators"
+            elif any(word in response_lower for word in ['violation', 'contract', 'error', 'invalid', 'limit', 'exceeded']):
+                decision = 'Y'
+                confidence = 0.6
+                rationale = "Contract violation indicators detected in response"
+            elif any(word in response_lower for word in ['no violation', 'not a contract', 'general question', 'installation', 'how to']):
+                decision = 'N'
+                confidence = 0.6
+                rationale = "No contract violation indicators found"
+            else:
+                # Final fallback - conservative decision
+                decision = 'N'
+                confidence = 0.3
+                rationale = f"Unable to parse response format, defaulting to no violation. Response: {response[:100]}..."
 
         # Ensure decision is valid
         if decision not in ['Y', 'N', 'Borderline']:
@@ -462,7 +671,11 @@ Filter Confidence: {filtered_post.get('filter_confidence', 0.0)}
             decision=decision,
             confidence=confidence,
             rationale=rationale,
-            model_used=f"borderline_{self.model}"
+            model_used=f"borderline_{self.model}",
+            contract_violations=contract_violations,
+            novel_patterns=novel_patterns,
+            research_value=research_value,
+            verification_notes=verification_notes
         )
 
     async def _update_screening_result(
@@ -486,6 +699,16 @@ Filter Confidence: {filtered_post.get('filter_confidence', 0.0)}
             'final_decision': enhanced_result.decision,  # Override with borderline result
             'final_confidence': enhanced_result.confidence
         }
+
+        # Add classification data if available
+        if enhanced_result.contract_violations:
+            update_doc['contract_violations'] = enhanced_result.contract_violations
+        if enhanced_result.novel_patterns:
+            update_doc['novel_patterns'] = enhanced_result.novel_patterns
+        if enhanced_result.research_value:
+            update_doc['research_value'] = enhanced_result.research_value
+        if enhanced_result.verification_notes:
+            update_doc['verification_notes'] = enhanced_result.verification_notes
 
         await self.db.update_one(
             'llm_screening_results',
