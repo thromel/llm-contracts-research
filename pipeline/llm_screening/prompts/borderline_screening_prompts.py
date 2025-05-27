@@ -176,6 +176,62 @@ Based on empirical analysis of LLM API violations, examine the post for these sp
 - Content flagged as inappropriate
 - Safety system interventions
 
+## POSTS TO AUTOMATICALLY EXCLUDE:
+
+**❌ REJECT these post types immediately** (mark as "N" with high confidence):
+
+### 1. Bug Reports (Not Contract Violations)
+**Indicators**:
+- "Bug:", "Issue:", "Unexpected behavior" in titles
+- Reports of software defects, incorrect outputs, or functional problems
+- SDK/library bugs unrelated to API usage limits
+- Performance issues without constraint violations
+
+**Examples to REJECT**:
+- "Bug: Model generates incorrect JSON format"
+- "ChatCompletion returns wrong response structure"
+- "SDK crashes when using function calling"
+- "Inconsistent responses between identical requests"
+
+### 2. Feature Requests (Not Contract Violations)
+**Indicators**:
+- "Feature Request:", "Enhancement:", "Add support for" in titles
+- Requests for new functionality, capabilities, or improvements
+- Suggestions for API design changes
+- "Would be nice if", "Can you add", "Please implement"
+
+**Examples to REJECT**:
+- "Feature Request: Add support for streaming function calls"
+- "Enhancement: Allow custom stop sequences"
+- "Please add GPT-5 model support"
+- "Request: Batch processing endpoints"
+
+### 3. General SDK/Library Issues (Not API Contract Violations)
+**Indicators**:
+- Installation problems, dependency conflicts
+- Documentation requests, examples, tutorials
+- Environment setup, configuration issues
+- Version compatibility questions
+
+**Examples to REJECT**:
+- "How to install openai library on Windows?"
+- "Requirements.txt missing dependency"
+- "Documentation unclear about parameter X"
+- "Example code doesn't work in Python 3.9"
+
+### 4. Quality Complaints Without Contract Violations
+**Indicators**:
+- Subjective quality assessments without specific violations
+- "Model is not good enough", "Results are poor"
+- Expectation mismatches without documented contract breaches
+
+**Examples to REJECT**:
+- "GPT-4 doesn't understand my domain"
+- "Model responses are too generic"
+- "Quality decreased after update"
+
+**CRITICAL**: Only mark as contract violations if there are specific, documented API usage constraints being violated (parameters, limits, quotas, formats, policies).
+
 ## COMMENT ANALYSIS PRIORITY:
 
 **Critical**: This content includes both original post AND community comments. Comments often contain:
@@ -208,13 +264,16 @@ Based on empirical analysis of LLM API violations, examine the post for these sp
 ### ❌ **NO (Not a Contract Violation)** - Evidence Level 1-2  
 **Requirements**:
 - No clear API contract violation evidence
+- Posts in the "AUTOMATICALLY EXCLUDE" categories above
 - General programming, installation, or conceptual questions
 - Issues unrelated to API usage constraints
 
 **Examples**:
+- Bug reports and feature requests (see exclusion list above)
 - Library installation problems
 - General "how to use" questions
 - Quality complaints without contract violations
+- SDK issues unrelated to API constraints
 
 ### 🤔 **BORDERLINE (Uncertain/Ambiguous)** - Evidence Level 3
 **Requirements**:
@@ -242,6 +301,7 @@ Based on empirical analysis of LLM API violations, examine the post for these sp
 As a senior researcher, provide a comprehensive evaluation following this structured approach:
 
 ### STEP 1: Evidence Assessment
+- **FIRST**: Is this a bug report, feature request, or general SDK issue? (If yes → immediate "N")
 - What evidence level (1-5) does this post demonstrate?
 - Are there specific error messages, parameter values, or technical details?
 - How do comments enhance or clarify the evidence?
@@ -273,7 +333,7 @@ RESOLUTION_CONTEXT: [How the issue was resolved based on comments]
 RESEARCH_VALUE: [High/Medium/Low - contribution to understanding LLM API contracts]
 RATIONALE: [Comprehensive 2-3 sentence justification citing specific evidence from post and comments]
 
-**Remember**: You are the primary screener. Be thorough but decisive. Focus on clear contract violations with good evidence, and don't hesitate to mark non-violations as "N" even if they're LLM-related."""
+**Remember**: You are the primary screener. Be thorough but decisive. Focus on clear contract violations with good evidence, and don't hesitate to mark non-violations as "N" even if they're LLM-related. **IMMEDIATELY REJECT bug reports, feature requests, and general SDK issues** - these are not contract violations."""
 
     @staticmethod
     def get_comparative_analysis_prompt() -> str:
