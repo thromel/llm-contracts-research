@@ -258,65 +258,74 @@ class PipelineConfig:
                 provider=LLMProvider.OPENAI,
                 model_name=os.getenv('OPENAI_MODEL', 'gpt-4-1106-preview'),
                 api_key=os.getenv('OPENAI_API_KEY'),
+                base_url=os.getenv('OPENAI_BASE_URL',
+                                   'https://api.openai.com/v1'),
                 temperature=float(os.getenv('OPENAI_TEMPERATURE', '0.1')),
                 max_tokens=int(os.getenv('OPENAI_MAX_TOKENS', '1500'))
             )
 
-        # Agentic screening LLMs (can use different models for different agents)
-        base_llm_config = None
+        # Agentic screening LLMs (only set up if needed for current screening mode)
+        if self.screening_mode in [ScreeningMode.AGENTIC, ScreeningMode.HYBRID]:
+            base_llm_config = None
 
-        logger.info(
-            f"🔍 Checking agentic provider: {os.getenv('AGENTIC_PROVIDER', 'openai')}")
-        logger.info(
-            f"🔑 OpenAI API key present: {bool(os.getenv('OPENAI_API_KEY'))}")
-
-        if os.getenv('AGENTIC_PROVIDER', 'openai').lower() == 'openai' and os.getenv('OPENAI_API_KEY'):
-            logger.info("✅ Setting up OpenAI for agentic screening")
-            base_llm_config = LLMConfig(
-                provider=LLMProvider.OPENAI,
-                model_name=os.getenv('AGENTIC_MODEL', 'gpt-4-1106-preview'),
-                api_key=os.getenv('OPENAI_API_KEY'),
-                temperature=float(os.getenv('AGENTIC_TEMPERATURE', '0.1')),
-                max_tokens=int(os.getenv('AGENTIC_MAX_TOKENS', '2000'))
-            )
             logger.info(
-                f"📋 Agentic config: {base_llm_config.model_name} with API key: {base_llm_config.api_key[:10]}...")
-        elif os.getenv('AGENTIC_PROVIDER', '').lower() == 'anthropic' and os.getenv('ANTHROPIC_API_KEY'):
-            logger.info("✅ Setting up Anthropic for agentic screening")
-            base_llm_config = LLMConfig(
-                provider=LLMProvider.ANTHROPIC,
-                model_name=os.getenv(
-                    'AGENTIC_MODEL', 'claude-3-sonnet-20240229'),
-                api_key=os.getenv('ANTHROPIC_API_KEY'),
-                base_url=os.getenv('ANTHROPIC_BASE_URL',
-                                   'https://api.anthropic.com'),
-                temperature=float(os.getenv('AGENTIC_TEMPERATURE', '0.1')),
-                max_tokens=int(os.getenv('AGENTIC_MAX_TOKENS', '2000'))
-            )
-        elif os.getenv('DEEPSEEK_API_KEY'):
+                f"🔍 Checking agentic provider: {os.getenv('AGENTIC_PROVIDER', 'openai')}")
             logger.info(
-                "✅ Setting up DeepSeek for agentic screening (fallback)")
-            # Fallback to DeepSeek for agentic
-            base_llm_config = LLMConfig(
-                provider=LLMProvider.DEEPSEEK,
-                model_name=os.getenv('AGENTIC_MODEL', 'deepseek-reasoner'),
-                api_key=os.getenv('DEEPSEEK_API_KEY'),
-                base_url=os.getenv('DEEPSEEK_BASE_URL',
-                                   'https://api.deepseek.com/v1'),
-                temperature=float(os.getenv('AGENTIC_TEMPERATURE', '0.1')),
-                max_tokens=int(os.getenv('AGENTIC_MAX_TOKENS', '2000'))
-            )
+                f"🔑 OpenAI API key present: {bool(os.getenv('OPENAI_API_KEY'))}")
 
-        # Set up agentic agents (using same config for all agents, can be customized)
-        if base_llm_config:
-            logger.info("✅ Setting up all agentic agents with base config")
-            self.agentic_screening.contract_detector_llm = base_llm_config
-            self.agentic_screening.technical_analyst_llm = base_llm_config
-            self.agentic_screening.relevance_judge_llm = base_llm_config
-            self.agentic_screening.decision_synthesizer_llm = base_llm_config
+            if os.getenv('AGENTIC_PROVIDER', 'openai').lower() == 'openai' and os.getenv('OPENAI_API_KEY'):
+                logger.info("✅ Setting up OpenAI for agentic screening")
+                base_llm_config = LLMConfig(
+                    provider=LLMProvider.OPENAI,
+                    model_name=os.getenv(
+                        'AGENTIC_MODEL', 'gpt-4-1106-preview'),
+                    api_key=os.getenv('OPENAI_API_KEY'),
+                    base_url=os.getenv('OPENAI_BASE_URL',
+                                       'https://api.openai.com/v1'),
+                    temperature=float(os.getenv('AGENTIC_TEMPERATURE', '0.1')),
+                    max_tokens=int(os.getenv('AGENTIC_MAX_TOKENS', '2000'))
+                )
+                logger.info(
+                    f"📋 Agentic config: {base_llm_config.model_name} with API key: {base_llm_config.api_key[:10]}...")
+            elif os.getenv('AGENTIC_PROVIDER', '').lower() == 'anthropic' and os.getenv('ANTHROPIC_API_KEY'):
+                logger.info("✅ Setting up Anthropic for agentic screening")
+                base_llm_config = LLMConfig(
+                    provider=LLMProvider.ANTHROPIC,
+                    model_name=os.getenv(
+                        'AGENTIC_MODEL', 'claude-3-sonnet-20240229'),
+                    api_key=os.getenv('ANTHROPIC_API_KEY'),
+                    base_url=os.getenv('ANTHROPIC_BASE_URL',
+                                       'https://api.anthropic.com'),
+                    temperature=float(os.getenv('AGENTIC_TEMPERATURE', '0.1')),
+                    max_tokens=int(os.getenv('AGENTIC_MAX_TOKENS', '2000'))
+                )
+            elif os.getenv('DEEPSEEK_API_KEY'):
+                logger.info(
+                    "✅ Setting up DeepSeek for agentic screening (fallback)")
+                # Fallback to DeepSeek for agentic
+                base_llm_config = LLMConfig(
+                    provider=LLMProvider.DEEPSEEK,
+                    model_name=os.getenv('AGENTIC_MODEL', 'deepseek-reasoner'),
+                    api_key=os.getenv('DEEPSEEK_API_KEY'),
+                    base_url=os.getenv('DEEPSEEK_BASE_URL',
+                                       'https://api.deepseek.com/v1'),
+                    temperature=float(os.getenv('AGENTIC_TEMPERATURE', '0.1')),
+                    max_tokens=int(os.getenv('AGENTIC_MAX_TOKENS', '2000'))
+                )
+
+            # Set up agentic agents (using same config for all agents, can be customized)
+            if base_llm_config:
+                logger.info("✅ Setting up all agentic agents with base config")
+                self.agentic_screening.contract_detector_llm = base_llm_config
+                self.agentic_screening.technical_analyst_llm = base_llm_config
+                self.agentic_screening.relevance_judge_llm = base_llm_config
+                self.agentic_screening.decision_synthesizer_llm = base_llm_config
+            else:
+                logger.warning(
+                    "❌ No valid LLM configuration found for agentic screening")
         else:
-            logger.warning(
-                "❌ No valid LLM configuration found for agentic screening")
+            logger.info(
+                "⏭️ Skipping agentic LLM setup for traditional screening mode")
 
     def get_active_llm_configs(self) -> Dict[str, LLMConfig]:
         """Get LLM configurations for the active screening mode."""

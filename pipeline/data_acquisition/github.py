@@ -147,7 +147,7 @@ class GitHubAcquisition:
                 try:
                     url = f"{self.base_url}/repos/{owner}/{repo}/issues"
                     params = {
-                        'state': 'all',
+                        'state': 'closed',  # Only fetch closed issues
                         'since': since.isoformat(),
                         'per_page': min(100, max_issues - issues_fetched),
                         'page': page,
@@ -183,9 +183,13 @@ class GitHubAcquisition:
                         if not self._is_potentially_llm_relevant(issue):
                             continue
 
-                        # Convert to RawPost
+                        # Only process issues with comments
+                        if issue.get('comments', 0) == 0:
+                            continue
+
+                        # Convert to RawPost (with comments)
                         raw_post = await self._convert_issue_to_rawpost(
-                            issue, owner, repo
+                            issue, owner, repo, client
                         )
 
                         yield raw_post
@@ -352,20 +356,64 @@ class GitHubAcquisition:
 
         return False
 
+    async def _fetch_issue_comments(
+        self,
+        issue_number: int,
+        owner: str,
+        repo: str,
+        client: httpx.AsyncClient
+    ) -> str:
+        """Fetch all comments for an issue."""
+
+        try:
+            url = f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}/comments"
+            response = await client.get(url)
+            response.raise_for_status()
+
+            comments = response.json()
+            comments_text = []
+
+            for comment in comments:
+                author = comment.get('user', {}).get('login', 'unknown')
+                body = comment.get('body', '').strip()
+                created_at = comment.get('created_at', '')
+
+                if body:
+                    comments_text.append(
+                        f"Comment by {author} ({created_at}):\n{body}")
+
+            return '\n\n'.join(comments_text)
+
+        except Exception as e:
+            logger.error(
+                f"Error fetching comments for issue {issue_number}: {str(e)}")
+            return ""
+
     async def _convert_issue_to_rawpost(
         self,
         issue: Dict[str, Any],
         owner: str,
-        repo: str
+        repo: str,
+        client: httpx.AsyncClient
     ) -> RawPost:
-        """Convert GitHub issue to RawPost format."""
+        """Convert GitHub issue to RawPost format with comments."""
+
+        # Fetch comments for the issue
+        comments_text = await self._fetch_issue_comments(
+            issue['number'], owner, repo, client
+        )
+
+        # Combine body with comments
+        body_with_comments = issue.get('body', '') or ''
+        if comments_text:
+            body_with_comments += f"\n\n--- COMMENTS ---\n{comments_text}"
 
         return RawPost(
             platform=Platform.GITHUB,
             source_id=str(issue['id']),
             url=issue['html_url'],
             title=issue['title'],
-            body_md=issue.get('body', '') or '',
+            body_md=body_with_comments,
             created_at=datetime.fromisoformat(issue['created_at'].rstrip('Z')),
             updated_at=datetime.fromisoformat(issue['updated_at'].rstrip('Z')),
             score=0,  # GitHub issues don't have scores like SO

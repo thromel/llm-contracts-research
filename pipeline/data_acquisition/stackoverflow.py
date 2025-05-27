@@ -186,13 +186,20 @@ class StackOverflowAcquisition:
                         break
 
                     for question in questions:
+                        # Filter for answered questions with comments
+                        if not question.get('is_answered', False):
+                            continue
+
+                        if question.get('comment_count', 0) == 0:
+                            continue
+
                         # Filter for LLM relevance
                         if not self._is_llm_relevant_question(question):
                             continue
 
-                        # Convert to RawPost
-                        raw_post = self._convert_question_to_rawpost(
-                            question, tag)
+                        # Convert to RawPost (with comments)
+                        raw_post = await self._convert_question_to_rawpost_with_comments(
+                            question, tag, client)
                         yield raw_post
 
                         questions_fetched += 1
@@ -325,6 +332,100 @@ class StackOverflowAcquisition:
             return True
 
         return False
+
+    async def _fetch_question_comments(
+        self,
+        question_id: str,
+        client: httpx.AsyncClient
+    ) -> str:
+        """Fetch comments for a question."""
+
+        try:
+            params = {
+                **self.default_params,
+                'order': 'desc',
+                'sort': 'creation'
+            }
+
+            url = f"{self.base_url}/questions/{question_id}/comments"
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+
+            # Handle response - Stack Exchange API can return gzipped or regular JSON
+            try:
+                if response.headers.get('content-encoding') == 'gzip':
+                    content = gzip.decompress(response.content)
+                    data = json.loads(content.decode('utf-8'))
+                else:
+                    data = response.json()
+            except (gzip.BadGzipFile, json.JSONDecodeError) as e:
+                try:
+                    data = response.json()
+                except json.JSONDecodeError:
+                    logger.error(
+                        f"Could not parse comments response for question {question_id}: {str(e)}")
+                    return ""
+
+            comments = data.get('items', [])
+            comments_text = []
+
+            for comment in comments:
+                author = comment.get('owner', {}).get(
+                    'display_name', 'unknown')
+                body = comment.get('body', '').strip()
+                score = comment.get('score', 0)
+                creation_date = comment.get('creation_date', 0)
+
+                if body:
+                    comments_text.append(
+                        f"Comment by {author} (score: {score}):\n{body}")
+
+            return '\n\n'.join(comments_text)
+
+        except Exception as e:
+            logger.error(
+                f"Error fetching comments for question {question_id}: {str(e)}")
+            return ""
+
+    async def _convert_question_to_rawpost_with_comments(
+        self,
+        question: Dict[str, Any],
+        original_tag: str,
+        client: httpx.AsyncClient
+    ) -> RawPost:
+        """Convert Stack Overflow question to RawPost format with comments."""
+
+        # Fetch comments for the question
+        comments_text = await self._fetch_question_comments(
+            str(question['question_id']), client
+        )
+
+        # Combine body with comments
+        body_with_comments = question.get('body', '') or ''
+        if comments_text:
+            body_with_comments += f"\n\n--- COMMENTS ---\n{comments_text}"
+
+        return RawPost(
+            platform=Platform.STACKOVERFLOW,
+            source_id=str(question['question_id']),
+            url=question['link'],
+            title=question['title'],
+            body_md=body_with_comments,
+            created_at=datetime.fromtimestamp(question['creation_date']),
+            updated_at=datetime.fromtimestamp(
+                question.get('last_activity_date', question['creation_date'])
+            ),
+            score=question.get('score', 0),
+            tags=question.get('tags', []) + [original_tag],
+            author=question.get('owner', {}).get('display_name', 'unknown'),
+            view_count=question.get('view_count', 0),
+            answer_count=question.get('answer_count', 0),
+            comment_count=question.get('comment_count', 0),
+            is_answered=question.get('is_answered', False),
+            accepted_answer_id=question.get('accepted_answer_id'),
+            acquisition_timestamp=datetime.utcnow(),
+            acquisition_version="1.0.0"
+        )
 
     def _convert_question_to_rawpost(
         self,

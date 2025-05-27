@@ -14,6 +14,7 @@ import httpx
 
 from ..common.models import FilteredPost, LLMScreeningResult
 from ..common.database import MongoDBManager, ProvenanceTracker
+from .prompts.borderline_screening_prompts import BorderlineScreeningPrompts
 
 logger = logging.getLogger(__name__)
 
@@ -56,51 +57,89 @@ class BorderlineScreener:
             'Content-Type': 'application/json'
         }
 
-        # Enhanced screening prompt for borderline cases
-        self.screening_prompt = """You are a senior researcher analyzing posts for LLM API contract violations. This post was flagged as borderline by initial screening and requires expert-level evaluation.
+        # Use improved prompts from research-based prompt system
+        self.prompts = BorderlineScreeningPrompts()
 
-API CONTRACT VIOLATION INDICATORS:
+    async def screen_all_unscreened_posts(
+        self,
+        batch_size: int = 25
+    ) -> Dict[str, Any]:
+        """Screen all unscreened posts directly (when no bulk screener is available).
 
-EXPLICIT VIOLATIONS:
-1. Parameter constraints: max_tokens, temperature, top_p outside valid ranges
-2. Rate limiting: 429 errors, quota exceeded, requests per minute violations  
-3. Input format: JSON schema errors, function calling format violations
-4. Context length: Token count exceeding model limits
-5. Authentication: Invalid API keys, billing issues, permission errors
-6. Response format: Expected JSON but got text, schema validation failures
+        Args:
+            batch_size: Number of posts to process
 
-IMPLICIT VIOLATIONS:
-1. Usage patterns that violate documented best practices
-2. Error messages indicating contract boundary issues
-3. Discussions of working around API limitations
-4. Code examples showing incorrect parameter usage
+        Returns:
+            Batch processing statistics
+        """
+        stats = {
+            'processed': 0,
+            'positive_decisions': 0,
+            'negative_decisions': 0,
+            'borderline_cases': 0,
+            'high_confidence': 0,
+            'api_calls': 0,
+            'processing_time': 0,
+            'errors': 0
+        }
 
-QUALITY INDICATORS:
-- Specific error messages and status codes
-- Code examples with actual API calls
-- Technical depth and implementation details
-- Clear problem-solution mapping
-- Community validation through responses
+        start_time = datetime.utcnow()
 
-EXCLUSION CRITERIA:
-- Generic programming questions without API specifics
-- Installation/environment issues unrelated to API usage
-- Conceptual discussions without practical implementation
-- Off-topic content or spam
+        # Get unscreened posts that passed keyword filter
+        unscreened_posts = []
+        async for filtered_post in self.db.find_many(
+            'filtered_posts',
+            {
+                'passed_keyword_filter': True,
+                'llm_screened': {'$ne': True}
+            },
+            limit=batch_size
+        ):
+            unscreened_posts.append(filtered_post)
 
-Post Title: {title}
+        logger.info(
+            f"Starting direct screening of {len(unscreened_posts)} unscreened posts")
 
-Post Content: {content}
+        # Process posts individually
+        for filtered_post in unscreened_posts:
+            try:
+                # Screen post directly without previous analysis
+                screening_result = await self._screen_unscreened_post(filtered_post)
 
-Previous Analysis: {previous_analysis}
+                stats['processed'] += 1
+                stats['api_calls'] += 1
 
-Provide detailed analysis in this format:
-DECISION: [Y/N/Borderline]
-CONFIDENCE: [0.0-1.0]
-RATIONALE: [Detailed explanation of your reasoning]
-CONTRACT_TYPES: [List specific contract types identified]
-QUALITY_ASSESSMENT: [Research value and content quality]
-RECOMMENDED_ACTION: [Next steps for this post]"""
+                # Classify result
+                if screening_result.decision == 'Y':
+                    stats['positive_decisions'] += 1
+                    if screening_result.confidence >= 0.8:
+                        stats['high_confidence'] += 1
+                elif screening_result.decision == 'N':
+                    stats['negative_decisions'] += 1
+                else:
+                    stats['borderline_cases'] += 1
+
+                # Save the screening result as a new document
+                await self._save_initial_screening_result(filtered_post, screening_result)
+
+                # Mark filtered post as screened
+                await self.db.update_one('filtered_posts',
+                                         {'_id': filtered_post['_id']},
+                                         {'$set': {'llm_screened': True}})
+
+                # Rate limiting
+                await asyncio.sleep(2.0)  # Conservative for GPT-4
+
+            except Exception as e:
+                logger.error(
+                    f"Error screening post {filtered_post.get('_id')}: {str(e)}")
+                stats['errors'] += 1
+
+        stats['processing_time'] = (
+            datetime.utcnow() - start_time).total_seconds()
+        logger.info(f"Direct screening completed: {stats}")
+
+        return stats
 
     async def screen_borderline_cases(
         self,
@@ -247,8 +286,8 @@ Original Confidence: {previous_analysis.get('confidence', 0.0)}
 Original Rationale: {previous_analysis.get('rationale', 'none')}
 """
 
-        # Create enhanced prompt
-        prompt = self.screening_prompt.format(
+        # Create enhanced prompt using improved research-based prompts
+        prompt = self.prompts.get_borderline_screening_prompt().format(
             title=title,
             content=content[:4000],  # Larger context for GPT-4
             previous_analysis=previous_summary + metadata_context
@@ -262,6 +301,84 @@ Original Rationale: {previous_analysis.get('rationale', 'none')}
         result.model_used = f"borderline_{self.model}"
 
         return result
+
+    async def _screen_unscreened_post(
+        self,
+        filtered_post: Dict[str, Any]
+    ) -> LLMScreeningResult:
+        """Screen a post that hasn't been through bulk screening.
+
+        Args:
+            filtered_post: Filtered post document
+
+        Returns:
+            LLMScreeningResult
+        """
+        # Get the original raw post content
+        raw_post = await self.db.find_one('raw_posts', {'_id': filtered_post['raw_post_id']})
+
+        if not raw_post:
+            raise ValueError(
+                f"Raw post not found for filtered post {filtered_post['_id']}")
+
+        # Prepare content for screening
+        title = raw_post.get('title', '')
+        content = raw_post.get('body_md', '')
+
+        # Include metadata context
+        metadata_context = f"""
+Platform: {raw_post.get('platform', 'unknown')}
+Tags: {raw_post.get('tags', [])}
+Score: {raw_post.get('score', 0)}
+Matched Keywords: {filtered_post.get('matched_keywords', [])}
+Filter Confidence: {filtered_post.get('filter_confidence', 0.0)}
+"""
+
+        # Create prompt for initial screening (no previous analysis)
+        prompt = self.prompts.get_borderline_screening_prompt().format(
+            title=title,
+            content=content[:4000],  # Larger context for GPT-4
+            previous_analysis="No previous analysis - initial screening" + metadata_context
+        )
+
+        # Make API call
+        response = await self._call_openai_api(prompt)
+
+        # Parse response
+        result = self._parse_screening_response(response)
+        result.model_used = f"direct_{self.model}"
+
+        return result
+
+    async def _save_initial_screening_result(
+        self,
+        filtered_post: Dict[str, Any],
+        screening_result: LLMScreeningResult
+    ) -> None:
+        """Save initial screening result to database."""
+
+        screening_doc = {
+            'filtered_post_id': str(filtered_post['_id']),
+            'decision': screening_result.decision,
+            'confidence': screening_result.confidence,
+            'rationale': screening_result.rationale,
+            'model_used': screening_result.model_used,
+            'screening_type': 'direct',
+            'created_at': datetime.utcnow(),
+            'borderline_reviewed': False
+        }
+
+        await self.db.insert_one('llm_screening_results', screening_doc)
+
+        # Log provenance
+        await self.provenance.log_transformation(
+            source_id=str(filtered_post['_id']),
+            source_collection='filtered_posts',
+            target_id=str(screening_doc.get('_id', 'unknown')),
+            target_collection='llm_screening_results',
+            transformation_type='direct_screening',
+            metadata={'confidence': screening_result.confidence}
+        )
 
     async def _call_openai_api(self, prompt: str) -> str:
         """Make API call to OpenAI.

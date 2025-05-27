@@ -107,7 +107,39 @@ pipeline_steps:
   data_acquisition: true
   keyword_filtering: true
   llm_screening: true
+
+llm_screening:
+  mode: traditional            # 'traditional' or 'agentic' 
+  model: gpt-4-turbo-2024-04-09  # OpenAI model name
+  temperature: 0.1             # LLM temperature (0.0-2.0)
+  max_tokens: 2000            # Maximum tokens per request
+  provider: openai            # Currently only 'openai' supported
 ```
+
+## LLM Configuration
+
+Configure LLM screening settings in the `pipeline_config.yaml` file:
+
+```yaml
+llm_screening:
+  mode: traditional              # 'traditional' (simple) or 'agentic' (multi-agent)
+  model: gpt-4-turbo-2024-04-09  # OpenAI model to use
+  temperature: 0.1               # Control randomness (0.0 = deterministic)
+  max_tokens: 2000              # Maximum tokens per LLM request
+  provider: openai              # LLM provider (currently only 'openai')
+```
+
+### Available Models
+
+Common OpenAI models you can use:
+- `gpt-4-turbo-2024-04-09` (recommended for quality)
+- `gpt-4o` (faster, good quality)
+- `gpt-3.5-turbo` (fastest, lower cost)
+
+### Screening Modes
+
+- **traditional**: Simple single-pass LLM screening (recommended)
+- **agentic**: Multi-agent LangChain pipeline (more complex, experimental)
 
 ## Environment Variables
 

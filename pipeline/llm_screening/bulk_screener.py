@@ -15,6 +15,7 @@ from tqdm import tqdm
 
 from ..common.models import FilteredPost, LLMScreeningResult
 from ..common.database import MongoDBManager, ProvenanceTracker
+from .prompts.bulk_screening_prompts import BulkScreeningPrompts
 
 logger = logging.getLogger(__name__)
 
@@ -57,75 +58,8 @@ class BulkScreener:
             'Content-Type': 'application/json'
         }
 
-        # Enhanced screening prompt template based on LLM contracts research
-        self.screening_prompt = """You are an expert analyst identifying LLM API contract violations for research purposes. Based on extensive analysis of 600+ real-world contract violations, you know that LLM APIs have specific "contracts" - conditions and usage protocols that developers must follow.
-
-CORE LLM API CONTRACT CATEGORIES (from research):
-
-1. PARAMETER CONSTRAINTS:
-   - max_tokens: Must be within model limits (e.g., GPT-4: ≤8192)
-   - temperature: Must be 0.0-2.0 
-   - top_p: Must be 0.0-1.0
-   - Invalid combinations (e.g., temperature + top_p simultaneously)
-
-2. RATE LIMITING VIOLATIONS:
-   - HTTP 429 "Too Many Requests" errors
-   - RPM (requests per minute) exceeded
-   - TPM (tokens per minute) exceeded
-   - Quota/billing limit violations
-
-3. CONTENT POLICY VIOLATIONS:
-   - "Content flagged as potentially violating usage policy"
-   - Safety filter rejections
-   - Moderation API blocks
-   - Inappropriate content filtering
-
-4. INPUT/OUTPUT FORMAT CONTRACTS:
-   - JSON schema validation failures for function calling
-   - Required message format violations (role, content structure)
-   - Response format not matching requested schema
-   - Tool/function calling format errors
-
-5. CONTEXT LENGTH VIOLATIONS:
-   - "Context length exceeded" errors
-   - Token count > model maximum (4K, 8K, 32K, 128K)
-   - Conversation history too long
-   - Prompt truncation issues
-
-6. AUTHENTICATION/AUTHORIZATION:
-   - Invalid API keys (HTTP 401)
-   - Expired tokens
-   - Insufficient permissions (HTTP 403)
-   - Billing/payment issues
-
-POST TO ANALYZE:
-Title: {title}
-
-Content: {content}
-
-TASK: Determine if this post contains LLM API contract violations or discussions.
-
-POSITIVE INDICATORS (Y):
-- Specific error messages with status codes (400, 401, 403, 429, 500)
-- Parameter validation failures with exact limits mentioned
-- API rate limiting or quota errors
-- Content policy/safety filter rejections
-- JSON parsing failures in LLM responses
-- Context length/token limit exceeded errors
-- Function calling or tool use problems
-- Authentication/billing issues with LLM APIs
-
-NEGATIVE INDICATORS (N):
-- Generic programming questions unrelated to LLM APIs
-- Installation/setup issues not involving API calls
-- Conceptual discussions without specific API usage
-- Model quality/accuracy complaints (not contract violations)
-- General Python/JavaScript errors unrelated to LLM APIs
-
-Respond with exactly this format:
-DECISION: [Y/N]
-CONFIDENCE: [0.0-1.0]  
-RATIONALE: [Specific contract type and evidence, e.g., "Rate limiting violation with 429 error" or "Context length exceeded GPT-4 8K limit"]"""
+        # Use improved prompts from research-based prompt system
+        self.prompts = BulkScreeningPrompts()
 
     async def screen_batch(
         self,
@@ -234,8 +168,8 @@ RATIONALE: [Specific contract type and evidence, e.g., "Rate limiting violation 
         if len(content) > 3000:
             content = content[:3000] + "..."
 
-        # Format prompt
-        prompt = self.screening_prompt.format(
+        # Format prompt using improved research-based prompts
+        prompt = self.prompts.get_screening_prompt().format(
             title=title,
             content=content
         )

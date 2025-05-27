@@ -29,33 +29,6 @@ try:
 except ImportError:
     pass
 
-# Apply LLM screening configuration from pipeline config
-
-
-def _apply_llm_config(self):
-    """Apply LLM configuration from pipeline config to environment variables."""
-    llm_config = self.pipeline_config.get('llm_screening', {})
-
-    # Set screening mode
-    screening_mode = llm_config.get('mode', 'traditional')
-    os.environ['SCREENING_MODE'] = screening_mode
-    logger.info(f"Set screening mode: {screening_mode}")
-
-    # Set OpenAI configuration for traditional screening
-    if llm_config.get('provider') == 'openai':
-        model = llm_config.get('model', 'gpt-4-turbo-2024-04-09')
-        temperature = str(llm_config.get('temperature', 0.1))
-        max_tokens = str(llm_config.get('max_tokens', 2000))
-
-        os.environ['OPENAI_MODEL'] = model
-        os.environ['OPENAI_TEMPERATURE'] = temperature
-        os.environ['OPENAI_MAX_TOKENS'] = max_tokens
-
-        logger.info(f"Set OpenAI model: {model}")
-        logger.info(f"Set temperature: {temperature}")
-        logger.info(f"Set max_tokens: {max_tokens}")
-
-
 # Setup logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -68,6 +41,11 @@ class MultiSourcePipelineRunner:
     def __init__(self, config_file: str = "pipeline_config.yaml"):
         self.config_file = config_file
         self.pipeline_config = self._load_pipeline_config()
+
+        # Apply LLM configuration BEFORE creating other components
+        self._apply_llm_config()
+
+        # Now get app config AFTER environment variables are set
         self.app_config = get_development_config()
         self.db = MongoDBManager(os.getenv('MONGODB_URI'))
 
@@ -112,13 +90,7 @@ class MultiSourcePipelineRunner:
                     'enabled': True,
                     'tags': [
                         'openai-api',
-                        'chatgpt-api',
-                        'gpt-3',
-                        'gpt-4',
-                        'anthropic',
-                        'claude-api',
-                        'google-ai',
-                        'llm-api'
+                        'langchain'
                     ],
                     'max_questions_per_tag': 100,
                     'days_back': 30
@@ -143,6 +115,29 @@ class MultiSourcePipelineRunner:
                 'provider': 'openai'
             }
         }
+
+    def _apply_llm_config(self):
+        """Apply LLM configuration from pipeline config to environment variables."""
+        llm_config = self.pipeline_config.get('llm_screening', {})
+
+        # Set screening mode
+        screening_mode = llm_config.get('mode', 'traditional')
+        os.environ['SCREENING_MODE'] = screening_mode
+        logger.info(f"Set screening mode: {screening_mode}")
+
+        # Set OpenAI configuration for traditional screening
+        if llm_config.get('provider') == 'openai':
+            model = llm_config.get('model', 'gpt-4-turbo-2024-04-09')
+            temperature = str(llm_config.get('temperature', 0.1))
+            max_tokens = str(llm_config.get('max_tokens', 2000))
+
+            os.environ['OPENAI_MODEL'] = model
+            os.environ['OPENAI_TEMPERATURE'] = temperature
+            os.environ['OPENAI_MAX_TOKENS'] = max_tokens
+
+            logger.info(f"Set OpenAI model: {model}")
+            logger.info(f"Set temperature: {temperature}")
+            logger.info(f"Set max_tokens: {max_tokens}")
 
     async def initialize(self):
         """Initialize database and pipeline components."""

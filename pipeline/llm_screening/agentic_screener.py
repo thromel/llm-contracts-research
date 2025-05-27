@@ -3,7 +3,7 @@ LangChain-Based Agentic LLM Screening Pipeline.
 
 Multi-agent system for comprehensive analysis of LLM API contract violations:
 1. Contract Violation Detector Agent
-2. Technical Error Analyst Agent  
+2. Technical Error Analyst Agent
 3. Context Relevance Judge Agent
 4. Final Decision Synthesizer Agent
 
@@ -32,6 +32,7 @@ from pydantic import BaseModel, Field
 
 from ..common.models import FilteredPost, LLMScreeningResult, ContractType, RootCause, Effect
 from ..common.database import MongoDBManager, ProvenanceTracker
+from .prompts.agentic_screening_prompts import AgenticScreeningPrompts
 
 logger = logging.getLogger(__name__)
 
@@ -298,90 +299,7 @@ class ContractViolationDetectorAgent:
                               output_parser=self.parser)
 
     def _get_system_prompt(self) -> str:
-        return """You are an expert LLM API contract violation detector. Your task is to analyze posts for explicit or implicit API usage contract violations.
-
-CONTRACT TYPES TO DETECT:
-
-1. PARAMETER CONSTRAINTS:
-   - max_tokens: Must be positive integer, within model limits
-   - temperature: Must be 0.0-2.0 (typically 0.0-1.0)
-   - top_p: Must be 0.0-1.0, mutually exclusive with temperature in some APIs
-   - frequency_penalty: Must be -2.0 to 2.0
-   - presence_penalty: Must be -2.0 to 2.0
-
-2. RATE LIMITING VIOLATIONS:
-   - Requests per minute (RPM) exceeded
-   - Tokens per minute (TPM) exceeded  
-   - Quota limitations
-   - Billing/usage limits
-
-3. INPUT FORMAT VIOLATIONS:
-   - JSON schema validation failures
-   - Function calling format errors
-   - Message format violations
-   - Encoding issues
-
-4. CONTEXT LENGTH VIOLATIONS:
-   - Token count exceeding model limits
-   - Context window overflow
-   - Prompt + completion length issues
-
-5. AUTHENTICATION/AUTHORIZATION:
-   - Invalid API keys
-   - Insufficient permissions
-   - Expired tokens
-   - Billing issues
-
-6. RESPONSE FORMAT VIOLATIONS:
-   - Expected JSON but got text
-   - Schema validation failures
-   - Missing required fields
-   - Type mismatches
-
-VIOLATION INDICATORS:
-- Error messages with specific codes (400, 401, 403, 429, 500)
-- Parameter validation failures
-- "Invalid request" messages
-- Rate limit exceeded notifications
-- Context length error messages
-- Authentication failures
-- Schema validation errors
-- Performance degradation due to parameter issues
-- Unexpected API behavior or responses
-- Function calling errors or format issues
-- Streaming response problems
-- Token or context window issues
-
-ANALYZE THE FOLLOWING aspects:
-1. Identify specific contract violations (be sensitive to subtle violations)
-2. Assess violation severity (consider user impact)
-3. Provide evidence from the text (look for error patterns)
-4. Rate confidence in your analysis (be generous with possibilities)
-
-GUIDELINES:
-- If there are clear API errors or unexpected behavior, lean towards identifying violations
-- Performance issues often indicate parameter or usage violations
-- Function calling problems are usually contract violations
-- Be sensitive to user frustration indicating API contract issues
-
-You MUST respond with a valid JSON object using these EXACT field names:
-{
-  "has_violation": true/false,
-  "violation_type": "string or null",
-  "confidence": 0.0-1.0,
-  "evidence": ["array", "of", "strings"],
-  "violation_severity": "low/medium/high/critical/unknown"
-}
-
-EXAMPLES OF COMMON VIOLATIONS TO LOOK FOR:
-- "performance degradation" -> parameter_constraint (temperature, top_p, model usage)
-- "function calling" errors -> input_format_violation (tool/function schema issues)
-- "streaming" problems -> response_format_violation (streaming response handling)
-- "chunking_strategy" issues -> parameter_constraint (vector store parameters)
-- "httpx client performance" -> rate_limiting or connection issues
-- Error codes like 400, 401, 403, 429, 500 -> various violation types
-
-Do not include any other text or explanation outside the JSON object."""
+        return AgenticScreeningPrompts.get_contract_violation_detector_prompt()
 
     async def analyze(self, post_content: str, title: str = "") -> ContractViolationAnalysis:
         """Analyze content for contract violations."""
@@ -446,82 +364,7 @@ class TechnicalErrorAnalystAgent:
                               output_parser=self.parser)
 
     def _get_system_prompt(self) -> str:
-        return """You are a technical error analysis expert specializing in LLM API integration issues. Analyze posts for technical errors, their root causes, and API relationships.
-
-ERROR CATEGORIES TO IDENTIFY:
-
-1. API CONNECTION ERRORS:
-   - Network timeouts
-   - SSL/TLS handshake failures
-   - DNS resolution issues
-   - Connection refused
-   - Service unavailable
-
-2. AUTHENTICATION ERRORS:
-   - Invalid API key format
-   - Expired authentication tokens
-   - Insufficient permissions
-   - Billing account issues
-   - Region/endpoint restrictions
-
-3. REQUEST FORMATTING ERRORS:
-   - Malformed JSON payloads
-   - Missing required headers
-   - Incorrect Content-Type
-   - Invalid parameter types
-   - Encoding issues (UTF-8, etc.)
-
-4. PARAMETER VALIDATION ERRORS:
-   - Out-of-range values
-   - Type mismatches
-   - Missing required parameters
-   - Conflicting parameter combinations
-   - Invalid enum values
-
-5. RATE LIMITING ERRORS:
-   - Too many requests per second/minute
-   - Token rate limits exceeded
-   - Burst rate limit violations
-   - Concurrent request limits
-
-6. RESPONSE PROCESSING ERRORS:
-   - JSON parsing failures
-   - Unexpected response format
-   - Missing expected fields
-   - Type conversion errors
-   - Encoding/decoding issues
-
-7. MODEL-SPECIFIC ERRORS:
-   - Model not found/available
-   - Model deprecation
-   - Regional availability issues
-   - Model capability limitations
-
-ROOT CAUSE ANALYSIS:
-- Trace errors to configuration issues
-- Identify library/SDK version problems
-- Detect environment setup problems
-- Assess code implementation issues
-- Evaluate API usage patterns
-
-TECHNICAL INDICATORS:
-- Stack traces and error messages
-- HTTP status codes
-- Library/framework error patterns
-- Configuration snippets
-- Code examples with issues
-
-You MUST respond with a valid JSON object using these EXACT field names:
-{
-  "is_technical_error": true/false,
-  "error_category": "string or null",
-  "root_cause": "string or null", 
-  "api_related": true/false,
-  "confidence": 0.0-1.0,
-  "error_patterns": ["array", "of", "strings"]
-}
-
-Do not include any other text or explanation outside the JSON object."""
+        return AgenticScreeningPrompts.get_technical_error_analyst_prompt()
 
     async def analyze(self, post_content: str, title: str = "") -> TechnicalErrorAnalysis:
         """Analyze content for technical errors."""
@@ -586,71 +429,7 @@ class ContextRelevanceJudgeAgent:
                               output_parser=self.parser)
 
     def _get_system_prompt(self) -> str:
-        return """You are a context relevance judge specializing in LLM-related content analysis. Evaluate whether content is relevant to LLM API research and assess its quality.
-
-LLM RELEVANCE INDICATORS:
-
-1. DIRECT LLM MENTIONS:
-   - Specific models: GPT-3, GPT-4, Claude, PaLM, LLaMA
-   - API providers: OpenAI, Anthropic, Google AI, Cohere
-   - Libraries: langchain, transformers, openai-python
-
-2. API-SPECIFIC TERMINOLOGY:
-   - Completions, embeddings, fine-tuning
-   - Prompts, tokens, context windows
-   - Temperature, top-p, max_tokens
-   - Function calling, tool use
-   - JSON mode, schema validation
-
-3. TECHNICAL CONCEPTS:
-   - Prompt engineering
-   - Context length limitations
-   - Rate limiting and quotas  
-   - Model capabilities and limitations
-   - API integration patterns
-
-4. ERROR PATTERNS:
-   - API-specific error codes
-   - LLM provider error messages
-   - Authentication issues
-   - Usage limit violations
-
-QUALITY ASSESSMENT CRITERIA:
-
-1. CONTENT DEPTH:
-   - Superficial mention vs detailed discussion
-   - Technical depth and specificity
-   - Problem description clarity
-   - Solution attempts documented
-
-2. RESEARCH VALUE:
-   - Novel contract violation patterns
-   - Clear error reproduction steps
-   - Community-validated solutions
-   - Edge case documentation
-
-3. SIGNAL vs NOISE:
-   - Actionable technical content
-   - Specific implementation details
-   - Clear problem-solution mapping
-   - Minimal off-topic content
-
-4. EXPERT REVIEW INDICATORS:
-   - Complex multi-factor issues
-   - Novel integration patterns
-   - Unclear error causation
-   - Conflicting information
-
-You MUST respond with a valid JSON object using these EXACT field names:
-{
-  "is_llm_related": true/false,
-  "relevance_score": 0.0-1.0,
-  "llm_indicators": ["array", "of", "strings"],
-  "context_quality": "poor/fair/good/excellent/unknown",
-  "requires_expert_review": true/false
-}
-
-Do not include any other text or explanation outside the JSON object."""
+        return AgenticScreeningPrompts.get_context_relevance_judge_prompt()
 
     async def analyze(self, post_content: str, title: str = "", metadata: Dict = None) -> ContextRelevanceAnalysis:
         """Analyze content relevance and quality."""
@@ -723,61 +502,7 @@ class FinalDecisionSynthesizerAgent:
                               output_parser=self.parser)
 
     def _get_system_prompt(self) -> str:
-        return """You are the final decision synthesizer for LLM contract violation screening. Integrate multiple agent analyses to make the final screening decision.
-
-DECISION CRITERIA:
-
-POSITIVE (Y) - Include in research dataset:
-1. Clear LLM API contract violations with evidence
-2. Technical errors directly related to API usage
-3. High-quality discussions of API limitations
-4. Novel contract violation patterns
-5. Well-documented integration issues
-6. Performance issues related to API parameters
-7. Function calling or tool use problems
-8. Streaming or response format issues
-9. Rate limiting or quota-related discussions
-10. Parameter validation problems
-
-NEGATIVE (N) - Exclude from research dataset:
-1. No LLM API relevance whatsoever
-2. Pure installation/environment setup (not API-related)
-3. General programming questions unrelated to LLM APIs
-4. Documentation requests or basic tutorials
-5. Off-topic content with no API connection
-
-BORDERLINE - Requires expert review:
-1. Potential contract violations needing validation
-2. Complex multi-factor issues
-3. Novel integration patterns
-4. Contradictory analysis results
-5. Low confidence from multiple agents
-6. Unclear API relationship but possible relevance
-
-CONFIDENCE CALCULATION:
-- Weight agent confidences by reliability
-- Consider evidence consistency across agents
-- Account for analysis depth and specificity
-- Factor in content quality indicators
-
-SYNTHESIS RULES:
-1. Contract violation evidence trumps other factors
-2. Technical API errors are high value
-3. Context relevance is a prerequisite
-4. Quality gates prevent noise inclusion
-5. Novel patterns may warrant borderline classification
-
-You MUST respond with a valid JSON object using these EXACT field names:
-{
-  "decision": "Y/N/Borderline",
-  "confidence": 0.0-1.0,
-  "rationale": "string explanation",
-  "contract_types_identified": ["array", "of", "strings"],
-  "recommended_action": "string",
-  "quality_flags": ["array", "of", "strings"]
-}
-
-Do not include any other text or explanation outside the JSON object."""
+        return AgenticScreeningPrompts.get_final_decision_synthesizer_prompt()
 
     async def synthesize(
         self,

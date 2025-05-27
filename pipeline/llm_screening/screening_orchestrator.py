@@ -260,18 +260,31 @@ class ScreeningOrchestrator:
             logger.info(
                 f"Bulk screening: {bulk_results.get('processed', 0)} posts processed")
 
-        # Step 2: Borderline screening
-        if self.borderline_screener:
-            logger.info("🎯 Running borderline screening...")
-            borderline_results = await self.borderline_screener.screen_borderline_cases(
-                confidence_min=self.config.traditional_screening.borderline_confidence_min,
-                confidence_max=self.config.traditional_screening.borderline_confidence_max,
+            # Step 2: Borderline screening (re-evaluate uncertain cases)
+            if self.borderline_screener:
+                logger.info("🎯 Running borderline screening...")
+                borderline_results = await self.borderline_screener.screen_borderline_cases(
+                    confidence_min=self.config.traditional_screening.borderline_confidence_min,
+                    confidence_max=self.config.traditional_screening.borderline_confidence_max,
+                    batch_size=self.config.traditional_screening.borderline_batch_size
+                )
+                results['borderline_screening'] = borderline_results
+
+                logger.info(
+                    f"Borderline screening: {borderline_results.get('processed', 0)} posts processed")
+
+        # Fallback: Use borderline screener for direct screening if no bulk screener
+        elif self.borderline_screener:
+            logger.info(
+                "📊 No bulk screener available, using borderline screener for direct screening...")
+            direct_results = await self.borderline_screener.screen_all_unscreened_posts(
                 batch_size=self.config.traditional_screening.borderline_batch_size
             )
-            results['borderline_screening'] = borderline_results
+            results['direct_screening'] = direct_results
+            results['total_processed'] += direct_results.get('processed', 0)
 
             logger.info(
-                f"Borderline screening: {borderline_results.get('processed', 0)} posts processed")
+                f"Direct screening: {direct_results.get('processed', 0)} posts processed")
 
         return results
 
