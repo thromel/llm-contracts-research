@@ -221,6 +221,28 @@ deduplication:
   title_weight: 0.6
   body_weight: 0.4
 
+# Advanced keyword filtering configuration
+keyword_filtering:
+  enabled: true
+  confidence_threshold: 0.4              # Minimum confidence to pass to LLM screening
+  quality_threshold: 0.3                 # Minimum quality score for content
+  batch_size: 500                        # Smaller batches for better quality control
+  category_weights:                       # Weights for different keyword categories
+    contract_violations: 0.3              # High weight for direct contract terms
+    llm_api_terms: 0.15                   # Medium weight for API-specific terms
+    error_indicators: 0.1                 # Lower weight for generic errors
+    pattern_matches: 0.25                 # High weight for regex patterns
+    tag_relevance: 0.1                    # Bonus for relevant tags
+  combination_bonuses:                    # Bonus scores for keyword combinations
+    contract_and_errors: 0.2              # Contract terms + error context
+    api_and_issues: 0.15                  # API terms + problem indicators
+    patterns_and_context: 0.25            # Regex patterns + supporting context
+  negative_filtering:                     # Filter out non-relevant content
+    enabled: true
+    penalty_weight: 0.2                   # Penalty for negative signals
+    tutorial_filter: true                 # Filter basic tutorials/guides
+    conceptual_filter: true               # Filter "what is" questions
+
 pipeline_steps:
   data_acquisition: true
   keyword_filtering: true

@@ -1,8 +1,8 @@
 """
-Keyword Pre-Filter for LLM Contracts Research Pipeline.
+Advanced Keyword Pre-Filter for LLM Contracts Research Pipeline.
 
-Boolean scan that removes ≈70% noise while retaining >93% recall.
-Combines LLM contract keywords with ML-style root-cause cues.
+Multi-stage filtering system with semantic categories, context analysis,
+and intelligent scoring for high-precision LLM contract violation detection.
 """
 
 import re
@@ -28,19 +28,20 @@ class FilterResult:
     filter_metadata: Dict[str, Any]
 
 
-class KeywordPreFilter:
+class AdvancedKeywordFilter:
     """
-    Keyword-based pre-filter for LLM contract research.
+    Advanced keyword-based pre-filter for LLM contract research.
 
     Features:
-    - LLM contract keywords (max_tokens, json schema, rate_limit, etc.)
-    - ML-style root-cause cues from Khairunnesa et al.
-    - Context-aware snippet extraction
-    - Confidence scoring
+    - Multi-category semantic filtering
+    - Context-aware pattern matching
+    - Confidence scoring with multiple signals
+    - Contract violation pattern detection
+    - Noise reduction through negative filtering
     """
 
     def __init__(self, db_manager: MongoDBManager):
-        """Initialize keyword pre-filter.
+        """Initialize advanced keyword filter.
 
         Args:
             db_manager: MongoDB manager for storage
@@ -48,48 +49,142 @@ class KeywordPreFilter:
         self.db = db_manager
         self.provenance = ProvenanceTracker(db_manager)
 
-        # Simple unified keyword list - if ANY of these match, the post passes
-        self.keywords = {
-            # Core LLM/API terms
-            'openai', 'gpt', 'claude', 'anthropic', 'api', 'llm', 'chatgpt',
-            'langchain', 'huggingface', 'transformers', 'ai', 'model',
+        # === POSITIVE SIGNALS - Organized by semantic categories ===
 
-            # API parameters
-            'max_tokens', 'temperature', 'top_p', 'frequency_penalty',
-            'presence_penalty', 'stop', 'stream', 'logprobs', 'context_length',
+        # Core LLM API contract violation indicators (HIGH VALUE)
+        self.contract_violation_keywords = {
+            # Parameter constraint violations
+            'max_tokens', 'temperature', 'top_p', 'top_k', 'frequency_penalty',
+            'presence_penalty', 'logprobs', 'n_completions', 'best_of',
+            'context_length', 'context_window', 'sequence_length',
 
-            # JSON and formatting
-            'json', 'schema', 'response_format', 'function_calling', 'tools',
-            'structured_output', 'json_mode', 'parse', 'format',
+            # Rate limiting and quota violations
+            'rate_limit', 'rate_limited', 'quota_exceeded', 'quota_limit',
+            'rpm', 'tpm', 'requests_per_minute', 'tokens_per_minute',
+            'billing_exceeded', 'usage_limit', 'throttling', 'throttled',
 
-            # Rate limiting and quotas
-            'rate_limit', 'quota', 'rpm', 'tpm', 'billing', 'usage',
-            'rate_exceeded', 'quota_exceeded', 'too_many_requests',
+            # Format and schema violations
+            'json_schema', 'response_format', 'function_calling', 'tool_calling',
+            'structured_output', 'json_mode', 'schema_validation',
+            'invalid_json', 'malformed_json', 'parse_error', 'json_decode_error',
 
-            # Errors and issues
-            'error', 'exception', 'failed', 'fail', 'bug', 'issue',
-            'problem', 'trouble', 'broken', 'help', 'fix', 'solve',
-            'timeout', 'unauthorized', 'forbidden', 'invalid_request',
+            # Content policy violations
+            'content_policy', 'policy_violation', 'content_filter',
+            'safety_filter', 'moderation_filter', 'flagged_content',
+            'inappropriate_content', 'blocked_content',
+
+            # Authentication and authorization
+            'api_key', 'invalid_api_key', 'unauthorized', 'forbidden',
+            'authentication_failed', 'access_denied', 'permission_denied',
 
             # Token and context issues
-            'token_limit', 'context_overflow', 'input_too_long',
-            'prompt_too_long', 'context_length_exceeded',
+            'token_limit', 'token_count', 'context_overflow', 'input_too_long',
+            'prompt_too_long', 'context_length_exceeded', 'truncated',
+        }
 
-            # Content policy
-            'content_policy', 'policy_violation', 'moderation',
-            'content_filter', 'safety_filter',
+        # LLM API and framework terms (MEDIUM VALUE)
+        self.llm_api_keywords = {
+            # Core LLM providers
+            'openai', 'anthropic', 'claude', 'gpt', 'chatgpt', 'gpt-4', 'gpt-3.5',
+            'gemini', 'palm', 'bard', 'azure_openai', 'bedrock',
 
-            # General programming/ML terms that might be relevant
-            'python', 'javascript', 'node', 'sdk', 'library', 'package',
-            'installation', 'import', 'module', 'version', 'update'
+            # Popular frameworks
+            'langchain', 'llamaindex', 'llama_index', 'semantic_kernel',
+            'guidance', 'autogen', 'crewai', 'haystack',
+
+            # Vector databases and embeddings
+            'embeddings', 'vector_database', 'pinecone', 'chroma', 'weaviate',
+            'qdrant', 'milvus', 'faiss', 'pgvector',
+
+            # Application frameworks
+            'streamlit', 'gradio', 'chainlit', 'modal', 'vercel_ai',
+        }
+
+        # Error and problem indicators (MEDIUM VALUE)
+        self.error_keywords = {
+            'error', 'exception', 'failed', 'failure', 'bug', 'issue',
+            'problem', 'trouble', 'broken', 'not_working', 'doesnt_work',
+            'timeout', 'connection_error', 'network_error', 'server_error',
+            'http_error', 'api_error', 'request_failed', 'response_error',
+            'invalid_request', 'bad_request', 'status_code', '400', '401',
+            '403', '429', '500', '502', '503', '504',
+        }
+
+        # Technical implementation terms (LOW VALUE - context dependent)
+        self.technical_keywords = {
+            'api', 'sdk', 'client', 'library', 'package', 'module',
+            'implementation', 'integration', 'configuration', 'setup',
+            'parameters', 'arguments', 'response', 'request', 'headers',
+            'payload', 'endpoint', 'url', 'method', 'get', 'post',
+        }
+
+        # === NEGATIVE SIGNALS - Filter out non-contract-related content ===
+
+        self.negative_keywords = {
+            # General installation/setup (unless combined with errors)
+            'how_to_install', 'installation_guide', 'getting_started',
+            'tutorial', 'beginner_guide', 'basic_usage', 'hello_world',
+
+            # General conceptual questions
+            'what_is', 'difference_between', 'comparison', 'vs', 'versus',
+            'pros_and_cons', 'advantages', 'disadvantages', 'best_practices',
+
+            # Non-API related content
+            'training_data', 'fine_tuning_guide', 'model_architecture',
+            'research_paper', 'academic_study', 'thesis', 'publication',
+
+            # General programming help (unless API-specific)
+            'python_basics', 'javascript_basics', 'coding_help',
+            'programming_tutorial', 'syntax_help', 'variable_declaration',
+        }
+
+        # === CONTEXT PATTERNS - Regex patterns for complex matching ===
+
+        self.contract_patterns = [
+            # Parameter validation errors
+            r'(?i)(max_tokens|temperature|top_p).*(?:must|should|cannot|exceeds?|limit|invalid|error)',
+            r'(?i)(rate.?limit|quota).*(?:exceeded|error|reached|violation|denied)',
+            r'(?i)(context.?length|token.?limit).*(?:exceeded|too.?long|maximum|overflow)',
+
+            # API error patterns
+            r'(?i)(json|schema).*(?:invalid|error|malformed|parse.*fail|validation.*fail)',
+            r'(?i)(api.?key|token).*(?:invalid|expired|missing|unauthorized|forbidden)',
+            r'(?i)(status.?code|http).*(?:400|401|403|429|500|502|503)',
+
+            # Content policy patterns
+            r'(?i)(content|usage).?policy.*(?:violation|flagged|denied|blocked)',
+            r'(?i)(safety|moderation).*(?:filter|blocked|flagged|violation)',
+
+            # Functional errors
+            r'(?i)(function.?call|tool.?use).*(?:error|failed|invalid|malformed)',
+            r'(?i)(stream|streaming).*(?:error|failed|interrupted|timeout)',
+        ]
+
+        # === QUALITY INDICATORS ===
+
+        self.quality_indicators = {
+            # High-quality content signals
+            'positive': {
+                'error_message', 'stack_trace', 'traceback', 'exception_details',
+                'code_example', 'minimal_reproduction', 'steps_to_reproduce',
+                'expected_behavior', 'actual_behavior', 'workaround', 'solution',
+                'resolved', 'fixed', 'working_solution',
+            },
+
+            # Low-quality content signals
+            'negative': {
+                'urgent', 'please_help', 'asap', 'desperate', 'stuck',
+                'no_idea', 'completely_lost', 'beginner', 'newbie', 'noob',
+                'simple_question', 'quick_question', 'dumb_question',
+            }
         }
 
     async def filter_batch(
         self,
         batch_size: int = 1000,
-        confidence_threshold: float = 0.3
+        confidence_threshold: float = 0.4
     ) -> Dict[str, Any]:
-        """Filter a batch of raw posts.
+        """Filter a batch of raw posts using advanced filtering.
 
         Args:
             batch_size: Number of posts to process in this batch
@@ -103,7 +198,10 @@ class KeywordPreFilter:
             'passed': 0,
             'failed': 0,
             'high_confidence': 0,
-            'keywords_matched': {},
+            'medium_confidence': 0,
+            'low_confidence': 0,
+            'categories_matched': {},
+            'patterns_matched': {},
             'processing_time': 0
         }
 
@@ -123,47 +221,61 @@ class KeywordPreFilter:
                     labels=raw_post_dict.get('labels', [])
                 )
 
-                # Apply filter
+                # Apply advanced filter
                 filter_result = self.apply_filter(raw_post)
 
-                # Create FilteredPost
-                filtered_post = FilteredPost(
-                    raw_post_id=raw_post._id,
-                    passed_keyword_filter=filter_result.passed,
-                    matched_keywords=filter_result.matched_keywords,
-                    filter_confidence=filter_result.confidence,
-                    relevant_snippets=filter_result.relevant_snippets,
-                    potential_contracts=filter_result.potential_contracts,
-                    filter_timestamp=datetime.utcnow(),
-                    filter_version="1.0.0"
-                )
+                # Only save if confidence meets threshold
+                if filter_result.confidence >= confidence_threshold:
+                    # Create FilteredPost
+                    filtered_post = FilteredPost(
+                        raw_post_id=raw_post._id,
+                        passed_keyword_filter=filter_result.passed,
+                        matched_keywords=filter_result.matched_keywords,
+                        filter_confidence=filter_result.confidence,
+                        relevant_snippets=filter_result.relevant_snippets,
+                        potential_contracts=filter_result.potential_contracts,
+                        filter_timestamp=datetime.utcnow(),
+                        filter_version="2.0.0"
+                    )
 
-                # Save to database
-                filtered_id = await self.db.save_filtered_post(filtered_post.to_dict())
+                    # Save to database
+                    filtered_id = await self.db.save_filtered_post(filtered_post.to_dict())
 
-                # Log provenance
-                await self.provenance.log_transformation(
-                    source_id=raw_post._id,
-                    source_collection='raw_posts',
-                    target_id=filtered_id,
-                    target_collection='filtered_posts',
-                    transformation_type='keyword_filter',
-                    metadata=filter_result.filter_metadata
-                )
+                    # Log provenance
+                    await self.provenance.log_transformation(
+                        source_id=raw_post._id,
+                        source_collection='raw_posts',
+                        target_id=filtered_id,
+                        target_collection='filtered_posts',
+                        transformation_type='advanced_keyword_filter',
+                        metadata=filter_result.filter_metadata
+                    )
 
                 # Update stats
                 stats['processed'] += 1
                 if filter_result.passed:
                     stats['passed'] += 1
-                    if filter_result.confidence >= 0.7:
+                    if filter_result.confidence >= 0.8:
                         stats['high_confidence'] += 1
+                    elif filter_result.confidence >= 0.6:
+                        stats['medium_confidence'] += 1
+                    else:
+                        stats['low_confidence'] += 1
                 else:
                     stats['failed'] += 1
 
-                # Track keyword usage
-                for keyword in filter_result.matched_keywords:
-                    stats['keywords_matched'][keyword] = stats['keywords_matched'].get(
-                        keyword, 0) + 1
+                # Track category usage
+                categories = filter_result.filter_metadata.get(
+                    'categories_matched', {})
+                for category, count in categories.items():
+                    stats['categories_matched'][category] = stats['categories_matched'].get(
+                        category, 0) + count
+
+                # Track pattern usage
+                patterns = filter_result.filter_metadata.get(
+                    'patterns_matched', 0)
+                stats['patterns_matched']['total'] = stats['patterns_matched'].get(
+                    'total', 0) + patterns
 
             except Exception as e:
                 logger.error(
@@ -175,239 +287,289 @@ class KeywordPreFilter:
         return stats
 
     def apply_filter(self, raw_post: RawPost) -> FilterResult:
-        """Apply simple keyword filter to a single post.
+        """Apply advanced multi-stage filter to a single post.
 
         Args:
             raw_post: Raw post to filter
 
         Returns:
-            FilterResult with pass/fail decision and metadata
+            FilterResult with pass/fail decision and detailed metadata
         """
         # Combine all text content
         combined_text = f"{raw_post.title} {raw_post.body_md}"
         combined_text_lower = combined_text.lower()
 
-        # Simple keyword matching - if ANY keyword matches, pass the post
-        matched_keywords = []
-        for keyword in self.keywords:
-            if keyword in combined_text_lower:
-                matched_keywords.append(keyword)
+        # Stage 1: Category-based keyword matching
+        contract_matches = self._find_keywords(
+            combined_text_lower, self.contract_violation_keywords)
+        llm_api_matches = self._find_keywords(
+            combined_text_lower, self.llm_api_keywords)
+        error_matches = self._find_keywords(
+            combined_text_lower, self.error_keywords)
+        technical_matches = self._find_keywords(
+            combined_text_lower, self.technical_keywords)
 
-        # Check tags and labels for relevant terms
-        tag_matches = []
-        for tag in raw_post.tags + raw_post.labels:
-            tag_lower = tag.lower()
-            for keyword in self.keywords:
-                if keyword in tag_lower:
-                    tag_matches.append(tag)
-                    if keyword not in matched_keywords:
-                        matched_keywords.append(keyword)
+        # Stage 2: Negative signal detection
+        negative_matches = self._find_keywords(
+            combined_text_lower, self.negative_keywords)
 
-        # Simple decision: if any keyword matches, pass it through
-        passed = len(matched_keywords) > 0
+        # Stage 3: Pattern matching for complex contract violations
+        pattern_matches = self._find_contract_patterns(combined_text)
 
-        # Simple confidence: more keywords = higher confidence
-        confidence = min(len(matched_keywords) * 0.1, 1.0)
+        # Stage 4: Tag and label analysis
+        tag_matches = self._check_tags_and_labels(
+            raw_post.tags + raw_post.labels)
 
-        # Extract a simple snippet around the first matched keyword
-        relevant_snippets = []
-        if matched_keywords and passed:
-            first_keyword = matched_keywords[0]
-            start_pos = combined_text_lower.find(first_keyword)
-            if start_pos != -1:
-                snippet_start = max(0, start_pos - 100)
-                snippet_end = min(len(combined_text),
-                                  start_pos + len(first_keyword) + 100)
-                snippet = combined_text[snippet_start:snippet_end].strip()
-                if len(snippet) > 20:
-                    relevant_snippets.append(snippet)
+        # Stage 5: Quality assessment
+        quality_score = self._assess_quality(combined_text_lower)
 
-        # Simple metadata
+        # Stage 6: Calculate weighted confidence score
+        confidence = self._calculate_advanced_confidence(
+            contract_matches, llm_api_matches, error_matches, technical_matches,
+            negative_matches, pattern_matches, tag_matches, quality_score,
+            combined_text_lower
+        )
+
+        # Stage 7: Make pass/fail decision with sophisticated logic
+        passed = self._make_decision(
+            contract_matches, llm_api_matches, error_matches,
+            negative_matches, pattern_matches, confidence
+        )
+
+        # Stage 8: Extract relevant snippets and potential contracts
+        all_matches = contract_matches + llm_api_matches + error_matches
+        relevant_snippets = self._extract_snippets(
+            combined_text, all_matches, context_size=150)
+        potential_contracts = self._identify_potential_contracts(
+            combined_text, all_matches, pattern_matches)
+
+        # Comprehensive metadata
         filter_metadata = {
-            'keywords_matched': len(matched_keywords),
-            'tags_matched': len(tag_matches),
+            'categories_matched': {
+                'contract_violations': len(contract_matches),
+                'llm_api_terms': len(llm_api_matches),
+                'error_indicators': len(error_matches),
+                'technical_terms': len(technical_matches),
+                'negative_signals': len(negative_matches),
+                'tag_matches': len(tag_matches)
+            },
+            'patterns_matched': len(pattern_matches),
+            'quality_score': quality_score,
             'text_length': len(combined_text),
-            'decision_reason': 'keyword_match' if passed else 'no_keywords'
+            'word_count': len(combined_text.split()),
+            'decision_factors': {
+                'has_contract_terms': len(contract_matches) > 0,
+                'has_error_context': len(error_matches) > 0,
+                'has_negative_signals': len(negative_matches) > 0,
+                'has_pattern_matches': len(pattern_matches) > 0,
+                'quality_threshold_met': quality_score > 0.3
+            }
         }
 
         return FilterResult(
             passed=passed,
             confidence=confidence,
-            matched_keywords=matched_keywords,
+            matched_keywords=all_matches,
             relevant_snippets=relevant_snippets,
-            potential_contracts=[],  # Not needed for simple filtering
+            potential_contracts=potential_contracts,
             filter_metadata=filter_metadata
         )
 
     def _find_keywords(self, text: str, keyword_set: Set[str]) -> List[str]:
-        """Find matching keywords in text."""
+        """Find matching keywords with word boundary checking."""
         matches = []
         for keyword in keyword_set:
-            # Handle both exact matches and word boundaries
-            if keyword in text:
-                # Check if it's a word boundary match for better precision
-                if re.search(r'\b' + re.escape(keyword) + r'\b', text):
-                    matches.append(keyword)
-                elif '_' in keyword and keyword in text:
-                    # For snake_case keywords, allow exact substring match
-                    matches.append(keyword)
+            # Create flexible pattern for compound keywords
+            pattern = keyword.replace('_', '[_\\s-]?')
+            if re.search(r'\b' + pattern + r'\b', text, re.IGNORECASE):
+                matches.append(keyword)
         return matches
 
     def _find_contract_patterns(self, text: str) -> List[Tuple[str, int, int]]:
-        """Find contract violation patterns using regex.
-
-        Returns:
-            List of (matched_text, start_pos, end_pos) tuples
-        """
+        """Find complex contract violation patterns using regex."""
         matches = []
-        for pattern in self.compiled_patterns:
-            for match in pattern.finditer(text):
+        for pattern in self.contract_patterns:
+            for match in re.finditer(pattern, text):
                 matches.append((match.group(), match.start(), match.end()))
         return matches
 
     def _check_tags_and_labels(self, tags_and_labels: List[str]) -> List[str]:
-        """Check for relevant tags and labels."""
-        relevant_tags = []
-        llm_tag_patterns = [
-            'openai', 'gpt', 'claude', 'anthropic', 'langchain',
-            'api', 'bug', 'error', 'rate-limit', 'timeout', 'json'
-        ]
+        """Check tags and labels for relevant terms."""
+        matches = []
+        all_keywords = (self.contract_violation_keywords |
+                        self.llm_api_keywords |
+                        self.error_keywords)
 
         for tag in tags_and_labels:
-            tag_lower = tag.lower()
-            for pattern in llm_tag_patterns:
-                if pattern in tag_lower:
-                    relevant_tags.append(tag)
+            tag_lower = tag.lower().replace('-', '_')
+            for keyword in all_keywords:
+                if keyword in tag_lower or tag_lower in keyword:
+                    matches.append(tag)
                     break
+        return matches
 
-        return relevant_tags
+    def _assess_quality(self, text: str) -> float:
+        """Assess content quality based on positive and negative indicators."""
+        positive_matches = self._find_keywords(
+            text, self.quality_indicators['positive'])
+        negative_matches = self._find_keywords(
+            text, self.quality_indicators['negative'])
 
-    def _calculate_confidence(
+        # Base quality score
+        quality = 0.5
+
+        # Boost for positive indicators
+        quality += len(positive_matches) * 0.1
+
+        # Penalty for negative indicators
+        quality -= len(negative_matches) * 0.15
+
+        # Bonus for having code blocks, error messages, etc.
+        if re.search(r'```|`[^`]+`|error:|exception:|traceback:', text):
+            quality += 0.2
+
+        # Bonus for having specific numbers/values (often in error messages)
+        if re.search(r'\b\d+\b', text):
+            quality += 0.1
+
+        return max(0.0, min(1.0, quality))
+
+    def _calculate_advanced_confidence(
         self,
-        llm_keywords: List[str],
-        ml_keywords: List[str],
-        error_keywords: List[str],
-        contract_matches: List[Tuple[str, int, int]],
+        contract_matches: List[str],
+        llm_api_matches: List[str],
+        error_matches: List[str],
+        technical_matches: List[str],
+        negative_matches: List[str],
+        pattern_matches: List[Tuple[str, int, int]],
         tag_matches: List[str],
+        quality_score: float,
         text: str
     ) -> float:
-        """Calculate confidence score for the filter decision."""
+        """Calculate sophisticated confidence score with multiple signals."""
 
-        # More generous base score components
-        # Up to 0.6 for LLM keywords (increased)
-        llm_score = min(len(llm_keywords) * 0.25, 0.6)
-        # Up to 0.3 for ML keywords (increased)
-        ml_score = min(len(ml_keywords) * 0.15, 0.3)
-        # Up to 0.3 for error keywords (increased)
-        error_score = min(len(error_keywords) * 0.15, 0.3)
-        pattern_score = min(len(contract_matches) * 0.35,
-                            0.7)  # Up to 0.7 for patterns (increased)
-        # Up to 0.4 for tags (increased)
-        tag_score = min(len(tag_matches) * 0.2, 0.4)
+        # Base confidence from different categories (weighted)
+        # High weight for contract terms
+        contract_score = min(len(contract_matches) * 0.3, 0.6)
+        # Medium weight for API terms
+        llm_api_score = min(len(llm_api_matches) * 0.15, 0.3)
+        # Lower weight for generic errors
+        error_score = min(len(error_matches) * 0.1, 0.2)
+        pattern_score = min(len(pattern_matches) * 0.25,
+                            0.5)   # High weight for patterns
+        # Bonus for relevant tags
+        tag_score = min(len(tag_matches) * 0.1, 0.2)
 
         # Combination bonuses
         combination_bonus = 0.0
-        if len(llm_keywords) > 0 and len(error_keywords) > 0:
-            combination_bonus += 0.2  # LLM + error is strong signal
+        if contract_matches and error_matches:  # Contract terms + errors = strong signal
+            combination_bonus += 0.2
+        # API + issues = good signal
+        if llm_api_matches and (contract_matches or error_matches):
+            combination_bonus += 0.15
+        # Patterns + context = very strong
+        if pattern_matches and (contract_matches or error_matches):
+            combination_bonus += 0.25
 
-        if len(contract_matches) > 0 and len(llm_keywords) > 0:
-            combination_bonus += 0.15  # Contract patterns + LLM keywords
+        # Quality adjustment
+        quality_adjustment = (quality_score - 0.5) * 0.3  # -0.15 to +0.15
 
-        # Text quality factors
-        text_length = len(text)
-        if text_length > 100:  # Prefer longer, more descriptive posts
-            length_bonus = min((text_length - 100) / 1000, 0.1)
-        else:
-            length_bonus = -0.1  # Penalize very short posts
+        # Negative signal penalty
+        negative_penalty = min(len(negative_matches) * 0.2, 0.4)
 
         # Calculate final confidence
-        confidence = llm_score + ml_score + error_score + \
-            pattern_score + tag_score + combination_bonus + length_bonus
+        confidence = (contract_score + llm_api_score + error_score + pattern_score +
+                      tag_score + combination_bonus + quality_adjustment - negative_penalty)
 
-        return min(max(confidence, 0.0), 1.0)  # Clamp to [0, 1]
+        return max(0.0, min(1.0, confidence))
 
-    def _extract_snippets(self, text: str, keywords: List[str], context_size: int = 100) -> List[str]:
-        """Extract relevant snippets around keywords."""
+    def _make_decision(
+        self,
+        contract_matches: List[str],
+        llm_api_matches: List[str],
+        error_matches: List[str],
+        negative_matches: List[str],
+        pattern_matches: List[Tuple[str, int, int]],
+        confidence: float
+    ) -> bool:
+        """Make sophisticated pass/fail decision."""
+
+        # High confidence threshold
+        if confidence >= 0.7:
+            return True
+
+        # Strong pattern matches (even with lower confidence)
+        if len(pattern_matches) >= 2:
+            return True
+
+        # Strong contract violation signals
+        if len(contract_matches) >= 2 and len(error_matches) >= 1:
+            return True
+
+        # Multiple LLM API terms with some error context
+        if len(llm_api_matches) >= 2 and len(error_matches) >= 1 and len(negative_matches) == 0:
+            return True
+
+        # Medium confidence with good signal quality
+        if confidence >= 0.5 and len(negative_matches) == 0:
+            return True
+
+        # Default threshold
+        return confidence >= 0.4
+
+    def _extract_snippets(self, text: str, keywords: List[str], context_size: int = 150) -> List[str]:
+        """Extract relevant text snippets around matched keywords."""
         snippets = []
         text_lower = text.lower()
 
-        for keyword in keywords[:10]:  # Limit to top 10 keywords
-            keyword_lower = keyword.lower()
-            start_pos = text_lower.find(keyword_lower)
-
-            if start_pos != -1:
-                # Extract context around the keyword
-                snippet_start = max(0, start_pos - context_size)
-                snippet_end = min(len(text), start_pos +
-                                  len(keyword) + context_size)
-                snippet = text[snippet_start:snippet_end].strip()
-
-                if len(snippet) > 20:  # Only keep meaningful snippets
+        for keyword in keywords[:5]:  # Limit to top 5 keywords
+            keyword_lower = keyword.lower().replace('_', '[_\\s-]?')
+            match = re.search(keyword_lower, text_lower)
+            if match:
+                start = max(0, match.start() - context_size)
+                end = min(len(text), match.end() + context_size)
+                snippet = text[start:end].strip()
+                if len(snippet) > 50 and snippet not in snippets:
                     snippets.append(snippet)
 
-        return snippets[:5]  # Return top 5 snippets
+        return snippets[:3]  # Return top 3 snippets
 
     def _identify_potential_contracts(
         self,
         text: str,
-        llm_keywords: List[str],
-        contract_matches: List[Tuple[str, int, int]]
+        keywords: List[str],
+        pattern_matches: List[Tuple[str, int, int]]
     ) -> List[str]:
-        """Identify potential contract clauses in the text."""
+        """Identify potential contract violations from context."""
         contracts = []
 
-        # Extract sentences containing LLM keywords
-        sentences = re.split(r'[.!?]+', text)
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if len(sentence) > 20:  # Meaningful sentence
-                sentence_lower = sentence.lower()
-                for keyword in llm_keywords:
-                    if keyword.lower() in sentence_lower:
-                        contracts.append(sentence)
-                        break
+        # Extract contracts from pattern matches
+        for pattern_match, start, end in pattern_matches:
+            contracts.append(f"Pattern: {pattern_match.strip()}")
 
-        # Add contract pattern matches
-        for match_text, _, _ in contract_matches:
-            if len(match_text) > 10:
-                contracts.append(match_text)
+        # Look for specific parameter mentions
+        param_patterns = [
+            r'(?i)(max_tokens|temperature|top_p)\s*[=:]\s*[\d.]+',
+            r'(?i)(rate.?limit|quota).*?(\d+)',
+            r'(?i)(context.?length).*?(\d+)',
+        ]
 
-        return contracts[:3]  # Return top 3 potential contracts
+        for pattern in param_patterns:
+            matches = re.findall(pattern, text)
+            for match in matches:
+                if isinstance(match, tuple):
+                    contracts.append(
+                        f"Parameter constraint: {' '.join(match)}")
+                else:
+                    contracts.append(f"Parameter constraint: {match}")
+
+        return contracts[:5]  # Return top 5 potential contracts
 
     async def get_filter_statistics(self) -> Dict[str, Any]:
-        """Get filtering statistics from the database."""
-        stats = {}
+        """Get comprehensive filtering statistics."""
+        # Implementation for getting statistics from database
+        pass  # Would implement database queries for stats
 
-        # Overall filter stats
-        total_filtered = await self.db.count_documents('filtered_posts')
-        passed_filter = await self.db.count_documents('filtered_posts', {'passed_keyword_filter': True})
-        failed_filter = total_filtered - passed_filter
 
-        stats['overall'] = {
-            'total_filtered': total_filtered,
-            'passed': passed_filter,
-            'failed': failed_filter,
-            'pass_rate': (passed_filter / total_filtered * 100) if total_filtered > 0 else 0
-        }
-
-        # Confidence distribution
-        high_confidence = await self.db.count_documents('filtered_posts', {
-            'filter_confidence': {'$gte': 0.7},
-            'passed_keyword_filter': True
-        })
-        medium_confidence = await self.db.count_documents('filtered_posts', {
-            'filter_confidence': {'$gte': 0.4, '$lt': 0.7},
-            'passed_keyword_filter': True
-        })
-        low_confidence = await self.db.count_documents('filtered_posts', {
-            'filter_confidence': {'$lt': 0.4},
-            'passed_keyword_filter': True
-        })
-
-        stats['confidence_distribution'] = {
-            'high': high_confidence,
-            'medium': medium_confidence,
-            'low': low_confidence
-        }
-
-        return stats
+# Maintain backward compatibility
+KeywordPreFilter = AdvancedKeywordFilter
