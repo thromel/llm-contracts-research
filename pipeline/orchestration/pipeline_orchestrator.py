@@ -111,7 +111,7 @@ class UnifiedPipelineOrchestrator:
             })
             raise
 
-    @with_retry(max_attempts=3, delay=1.0)
+    @with_retry(max_attempts=3, base_delay=1.0)
     async def _initialize_database(self) -> None:
         """Initialize database connection with retry logic."""
         await self.db.connect()
