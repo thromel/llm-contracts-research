@@ -125,7 +125,44 @@ All screening modes use **empirically-grounded prompts** with comment analysis:
 - Solution verification through accepted answers
 - Problem clarification through follow-up discussions
 
-## 🏗️ **Core Pipeline Components**
+## 🏗️ **Refactored Architecture**
+
+### **Foundation Layer** ✅
+- **Unified Configuration Management** (`pipeline/foundation/config.py`)
+  - Single source of truth for env vars + YAML configuration
+  - Type-safe configuration with Pydantic validation
+  - Environment-aware settings (dev/prod/research modes)
+- **Enhanced Logging System** (`pipeline/foundation/logging.py`)
+  - Structured JSON logging with correlation ID tracking
+  - Operation timing and metrics collection
+  - Context-aware logging adapters
+- **Retry & Resilience** (`pipeline/foundation/retry.py`)
+  - Circuit breaker pattern for external APIs
+  - Configurable retry strategies with exponential backoff
+  - Network and database operation protection
+
+### **Domain Layer** ✅
+- **Enhanced Data Models** (`pipeline/domain/models.py`)
+  - Type-safe Pydantic models with comprehensive validation
+  - Auto-generating MongoDB documents with indexing
+  - Content hash generation for deduplication
+  - Consensus calculation and agreement metrics
+- **Business Logic Integration**
+  - Provenance tracking throughout pipeline stages
+  - Quality scoring and confidence metrics
+  - Human labeling workflow support
+
+### **Infrastructure Layer** ✅
+- **Database Management** (`pipeline/infrastructure/database.py`)
+  - Async MongoDB operations with connection pooling
+  - Automatic retry logic and health monitoring
+  - Transaction support and bulk operations
+  - Index management and query optimization
+- **Monitoring & Observability** (`pipeline/infrastructure/monitoring.py`)
+  - Metrics collection with Prometheus export
+  - Pipeline operation tracking and timing
+  - Health checks and performance monitoring
+  - Error rate and quality metrics
 
 ### **Data Acquisition** ✅
 - **GitHub Acquisition** (`pipeline/data_acquisition/github.py`)
@@ -142,12 +179,6 @@ All screening modes use **empirically-grounded prompts** with comment analysis:
 - **LLM Screening Orchestrator** - Coordinates multiple screening approaches
 - **Comment-Aware Screening** - All screening modes consider full comment context
 - **Provenance Tracking** - Complete audit trail of data transformations
-
-### **Database & Storage** ✅
-- **MongoDB Integration** - Scalable document storage
-- **Content Deduplication** - Hash-based duplicate prevention
-- **Structured Data Models** - Type-safe Pydantic models
-- **Performance Indexing** - Optimized queries for large datasets
 
 ## 📊 **Pipeline Statistics**
 
@@ -235,40 +266,72 @@ python run_pipeline.py --stats-only
 python -c "from pipeline.common.config import get_development_config; print(get_development_config().validate())"
 ```
 
-## 📚 **Project Structure**
+## 📚 **Refactored Project Structure**
 
 ```
 llm-contracts-research/
 ├── pipeline/
-│   ├── data_acquisition/          # Enhanced GitHub & Stack Overflow acquisition
-│   │   ├── github.py             # Closed issues + comments
-│   │   └── stackoverflow.py      # Answered questions + comments
-│   ├── preprocessing/
-│   │   └── keyword_filter.py     # Pre-screening noise reduction
-│   ├── llm_screening/            # Multi-modal screening system
+│   ├── foundation/               # 🏗️ Foundation Layer
+│   │   ├── config.py            # Unified configuration management
+│   │   ├── logging.py           # Enhanced structured logging
+│   │   ├── retry.py             # Circuit breaker & retry logic
+│   │   └── types.py             # Common types and enums
+│   ├── infrastructure/          # 🔧 Infrastructure Layer  
+│   │   ├── database.py          # Async MongoDB with pooling
+│   │   └── monitoring.py        # Metrics and observability
+│   ├── domain/                  # 🎯 Domain Layer
+│   │   └── models.py            # Enhanced Pydantic models
+│   ├── data_acquisition/        # 📥 Data Sources
+│   │   ├── github.py            # Closed issues + comments
+│   │   └── stackoverflow.py     # Answered questions + comments
+│   ├── preprocessing/           # 🔍 Data Processing
+│   │   └── keyword_filter.py    # Pre-screening noise reduction
+│   ├── llm_screening/          # 🧠 LLM Analysis
 │   │   ├── screening_orchestrator.py  # Coordinates all screening modes
 │   │   ├── borderline_screener.py     # GPT-4 detailed analysis
 │   │   ├── bulk_screener.py           # DeepSeek high-throughput
 │   │   ├── agentic_screener.py        # Multi-agent LangChain
 │   │   └── prompts/               # Research-based prompt system
-│   └── common/
-│       ├── models.py             # Enhanced data models
-│       ├── database.py           # MongoDB with provenance
-│       └── config.py             # Environment configuration
-├── run_pipeline.py               # Main pipeline runner
-├── pipeline_config.yaml          # Pipeline configuration
-└── requirements*.txt             # Dependencies
+│   └── common/                  # 🔄 Legacy (being refactored)
+│       ├── models.py            # Original data models
+│       ├── database.py          # Original MongoDB
+│       └── config.py            # Original configuration
+├── tests/                       # 🧪 Comprehensive Test Suite
+│   ├── test_foundation/         # Foundation layer tests
+│   ├── test_infrastructure/     # Infrastructure tests  
+│   ├── test_domain/            # Domain model tests
+│   └── test_core/              # Core pipeline tests
+├── run_pipeline.py             # Main pipeline runner
+├── pipeline_config.yaml        # Pipeline configuration
+└── requirements*.txt           # Dependencies
 ```
 
-## 🔄 **Next Steps**
+## 🔄 **Refactoring Progress**
 
-### **Ready for Implementation**
+### **✅ Completed Milestones**
+- [x] **Foundation Layer**: Unified config, enhanced logging, retry mechanisms
+- [x] **Infrastructure Layer**: Async database, monitoring, metrics collection
+- [x] **Domain Layer**: Type-safe models, validation, business logic
+- [x] **Architecture Documentation**: Updated README with new structure
+
+### **🚧 In Progress**
+- [ ] **Unified Pipeline Orchestrator**: Single orchestrator replacing dual systems
+- [ ] **Module Restructuring**: Migrate existing components to new architecture
+- [ ] **Integration Testing**: End-to-end tests with new architecture
+
+### **📋 Remaining Tasks**
+- [ ] **Legacy Migration**: Update existing screeners to use new foundation
+- [ ] **Entry Point Updates**: Modernize run_pipeline.py with new components
+- [ ] **Performance Optimization**: Leverage new monitoring and retry systems
+- [ ] **Documentation**: Complete API documentation and migration guide
+
+### **🎯 Ready for Implementation**
 - [ ] **Human Labelling Interface**: Web-based triple-blind review system
 - [ ] **Reliability Validation**: Fleiss Kappa inter-rater agreement analysis  
 - [ ] **Statistical Analysis**: Research metrics and publication-ready reports
 - [ ] **Real-time Monitoring**: Dashboard for continuous pipeline monitoring
 
-### **Research Extensions**
+### **🔬 Research Extensions**
 - [ ] **Multi-language Analysis**: Extend beyond Python to JavaScript, etc.
 - [ ] **Temporal Analysis**: Track contract violation trends over time
 - [ ] **Provider Comparison**: Cross-provider contract violation analysis
