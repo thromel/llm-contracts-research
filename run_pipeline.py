@@ -2,24 +2,18 @@
 """
 Multi-Source Data Pipeline Runner
 
-Fetches data from GitHub and Stack Overflow APIs and runs the complete
-LLM screening pipeline with configurable sources and independent step execution.
+Runs the complete LLM contracts research pipeline using the new unified architecture.
+Supports both legacy YAML configuration and new ConfigManager approach.
 """
 
-from pipeline.data_acquisition.github import GitHubAcquisition
-from pipeline.data_acquisition.stackoverflow import StackOverflowAcquisition
-from pipeline.preprocessing.keyword_filter import KeywordPreFilter
-from pipeline.llm_screening.screening_orchestrator import ScreeningOrchestrator
-from pipeline.common.database import MongoDBManager
-from pipeline.common.config import get_development_config
-from pipeline.common.models import RawPost, Platform
+from pipeline.foundation.config import ConfigManager
+from pipeline.orchestration.pipeline_orchestrator import UnifiedPipelineOrchestrator, PipelineMode
+from pipeline.domain.models import PipelineStage
 import asyncio
 import logging
 import os
 import yaml
-import hashlib
-from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any
 import argparse
 
 # Load environment variables
@@ -35,29 +29,25 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 
-class MultiSourcePipelineRunner:
-    """Pipeline runner for GitHub and Stack Overflow data with step-by-step execution."""
+class ModernPipelineRunner:
+    """
+    Modern pipeline runner using the new unified architecture.
+    
+    Supports YAML configuration files for backward compatibility while
+    leveraging the new foundation and infrastructure layers.
+    """
 
     def __init__(self, config_file: str = "pipeline_config.yaml"):
         self.config_file = config_file
-        self.pipeline_config = self._load_pipeline_config()
+        self.yaml_config = self._load_yaml_config()
+        
+        # Convert YAML config to new ConfigManager
+        self.config = self._convert_yaml_to_config_manager()
+        
+        # Initialize unified orchestrator
+        self.orchestrator = UnifiedPipelineOrchestrator(config=self.config)
 
-        # Apply LLM configuration BEFORE creating other components
-        self._apply_llm_config()
-
-        # Now get app config AFTER environment variables are set
-        self.app_config = get_development_config()
-        self.db = MongoDBManager(os.getenv('MONGODB_URI'))
-
-        # Initialize data acquisition clients
-        self.github_client = None
-        self.stackoverflow_client = None
-
-        # Initialize processing components
-        self.keyword_filter = None
-        self.orchestrator = None
-
-    def _load_pipeline_config(self) -> Dict[str, Any]:
+    def _load_yaml_config(self) -> Dict[str, Any]:
         """Load pipeline configuration from YAML file."""
         try:
             with open(self.config_file, 'r') as f:
@@ -116,9 +106,44 @@ class MultiSourcePipelineRunner:
             }
         }
 
-    def _apply_llm_config(self):
+    def _convert_yaml_to_config_manager(self) -> ConfigManager:
+        """Convert YAML configuration to ConfigManager format."""
+        config_manager = ConfigManager()
+        
+        # Apply LLM configuration from YAML
+        self._apply_yaml_llm_config()
+        
+        # Set database configuration
+        config_manager.set("mongodb.uri", os.getenv('MONGODB_URI'))
+        config_manager.set("mongodb.database", os.getenv('DATABASE_NAME', 'llm_contracts_research'))
+        
+        # Set API keys from environment
+        if os.getenv('GITHUB_TOKEN'):
+            config_manager.set("github.token", os.getenv('GITHUB_TOKEN'))
+        if os.getenv('OPENAI_API_KEY'):
+            config_manager.set("openai.api_key", os.getenv('OPENAI_API_KEY'))
+        if os.getenv('STACKOVERFLOW_API_KEY'):
+            config_manager.set("stackoverflow.api_key", os.getenv('STACKOVERFLOW_API_KEY'))
+            
+        # Set pipeline configuration from YAML
+        sources = self.yaml_config.get('sources', {})
+        if sources.get('github', {}).get('enabled', False):
+            config_manager.set("acquisition.github.enabled", True)
+        if sources.get('stackoverflow', {}).get('enabled', False):
+            config_manager.set("acquisition.stackoverflow.enabled", True)
+            
+        # Set screening configuration
+        llm_config = self.yaml_config.get('llm_screening', {})
+        if llm_config.get('mode') == 'traditional':
+            config_manager.set("screening.traditional.enabled", True)
+        elif llm_config.get('mode') == 'agentic':
+            config_manager.set("screening.agentic.enabled", True)
+            
+        return config_manager
+
+    def _apply_yaml_llm_config(self):
         """Apply LLM configuration from pipeline config to environment variables."""
-        llm_config = self.pipeline_config.get('llm_screening', {})
+        llm_config = self.yaml_config.get('llm_screening', {})
 
         # Set screening mode
         screening_mode = llm_config.get('mode', 'traditional')
@@ -156,293 +181,65 @@ class MultiSourcePipelineRunner:
             logger.info(f"Set max_tokens: {max_tokens}")
 
     async def initialize(self):
-        """Initialize database and pipeline components."""
-        await self.db.connect()
+        """Initialize the unified pipeline orchestrator."""
+        await self.orchestrator.initialize()
+        logger.info("Modern pipeline initialized successfully")
 
-        # Initialize data acquisition clients
-        if self.pipeline_config['sources']['github']['enabled']:
-            github_token = os.getenv('GITHUB_TOKEN')
-            if github_token:
-                self.github_client = GitHubAcquisition(
-                    github_token, self.db, self.pipeline_config)
-                logger.info(
-                    "GitHub client initialized with configurable filtering")
-            else:
-                logger.warning(
-                    "GITHUB_TOKEN not found, GitHub acquisition disabled")
-
-        if self.pipeline_config['sources']['stackoverflow']['enabled']:
-            # Optional - increases rate limits
-            so_key = os.getenv('STACKOVERFLOW_API_KEY')
-            self.stackoverflow_client = StackOverflowAcquisition(
-                self.db, so_key, self.pipeline_config)
-            if so_key:
-                logger.info(
-                    "Stack Overflow client initialized with API key and configurable filtering")
-            else:
-                logger.info(
-                    "Stack Overflow client initialized without API key but with configurable filtering")
-                logger.warning(
-                    "Consider setting STACKOVERFLOW_API_KEY for higher rate limits")
-
-        # Initialize processing components
-        self.keyword_filter = KeywordPreFilter(self.db)
-        self.orchestrator = ScreeningOrchestrator(self.app_config, self.db)
-
-        logger.info("Pipeline initialized successfully")
-
-    def _generate_content_hash(self, title: str, body: str) -> str:
-        """Generate a hash for deduplication based on title and body content."""
-        # Normalize content for comparison
-        normalized_title = title.lower().strip()
-        normalized_body = body.lower().strip()
-
-        # Create hash from combined content
-        content = f"{normalized_title}|{normalized_body}"
-        return hashlib.sha256(content.encode()).hexdigest()[:16]
-
-    async def _is_duplicate_post(self, content_hash: str) -> bool:
-        """Check if a post with this content hash already exists."""
-        existing = await self.db.find_one('raw_posts', {'content_hash': content_hash})
-        return existing is not None
-
-    async def step_data_acquisition(self) -> List[RawPost]:
-        """Step 1: Acquire data from configured sources."""
+    async def step_data_acquisition(self, max_posts: int = 1000) -> Dict[str, Any]:
+        """Step 1: Acquire data using unified orchestrator."""
         logger.info("=== STEP 1: Data Acquisition ===")
+        return await self.orchestrator._execute_stage(
+            PipelineStage.DATA_ACQUISITION, max_posts, False
+        )
 
-        all_posts = []
-        duplicates_skipped = 0
-
-        # GitHub data acquisition
-        if self.github_client:
-            github_config = self.pipeline_config['sources']['github']
-            for repo_config in github_config['repositories']:
-                logger.info(
-                    f"Fetching from {repo_config['owner']}/{repo_config['repo']}")
-
-                since = datetime.now().replace(
-                    day=max(1, datetime.now().day - github_config['days_back']))
-
-                async for raw_post in self.github_client._fetch_repository_issues(
-                    owner=repo_config['owner'],
-                    repo=repo_config['repo'],
-                    since=since,
-                    max_issues=github_config['max_issues_per_repo']
-                ):
-                    # Check for duplicates
-                    content_hash = self._generate_content_hash(
-                        raw_post.title, raw_post.body_md)
-
-                    if await self._is_duplicate_post(content_hash):
-                        duplicates_skipped += 1
-                        continue
-
-                    # Add content hash to post
-                    raw_post.content_hash = content_hash
-
-                    # Save to database
-                    await self.github_client.save_to_database(raw_post)
-                    all_posts.append(raw_post)
-
-        # Stack Overflow data acquisition
-        if self.stackoverflow_client:
-            so_config = self.pipeline_config['sources']['stackoverflow']
-            for tag in so_config['tags']:
-                logger.info(
-                    f"Fetching Stack Overflow questions for tag: {tag}")
-
-                async for raw_post in self.stackoverflow_client.acquire_tagged_questions(
-                    tags=[tag],
-                    since_days=so_config['days_back'],
-                    max_questions=so_config['max_questions_per_tag'],
-                    include_answers=False  # Answers will be merged into question body
-                ):
-                    # Check for duplicates
-                    content_hash = self._generate_content_hash(
-                        raw_post.title, raw_post.body_md)
-
-                    if await self._is_duplicate_post(content_hash):
-                        duplicates_skipped += 1
-                        continue
-
-                    # Add content hash to post
-                    raw_post.content_hash = content_hash
-
-                    # Save to database
-                    await self.stackoverflow_client.save_to_database(raw_post)
-                    all_posts.append(raw_post)
-
-        logger.info(
-            f"Data acquisition complete: {len(all_posts)} new posts, {duplicates_skipped} duplicates skipped")
-        return all_posts
-
-    async def step_keyword_filtering(self, raw_posts: Optional[List[RawPost]] = None) -> List[Dict[str, Any]]:
-        """Step 2: Apply keyword filtering to raw posts."""
+    async def step_keyword_filtering(self, max_posts: int = 1000) -> Dict[str, Any]:
+        """Step 2: Apply keyword filtering using unified orchestrator."""
         logger.info("=== STEP 2: Keyword Filtering ===")
+        return await self.orchestrator._execute_stage(
+            PipelineStage.DATA_PREPROCESSING, max_posts, False
+        )
 
-        if raw_posts is None:
-            # Load unfiltered posts from database
-            raw_posts = []
-            async for post_doc in self.db.find_many('raw_posts', {'filtered': {'$ne': True}}):
-                # Convert back to RawPost object from dictionary
-                try:
-                    # Convert MongoDB document back to RawPost object
-                    raw_post_obj = RawPost.from_dict(post_doc)
-                    raw_posts.append(raw_post_obj)
-                except Exception as e:
-                    logger.error(f"Error converting post to RawPost: {e}")
-                    # Skip this post if conversion fails
-                    continue
-
-        filtered_posts = []
-        passed_count = 0
-
-        for i, raw_post in enumerate(raw_posts):
-            # Apply keyword filter
-            filter_result = self.keyword_filter.apply_filter(raw_post)
-
-            # Handle both RawPost objects and dict objects
-            if hasattr(raw_post, '_id'):
-                # RawPost object
-                post_id = raw_post._id or f"post_{i}"
-                content_hash = raw_post.content_hash
-            else:
-                # Dict object from database
-                post_id = raw_post.get('_id', f"post_{i}")
-                content_hash = raw_post.get('content_hash')
-
-            filtered_post = {
-                '_id': f"filtered_{post_id}",
-                'raw_post_id': post_id,
-                'content_hash': content_hash,
-                'passed_keyword_filter': filter_result.passed,
-                'filter_confidence': filter_result.confidence,
-                'matched_keywords': filter_result.matched_keywords,
-                'filter_timestamp': datetime.utcnow(),
-                'llm_screened': False
-            }
-
-            await self.db.insert_one('filtered_posts', filtered_post)
-
-            # Mark raw post as filtered
-            await self.db.update_one('raw_posts',
-                                     {'_id': post_id},
-                                     {'$set': {'filtered': True}})
-
-            filtered_posts.append(filtered_post)
-
-            if filter_result.passed:
-                passed_count += 1
-
-        logger.info(
-            f"Keyword filtering complete: {passed_count}/{len(raw_posts)} posts passed")
-        return filtered_posts
-
-    async def step_llm_screening(self, max_posts: Optional[int] = None) -> Dict[str, Any]:
-        """Step 3: Run LLM screening on filtered posts."""
+    async def step_llm_screening(self, max_posts: int = 1000) -> Dict[str, Any]:
+        """Step 3: Run LLM screening using unified orchestrator."""
         logger.info("=== STEP 3: LLM Screening ===")
-
-        # Check for posts that need LLM screening and haven't been screened yet
-        unscreened_posts = []
-        async for post in self.db.find_many('filtered_posts', {
-            'passed_keyword_filter': True,
-            'llm_screened': False
-        }):
-            unscreened_posts.append(post)
-
-        unscreened_count = await self.db.count_documents('filtered_posts', {
-            'passed_keyword_filter': True,
-            'llm_screened': False
-        })
-
-        if unscreened_count == 0:
-            logger.info("No posts need LLM screening")
-            return {'processed': 0, 'message': 'No posts to screen'}
-
-        # Check for posts that have already been screened (avoid duplicate LLM calls)
-        screened_hashes = set()
-        async for result in self.db.find_many('llm_screening_results', {}):
-            if 'content_hash' in result:
-                screened_hashes.add(result['content_hash'])
-
-        logger.info(
-            f"Found {len(screened_hashes)} posts already screened, will skip duplicates")
-
-        # Filter out already screened posts by content hash
-        posts_to_screen = []
-        duplicates_skipped = 0
-
-        for post in unscreened_posts:
-            content_hash = post.get('content_hash')
-            if content_hash in screened_hashes:
-                duplicates_skipped += 1
-                # Mark as screened even though we're skipping (to avoid reprocessing)
-                await self.db.update_one('filtered_posts',
-                                         {'_id': post['_id']},
-                                         {'$set': {'llm_screened': True, 'skipped_duplicate': True}})
-            else:
-                posts_to_screen.append(post)
-
-        logger.info(
-            f"LLM screening: {len(posts_to_screen)} posts to screen, {duplicates_skipped} duplicates skipped")
-
-        if max_posts:
-            posts_to_screen = posts_to_screen[:max_posts]
-
-        if not posts_to_screen:
-            return {'processed': 0, 'duplicates_skipped': duplicates_skipped}
-
-        # Run LLM screening
-        return await self.orchestrator.run_screening_pipeline(
-            max_posts=len(posts_to_screen),
-            skip_validation=False
+        return await self.orchestrator._execute_stage(
+            PipelineStage.LLM_SCREENING, max_posts, False
         )
 
     async def get_stats(self) -> Dict[str, Any]:
         """Get comprehensive pipeline statistics."""
-        stats = {
-            'raw_posts': await self.db.count_documents('raw_posts', {}),
-            'raw_posts_github': await self.db.count_documents('raw_posts', {'platform': 'github'}),
-            'raw_posts_stackoverflow': await self.db.count_documents('raw_posts', {'platform': 'stackoverflow'}),
-            'filtered_posts': await self.db.count_documents('filtered_posts', {}),
-            'passed_filter': await self.db.count_documents('filtered_posts', {'passed_keyword_filter': True}),
-            'screened': await self.db.count_documents('filtered_posts', {'llm_screened': True}),
-            'screening_results': await self.db.count_documents('llm_screening_results', {}),
-            'duplicates_by_hash': await self.db.count_documents('filtered_posts', {'skipped_duplicate': True})
-        }
-        return stats
+        return await self.orchestrator.get_pipeline_status()
 
     async def run_full_pipeline(self):
         """Run the complete pipeline end-to-end."""
         logger.info("=== RUNNING FULL PIPELINE ===")
-
-        # Step 1: Data Acquisition
-        if self.pipeline_config['pipeline_steps']['data_acquisition']:
-            raw_posts = await self.step_data_acquisition()
-        else:
-            raw_posts = None
-
-        # Step 2: Keyword Filtering
-        if self.pipeline_config['pipeline_steps']['keyword_filtering']:
-            filtered_posts = await self.step_keyword_filtering(raw_posts)
-
-        # Step 3: LLM Screening
-        if self.pipeline_config['pipeline_steps']['llm_screening']:
-            screening_results = await self.step_llm_screening()
-            logger.info(f"LLM screening results: {screening_results}")
-
-        # Final stats
-        stats = await self.get_stats()
+        
+        # Determine which stages to run based on YAML config
+        stages = []
+        pipeline_steps = self.yaml_config.get('pipeline_steps', {})
+        
+        if pipeline_steps.get('data_acquisition', True):
+            stages.append(PipelineStage.DATA_ACQUISITION)
+        if pipeline_steps.get('keyword_filtering', True):
+            stages.append(PipelineStage.DATA_PREPROCESSING)
+        if pipeline_steps.get('llm_screening', True):
+            stages.append(PipelineStage.LLM_SCREENING)
+            
+        # Run the pipeline
+        results = await self.orchestrator.execute_pipeline(
+            mode=PipelineMode.RESEARCH,
+            stages=stages,
+            max_posts_per_stage=1000,
+            skip_validation=False
+        )
+        
         logger.info("=== PIPELINE COMPLETE ===")
-        logger.info("Final Statistics:")
-        for key, value in stats.items():
-            logger.info(f"  {key}: {value}")
+        logger.info(f"Results: {results}")
+        return results
 
     async def shutdown(self):
         """Cleanup and shutdown."""
-        await self.db.disconnect()
-        if self.orchestrator:
-            await self.orchestrator.cleanup_and_shutdown()
+        await self.orchestrator.cleanup()
 
 
 async def main():
@@ -461,7 +258,7 @@ async def main():
 
     logger.info("Starting Multi-Source Data Pipeline")
 
-    runner = MultiSourcePipelineRunner(config_file=args.config)
+    runner = ModernPipelineRunner(config_file=args.config)
 
     try:
         await runner.initialize()
