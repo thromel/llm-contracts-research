@@ -1,8 +1,10 @@
-# ML/LLM API Contract Violation Analysis System
+# LLM API Contract Violation Analysis System
 
 ## Overview
 
-This system analyzes GitHub issues to identify and categorize API contract violations in both traditional ML and LLM systems. It uses an enhanced taxonomy based on research from "What Kinds of Contracts Do ML APIs Need?" (2307.14465v1) and incorporates continuous learning to discover new contract types.
+This system provides a comprehensive research pipeline for analyzing LLM API contract violations in GitHub issues and Stack Overflow posts. Built on a modern, event-driven architecture, it features multi-modal LLM screening capabilities, intelligent data acquisition, and comprehensive reliability validation.
+
+The pipeline integrates multiple LLM providers (OpenAI, DeepSeek, Anthropic) and screening approaches (Traditional, Agentic, Hybrid) to maximize research quality while maintaining high throughput.
 
 ## Research Insights
 
@@ -55,23 +57,69 @@ The system's design is heavily influenced by key findings from the research pape
    - Resolution guidance
    - Error propagation tracking
 
-## Usage
+## Pipeline Usage
+
+### Quick Start
+
+```bash
+# Run complete pipeline with all screening modes
+python run_pipeline.py
+
+# Run specific screening modes
+python run_pipeline.py --mode traditional    # Traditional LLM screening
+python run_pipeline.py --mode agentic        # Multi-agent LLM screening
+python run_pipeline.py --mode hybrid         # Both approaches
+
+# Run specific pipeline steps
+python run_pipeline.py --step acquisition   # Data acquisition only
+python run_pipeline.py --step filtering     # Keyword filtering only
+python run_pipeline.py --step screening     # LLM screening only
+```
+
+### Programmatic Usage - New Architecture
 
 ```python
-from src.analysis.core.analyzer import GitHubIssuesAnalyzer
+import asyncio
+from pipeline.foundation.config import get_config_manager
+from pipeline.orchestration.pipeline_orchestrator import UnifiedPipelineOrchestrator, PipelineMode
 
-# Initialize analyzer
-analyzer = GitHubIssuesAnalyzer("owner/repo")
+async def analyze_contract_violations():
+    # Initialize configuration
+    config = get_config_manager()
+    config.load_from_env(".env")
+    config.load_from_yaml("pipeline_config.yaml")
+    
+    # Initialize orchestrator
+    orchestrator = UnifiedPipelineOrchestrator(config=config)
+    await orchestrator.initialize()
+    
+    # Run agentic screening for high-quality analysis
+    results = await orchestrator.execute_pipeline(
+        mode=PipelineMode.AGENTIC,
+        max_posts_per_stage=1000
+    )
+    
+    print(f"Analysis completed: {results['total_posts_processed']} posts analyzed")
+    return results
 
-# Analyze a single issue
-result = analyzer.analyze_issue(
-    title="Model crashes with wrong input",
-    body="Error when passing string instead of tensor",
-    comments="Similar issues reported"
+# Run analysis
+asyncio.run(analyze_contract_violations())
+```
+
+### Legacy Compatibility
+
+```python
+from pipeline.main_pipeline import ResearchPipelineOrchestrator
+from pipeline.common.config import PipelineConfig
+
+# Legacy pipeline still works
+config = PipelineConfig(
+    mongodb_connection_string="mongodb://localhost:27017/",
+    openai_api_key="your-key-here"
 )
 
-# Save analysis results
-analyzer.save_results([result])
+orchestrator = ResearchPipelineOrchestrator(config)
+# Use existing methods...
 ```
 
 ## Analysis Output
@@ -175,21 +223,72 @@ When suggesting new contracts, it provides:
 - Pipeline stage relevance
 - Propagation patterns
 
-## Integration
+## System Architecture Integration
 
-The system integrates with:
-- GitHub API for issue fetching
-- OpenAI API for analysis
-- Local storage for results
+The enhanced pipeline integrates with multiple modern components:
 
-## Configuration
+### Data Sources
+- **GitHub API**: Closed issues with comments from major LLM provider repositories
+- **Stack Overflow API**: Answered questions with community validation
+- **MongoDB**: Async database operations with connection pooling
 
-Key settings in `settings.py`:
-- OpenAI model selection
-- Analysis parameters
-- Output formats
-- Storage locations
-- Pipeline stage definitions
+### LLM Providers
+- **OpenAI**: GPT-4 for detailed analysis and borderline screening
+- **DeepSeek**: High-throughput bulk screening with DeepSeek-R1
+- **Anthropic**: Claude models for agentic screening (optional)
+
+### Infrastructure
+- **Event Bus**: Decoupled component communication
+- **Circuit Breaker**: Resilient API operations
+- **Metrics Collection**: Prometheus-compatible monitoring
+- **Structured Logging**: JSON logging with correlation tracking
+
+## Configuration System
+
+The unified configuration system supports:
+
+### Environment Variables
+```bash
+# Database
+MONGODB_URI=mongodb://localhost:27017/
+DATABASE_NAME=llm_contracts_research
+
+# LLM APIs
+OPENAI_API_KEY=sk-...
+DEEPSEEK_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-...
+
+# Pipeline Settings
+SCREENING_MODE=agentic  # traditional|agentic|hybrid
+MAX_POSTS_PER_RUN=50000
+```
+
+### YAML Configuration
+```yaml
+sources:
+  github:
+    enabled: true
+    repositories:
+      - owner: openai
+        repo: openai-python
+    max_issues_per_repo: 1000
+    
+  stackoverflow:
+    enabled: true
+    tags: [openai-api, langchain]
+    max_questions_per_tag: 5000
+
+llm_screening:
+  mode: agentic
+  temperature: 0.1
+  max_tokens: 2000
+```
+
+### Configuration Validation
+- Type-safe Pydantic models
+- API key validation
+- Database connection testing
+- LLM provider availability checks
 
 ## Contributing
 
