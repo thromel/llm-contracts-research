@@ -18,18 +18,51 @@ class Platform(str, Enum):
 
 
 class ContractType(str, Enum):
-    """LLM Contract types from the taxonomy."""
-    DATA_TYPE = "data_type"
-    OUTPUT_FORMAT = "output_format"
-    RATE_LIMIT = "rate_limit"
-    CONTEXT_LENGTH = "context_length"
+    """LLM Contract types from the taxonomy - Extended based on research."""
+    # Single API Method (Behavioral) Contracts
+    PRIMITIVE_TYPE = "primitive_type"
+    BUILT_IN_TYPE = "built_in_type"
+    REFERENCE_TYPE = "reference_type"
+    ML_TYPE = "ml_type"
+    LLM_TYPE = "llm_type"
+    
+    # Value and Format Constraints
+    VALUE_RANGE = "value_range"
+    STRING_FORMAT = "string_format"
+    ENUM_VALUE = "enum_value"
+    LENGTH_LIMIT = "length_limit"
+    ARRAY_DIMENSION = "array_dimension"
+    
+    # Parameter Constraints
+    MAX_TOKENS = "max_tokens"
     TEMPERATURE = "temperature"
     TOP_P = "top_p"
-    MAX_TOKENS = "max_tokens"
+    TOP_K = "top_k"
+    FREQUENCY_PENALTY = "frequency_penalty"
+    PRESENCE_PENALTY = "presence_penalty"
+    
+    # LLM-Specific Contracts
+    PROMPT_FORMAT = "prompt_format"
+    OUTPUT_FORMAT = "output_format"
     JSON_SCHEMA = "json_schema"
     FUNCTION_CALLING = "function_calling"
-    STREAM_FORMAT = "stream_format"
-    SAFETY_FILTERS = "safety_filters"
+    CONTENT_POLICY = "content_policy"
+    SAFETY_FILTER = "safety_filter"
+    
+    # Rate and Resource Limits
+    RATE_LIMIT = "rate_limit"
+    CONTEXT_LENGTH = "context_length"
+    TOKEN_LIMIT = "token_limit"
+    COST_LIMIT = "cost_limit"
+    
+    # Temporal Contracts
+    INITIALIZATION_ORDER = "initialization_order"
+    CLEANUP_ORDER = "cleanup_order"
+    DEPENDENCY_ORDER = "dependency_order"
+    
+    # Authentication and Authorization
+    API_KEY_FORMAT = "api_key_format"
+    PERMISSION_SCOPE = "permission_scope"
 
 
 class PipelineStage(str, Enum):
@@ -212,6 +245,11 @@ class LLMScreeningResult(BaseModel):
     
     # Enhanced classification
     contract_violations: List[Dict[str, Any]] = Field(default_factory=list, description="Detailed violation analysis")
+    contract_types_identified: List[ContractType] = Field(default_factory=list, description="Specific contract types violated")
+    contract_categories: List[str] = Field(default_factory=list, description="High-level contract categories")
+    violation_severity: Optional[str] = Field(default=None, description="Severity of violation (critical/high/medium/low)")
+    
+    # Original taxonomy mapping
     pipeline_stage: Optional[PipelineStage] = Field(default=None, description="Affected pipeline stage")
     root_cause: Optional[RootCause] = Field(default=None, description="Identified root cause")
     effect: Optional[Effect] = Field(default=None, description="Observed effect")
@@ -250,9 +288,14 @@ class HumanLabel(BaseModel):
     # Core classification
     is_contract_violation: bool = Field(..., description="Whether this represents a contract violation")
     contract_type: Optional[ContractType] = Field(default=None, description="Type of contract violated")
+    contract_types: List[ContractType] = Field(default_factory=list, description="Multiple contract types if applicable")
+    contract_category: Optional[str] = Field(default=None, description="High-level category (SAM/AMO/Hybrid/LLM-Specific)")
+    
+    # Detailed taxonomy mapping
     pipeline_stage: Optional[PipelineStage] = Field(default=None, description="Affected pipeline stage")
     root_cause: Optional[RootCause] = Field(default=None, description="Root cause of issue")
     effect: Optional[Effect] = Field(default=None, description="Observed effect")
+    violation_severity: Optional[str] = Field(default=None, description="Severity assessment")
     
     # Detailed assessment
     notes: str = Field(default="", description="Detailed notes from rater")

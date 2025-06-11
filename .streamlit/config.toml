@@ -1,0 +1,22 @@
+[global]
+# Streamlit configuration for contract analysis dashboard
+
+[theme]
+# Use light theme by default
+primaryColor = "#ff4b4b"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f2f6"
+textColor = "#262730"
+
+[server]
+# Server configuration
+port = 8501
+baseUrlPath = ""
+enableCORS = true
+enableXsrfProtection = true
+
+# For GitHub Pages deployment
+headless = true
+
+[browser]
+gatherUsageStats = false
